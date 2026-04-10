@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/Grenade.gd" id="1_grnd"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_gr"]
+radius = 8.0
+
+[node name="Grenade" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_grnd")
+
+[node name="Body" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-7, -4, 7, -4, 8, 0, 7, 4, -7, 4, -8, 0)
+color = Color(0.35, 0.75, 0.28, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_gr")

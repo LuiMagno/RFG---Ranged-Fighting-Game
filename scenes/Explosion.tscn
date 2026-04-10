@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/Explosion.gd" id="1_expl0"]
+
+[node name="Explosion" type="Node2D"]
+script = ExtResource("1_expl0")
+
+[node name="Puff" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-14, 0, -10, -10, 0, -14, 10, -10, 14, 0, 10, 10, 0, 14, -10, 10)
+color = Color(1, 0.9, 0.3, 1)

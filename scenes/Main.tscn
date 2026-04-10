@@ -1,0 +1,350 @@
+[gd_scene format=3 uid="uid://b5ldnu42gnvry"]
+
+[ext_resource type="PackedScene" path="res://scenes/Arrow.tscn" id="1_8vl5s"]
+[ext_resource type="Script" uid="uid://dvb5mmldjvvto" path="res://scripts/Game.gd" id="2_f8j4s"]
+[ext_resource type="Script" uid="uid://bhg3uohddtnc0" path="res://scripts/PistoleiroPlayer.gd" id="3_2lq0l"]
+[ext_resource type="PackedScene" path="res://scenes/Grenade.tscn" id="4_grnd"]
+[ext_resource type="Script" uid="uid://bsjvlq4hfptgw" path="res://scripts/ArqueiroPlayer.gd" id="5_archer"]
+[ext_resource type="PackedScene" path="res://scenes/ArcherSpike.tscn" id="6_spike"]
+[ext_resource type="PackedScene" path="res://scenes/HomingMissile.tscn" id="7_homing"]
+[ext_resource type="PackedScene" path="res://scenes/IceMissile.tscn" id="8_ice"]
+[ext_resource type="PackedScene" path="res://scenes/GravityOrb.tscn" id="9_orb"]
+[ext_resource type="Script" path="res://scripts/PauseMenuController.gd" id="10_pause"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_2"]
+size = Vector2(1920, 84)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_3"]
+size = Vector2(12, 864)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_4"]
+size = Vector2(1920, 12)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
+size = Vector2(40, 90)
+
+[node name="Main" type="Node2D" unique_id=1893289060]
+script = ExtResource("2_f8j4s")
+arrow_scene = ExtResource("1_8vl5s")
+homing_missile_scene = ExtResource("7_homing")
+ice_missile_scene = ExtResource("8_ice")
+gravity_orb_scene = ExtResource("9_orb")
+grenade_scene = ExtResource("4_grnd")
+archer_spike_scene = ExtResource("6_spike")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1305220782]
+mouse_filter = 2
+offset_right = 1920.0
+offset_bottom = 864.0
+color = Color(0.12, 0.13, 0.15, 1)
+
+[node name="Ground" type="ColorRect" parent="." unique_id=323674890]
+mouse_filter = 2
+offset_top = 780.0
+offset_right = 1920.0
+offset_bottom = 864.0
+color = Color(0.18, 0.2, 0.23, 1)
+
+[node name="MidDivider" type="ColorRect" parent="." unique_id=1539054452]
+mouse_filter = 2
+offset_left = 958.0
+offset_right = 962.0
+offset_bottom = 864.0
+color = Color(1, 1, 1, 0.18)
+
+[node name="GroundBody" type="StaticBody2D" parent="." unique_id=787593236]
+position = Vector2(960, 822)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="GroundBody" unique_id=1749632033]
+shape = SubResource("RectangleShape2D_2")
+
+[node name="LeftWallBody" type="StaticBody2D" parent="." unique_id=2009879994]
+position = Vector2(6, 432)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LeftWallBody" unique_id=1313961997]
+shape = SubResource("RectangleShape2D_3")
+
+[node name="RightWallBody" type="StaticBody2D" parent="." unique_id=833315688]
+position = Vector2(1914, 432)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RightWallBody" unique_id=1631368845]
+shape = SubResource("RectangleShape2D_3")
+
+[node name="CeilingBody" type="StaticBody2D" parent="." unique_id=408891436]
+position = Vector2(960, 6)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CeilingBody" unique_id=285235714]
+shape = SubResource("RectangleShape2D_4")
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=1497108176]
+layer = 10
+
+[node name="P1HPBar" type="ProgressBar" parent="UI" unique_id=1238535219]
+offset_left = 24.0
+offset_top = 14.0
+offset_right = 510.0
+offset_bottom = 41.0
+value = 100.0
+show_percentage = false
+
+[node name="P1HP" type="Label" parent="UI" unique_id=582198522]
+offset_left = 36.0
+offset_top = 10.0
+offset_right = 510.0
+offset_bottom = 53.0
+text = "P1 HP: 100"
+
+[node name="P1Special" type="Label" parent="UI" unique_id=941274321]
+visible = false
+offset_left = 24.0
+offset_top = 43.0
+offset_right = 630.0
+offset_bottom = 74.0
+text = "SPECIAL: OFF"
+
+[node name="P1ArcherSpike" type="Label" parent="UI" unique_id=941274323]
+visible = false
+offset_left = 24.0
+offset_top = 74.0
+offset_right = 780.0
+offset_bottom = 106.0
+theme_override_colors/font_color = Color(0.55, 0.95, 0.65, 1)
+
+[node name="P2HPBar" type="ProgressBar" parent="UI" unique_id=1784886207]
+offset_left = 1410.0
+offset_top = 14.0
+offset_right = 1896.0
+offset_bottom = 41.0
+value = 100.0
+show_percentage = false
+
+[node name="P2HP" type="Label" parent="UI" unique_id=431314390]
+offset_left = 1470.0
+offset_top = 10.0
+offset_right = 1896.0
+offset_bottom = 53.0
+text = "P2 HP: 100"
+horizontal_alignment = 2
+
+[node name="P2Special" type="Label" parent="UI" unique_id=941274322]
+visible = false
+offset_left = 1290.0
+offset_top = 43.0
+offset_right = 1896.0
+offset_bottom = 74.0
+text = "SPECIAL: OFF"
+horizontal_alignment = 2
+
+[node name="P2ArcherSpike" type="Label" parent="UI" unique_id=941274324]
+visible = false
+offset_left = 1140.0
+offset_top = 74.0
+offset_right = 1896.0
+offset_bottom = 106.0
+theme_override_colors/font_color = Color(0.55, 0.95, 0.65, 1)
+horizontal_alignment = 2
+
+[node name="TrainingPanel" type="Panel" parent="UI"]
+visible = false
+offset_left = 24.0
+offset_top = 115.0
+offset_right = 510.0
+offset_bottom = 240.0
+
+[node name="VBox" type="VBoxContainer" parent="UI/TrainingPanel"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 10.0
+offset_right = -12.0
+offset_bottom = -10.0
+theme_override_constants/separation = 8
+
+[node name="TrainingTitle" type="Label" parent="UI/TrainingPanel/VBox"]
+text = "Treinamento"
+
+[node name="ChkDummyShoot" type="CheckBox" parent="UI/TrainingPanel/VBox"]
+text = "Boneco atira automaticamente"
+
+[node name="BtnBackToMenu" type="Button" parent="UI/TrainingPanel/VBox"]
+text = "Voltar ao menu"
+
+[node name="PauseLayer" type="CanvasLayer" parent="."]
+layer = 100
+script = ExtResource("10_pause")
+
+[node name="Root" type="Control" parent="PauseLayer"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="PauseLayer/Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.02, 0.03, 0.06, 0.72)
+
+[node name="Center" type="CenterContainer" parent="PauseLayer/Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="Panel" parent="PauseLayer/Root/Center"]
+custom_minimum_size = Vector2(420, 268)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="PauseLayer/Root/Center/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="PauseLayer/Root/Center/Panel/VBox"]
+layout_mode = 2
+text = "Pausa"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(0.92, 0.95, 1, 1)
+
+[node name="Hint" type="Label" parent="PauseLayer/Root/Center/Panel/VBox"]
+layout_mode = 2
+text = "Enter — fechar"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+
+[node name="BtnResume" type="Button" parent="PauseLayer/Root/Center/Panel/VBox"]
+layout_mode = 2
+text = "Continuar"
+
+[node name="BtnMenu" type="Button" parent="PauseLayer/Root/Center/Panel/VBox"]
+layout_mode = 2
+text = "Voltar ao menu principal"
+
+[node name="LeftPlayer" type="CharacterBody2D" parent="." unique_id=1571489207]
+position = Vector2(210, 672)
+collision_mask = 3
+script = ExtResource("3_2lq0l")
+
+[node name="Body" type="Polygon2D" parent="LeftPlayer" unique_id=37644554]
+color = Color(0.25, 0.6, 1, 1)
+polygon = PackedVector2Array(-20, -45, 20, -45, 20, 45, -20, 45)
+
+[node name="Bow" type="Polygon2D" parent="LeftPlayer" unique_id=448013143]
+z_index = 40
+position = Vector2(18, -10)
+color = Color(0.95, 0.95, 0.95, 1)
+polygon = PackedVector2Array(0, -3, 42, -3, 42, 3, 0, 3)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LeftPlayer" unique_id=1278592894]
+shape = SubResource("RectangleShape2D_1")
+
+[node name="Muzzle" type="Marker2D" parent="LeftPlayer" unique_id=1095587038]
+position = Vector2(35, -10)
+
+[node name="OrbChargeVisual" type="Polygon2D" parent="LeftPlayer/Muzzle"]
+visible = false
+z_index = 41
+polygon = PackedVector2Array(-11, -11, 11, -11, 11, 11, -11, 11)
+color = Color(0.72, 0.35, 1, 0.82)
+
+[node name="MuzzleTop" type="Marker2D" parent="LeftPlayer" unique_id=503941261]
+position = Vector2(35, -26)
+
+[node name="MuzzleBottom" type="Marker2D" parent="LeftPlayer" unique_id=1520852119]
+position = Vector2(35, 6)
+
+[node name="ChargeBar" type="ProgressBar" parent="LeftPlayer" unique_id=1082974158]
+visible = false
+z_index = 50
+offset_left = -40.0
+offset_top = -80.0
+offset_right = 40.0
+offset_bottom = -53.0
+show_percentage = false
+
+[node name="Trajectory" type="Line2D" parent="LeftPlayer" unique_id=2080697259]
+visible = false
+z_index = 45
+width = 2.0
+default_color = Color(0.45, 0.8, 1, 0.85)
+
+[node name="ShieldVisual" type="Polygon2D" parent="LeftPlayer" unique_id=2080697260]
+visible = false
+z_index = 38
+position = Vector2(24, -10)
+color = Color(0.35, 0.72, 1, 0.42)
+polygon = PackedVector2Array(0, -38, 32, -30, 34, 0, 32, 30, 0, 38)
+
+[node name="RightPlayer" type="CharacterBody2D" parent="." unique_id=60473321]
+position = Vector2(1710, 672)
+collision_mask = 3
+script = ExtResource("5_archer")
+player_id = 2
+
+[node name="Body" type="Polygon2D" parent="RightPlayer" unique_id=584743274]
+color = Color(1, 0.45, 0.25, 1)
+polygon = PackedVector2Array(-20, -45, 20, -45, 20, 45, -20, 45)
+
+[node name="Bow" type="Polygon2D" parent="RightPlayer" unique_id=743516786]
+z_index = 40
+position = Vector2(-18, -10)
+color = Color(0.95, 0.95, 0.95, 1)
+polygon = PackedVector2Array(0, -3, 42, -3, 42, 3, 0, 3)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RightPlayer" unique_id=315425023]
+shape = SubResource("RectangleShape2D_1")
+
+[node name="Muzzle" type="Marker2D" parent="RightPlayer" unique_id=2094961323]
+position = Vector2(-35, -10)
+
+[node name="OrbChargeVisual" type="Polygon2D" parent="RightPlayer/Muzzle"]
+visible = false
+z_index = 41
+polygon = PackedVector2Array(-11, -11, 11, -11, 11, 11, -11, 11)
+color = Color(0.72, 0.35, 1, 0.82)
+
+[node name="MuzzleTop" type="Marker2D" parent="RightPlayer" unique_id=503941262]
+position = Vector2(-35, -26)
+
+[node name="MuzzleBottom" type="Marker2D" parent="RightPlayer" unique_id=1520852120]
+position = Vector2(-35, 6)
+
+[node name="ChargeBar" type="ProgressBar" parent="RightPlayer" unique_id=935895624]
+visible = false
+z_index = 50
+offset_left = -40.0
+offset_top = -80.0
+offset_right = 40.0
+offset_bottom = -53.0
+show_percentage = false
+
+[node name="Trajectory" type="Line2D" parent="RightPlayer" unique_id=1346894564]
+visible = false
+z_index = 45
+width = 2.0
+default_color = Color(1, 0.7, 0.4, 0.85)
+
+[node name="ShieldVisual" type="Polygon2D" parent="RightPlayer" unique_id=1346894565]
+visible = false
+z_index = 38
+position = Vector2(-24, -10)
+scale = Vector2(-1, 1)
+color = Color(0.45, 0.95, 0.75, 0.42)
+polygon = PackedVector2Array(0, -38, 32, -30, 34, 0, 32, 30, 0, 38)

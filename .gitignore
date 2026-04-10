@@ -1,0 +1,8 @@
+.godot/
+.import/
+*.import
+*.translation
+*.tmp
+.DS_Store
+Thumbs.db
+*.swp
