@@ -86,6 +86,7 @@ func _fill_class_option(ob: OptionButton) -> void:
 	ob.add_item("Pistoleiro")
 	ob.add_item("Arqueiro")
 	ob.add_item("Mago")
+	ob.add_item("Esqueleto")
 
 
 func _apply_character_selection() -> void:

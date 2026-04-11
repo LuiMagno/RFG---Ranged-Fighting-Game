@@ -16,6 +16,7 @@ class_name Game
 const PISTOLEIRO_PLAYER_SCRIPT := "res://characters/pistoleiro_player.gd"
 const ARQUEIRO_PLAYER_SCRIPT := "res://characters/arqueiro_player.gd"
 const MAGO_PLAYER_SCRIPT := "res://characters/mago_player.gd"
+const ESQUELETO_PLAYER_SCRIPT := "res://characters/esqueleto_player.gd"
 
 @onready var left_player: Player = $LeftPlayer
 @onready var right_player: Player = $RightPlayer
@@ -75,6 +76,10 @@ func _assign_player_script(node: Node, kind: int) -> void:
 		path = PISTOLEIRO_PLAYER_SCRIPT
 	elif kind == Player.CharacterKind.ARQUEIRO:
 		path = ARQUEIRO_PLAYER_SCRIPT
+	elif kind == Player.CharacterKind.MAGO:
+		path = MAGO_PLAYER_SCRIPT
+	elif kind == Player.CharacterKind.ESQUELETO:
+		path = ESQUELETO_PLAYER_SCRIPT
 	else:
 		path = MAGO_PLAYER_SCRIPT
 	var scr := load(path) as Script
@@ -441,7 +446,7 @@ func _spawn_one_arrow(
 	var g := gravity_override
 	var b := bounces_override
 	if g == INF:
-		g = 0.0 if owner_player.is_pistoleiro() else arrow.gravity_accel
+		g = 0.0 if (owner_player.is_pistoleiro() or owner_player.is_esqueleto()) else arrow.gravity_accel
 	if b < 0:
 		b = 1 if owner_player.is_pistoleiro() else 0
 
@@ -562,6 +567,9 @@ func _on_left_special_buff_changed(active: bool, uses_left: int, _time_left: flo
 				p1_special_label.text = "P1: clique atirar de novo p/ 5 flechas"
 		else:
 			p1_special_label.text = ""
+	elif left_player.is_esqueleto():
+		p1_special_label.visible = active
+		p1_special_label.text = "P1: próximo tiro (rato) = 3 flechas" if active else ""
 	else:
 		p1_special_label.visible = false
 		p1_special_label.text = ""
@@ -582,6 +590,9 @@ func _on_right_special_buff_changed(active: bool, uses_left: int, _time_left: fl
 				p2_special_label.text = "P2: clique atirar de novo p/ 5 flechas"
 		else:
 			p2_special_label.text = ""
+	elif right_player.is_esqueleto():
+		p2_special_label.visible = active
+		p2_special_label.text = "P2: próximo tiro (rato) = 3 flechas" if active else ""
 	else:
 		p2_special_label.visible = false
 		p2_special_label.text = ""
