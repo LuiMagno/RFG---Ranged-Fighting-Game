@@ -2,9 +2,9 @@ extends CharacterBody2D
 class_name Player
 
 ## Classe base: movimento, mira, vida, tiro carregado (lógica comum) e sinais.
-## Jogabilidade específica fica em PistoleiroPlayer e ArqueiroPlayer.
+## Jogabilidade específica: PistoleiroPlayer, ArqueiroPlayer, MagoPlayer, EsqueletoPlayer (base reta).
 
-enum CharacterKind { PISTOLEIRO, ARQUEIRO, MAGO }
+enum CharacterKind { PISTOLEIRO, ARQUEIRO, MAGO, ESQUELETO }
 
 signal shoot_requested(owner_player: Player, spawn_position: Vector2, initial_velocity: Vector2, shot_flags: Dictionary)
 signal health_changed(current_hp: int)
@@ -23,6 +23,13 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 @export var player_id: int = 1
 @export var move_speed: float = 260.0
 @export var input_enabled: bool = true
+
+## Duplo toque na tecla “para frente” (em direção ao adversário) ativa corrida contínua até ser interrompida.
+@export var sprint_double_tap_window: float = 0.28
+@export_range(1.05, 1.75, 0.01) var sprint_speed_multiplier: float = 1.42
+## Multiplicador de cor no corpo / arco enquanto a corrida está ativa (sobre `modulate` original).
+@export var sprint_visual_body_mult: Color = Color(1.2, 1.05, 0.72, 1.0)
+@export var sprint_visual_bow_mult: Color = Color(1.12, 1.02, 0.78, 1.0)
 
 @export var gravity_accel: float = 1800.0
 @export var jump_speed: float = 650.0
@@ -81,6 +88,8 @@ var _frozen_prev: bool = false
 var _orig_body_modulate: Color = Color.WHITE
 var _orig_bow_modulate: Color = Color.WHITE
 var _hover_float_left: float = 0.0
+var _sprint_active: bool = false
+var _last_forward_tap_time_s: float = -100.0
 
 
 func is_pistoleiro() -> bool:
@@ -92,6 +101,10 @@ func is_arqueiro() -> bool:
 
 
 func is_mago() -> bool:
+	return false
+
+
+func is_esqueleto() -> bool:
 	return false
 
 
@@ -249,6 +262,11 @@ func _physics_process(delta: float) -> void:
 	_dash_cd_left = maxf(0.0, _dash_cd_left - delta)
 	_extra_timer_tick(delta)
 
+	if _frozen_left <= 0.0:
+		_update_sprint_double_tap()
+		if _sprint_active and not _is_holding_forward_only():
+			_interrupt_sprint()
+
 	if _control_lock_left > 0.0 and _dash_time_left > 0.0:
 		_dash_time_left = 0.0
 
@@ -287,11 +305,14 @@ func _physics_process(delta: float) -> void:
 		if hovering:
 			# hy>0 = intenção “para cima” na tela; em 2D velocity.y positivo é para baixo.
 			var hv := _get_hover_move_vector() if input_enabled else Vector2.ZERO
-			velocity = Vector2(hv.x * move_speed, -hv.y * move_speed)
+			var sp0 := _get_sprint_speed_mult()
+			velocity = Vector2(hv.x * move_speed * sp0, -hv.y * move_speed * sp0)
 		else:
 			var dir := 0.0 if not input_enabled else _get_move_axis()
-			velocity.x = dir * move_speed
+			var sp := _get_sprint_speed_mult()
+			velocity.x = dir * move_speed * sp
 		if _can_start_dash() and _dash_just_pressed():
+			_interrupt_sprint()
 			_dash_dir_sign = _dash_direction_sign()
 			var st0: Dictionary = _get_dash_stats()
 			_dash_time_left = float(st0.get("duration", 0.18))
@@ -322,6 +343,7 @@ func _physics_process(delta: float) -> void:
 		velocity.y = -jump_speed
 		_jumps_left -= 1
 
+	_refresh_sprint_body_modulate()
 	move_and_slide()
 	_enforce_arena_half()
 	_process_combat(delta)
@@ -354,6 +376,7 @@ func _get_hover_move_vector() -> Vector2:
 func freeze_for(seconds: float) -> void:
 	if seconds <= 0.0:
 		return
+	_interrupt_sprint()
 	if _frozen_left <= 0.0:
 		_frozen_anchor_pos = global_position
 	_frozen_left = maxf(_frozen_left, seconds)
@@ -366,6 +389,15 @@ func _set_frozen_visual(active: bool) -> void:
 		_body_visual.modulate = Color(0.75, 0.9, 1.0, 1.0) if active else _orig_body_modulate
 	if _bow_visual != null:
 		_bow_visual.modulate = Color(0.85, 0.95, 1.0, 1.0) if active else _orig_bow_modulate
+
+
+func _refresh_sprint_body_modulate() -> void:
+	if _body_visual == null:
+		return
+	if _is_sprint_speed_boost_active():
+		_body_visual.modulate = _orig_body_modulate * sprint_visual_body_mult
+	else:
+		_body_visual.modulate = _orig_body_modulate
 
 
 func _allow_jump_while_concentrating() -> bool:
@@ -396,7 +428,10 @@ func _update_aim(_delta: float) -> void:
 
 
 func _update_bow_visual() -> void:
-	bow.modulate = Color(1.0, 0.88, 0.45, 1.0) if _archer_special_glow() else Color.WHITE
+	var bow_col := Color(1.0, 0.88, 0.45, 1.0) if _archer_special_glow() else Color.WHITE
+	if _is_sprint_speed_boost_active():
+		bow_col = bow_col * sprint_visual_bow_mult
+	bow.modulate = bow_col
 	var angle_rad := deg_to_rad(launch_angle_degrees)
 	if player_id == 1:
 		bow.rotation = -angle_rad
@@ -408,6 +443,47 @@ func _get_move_axis() -> float:
 	if player_id == 1:
 		return Input.get_axis("p1_left", "p1_right")
 	return Input.get_axis("p2_left", "p2_right")
+
+
+func _forward_action_just_pressed() -> bool:
+	if player_id == 1:
+		return Input.is_action_just_pressed("p1_right")
+	return Input.is_action_just_pressed("p2_left")
+
+
+func _is_holding_forward_only() -> bool:
+	if player_id == 1:
+		return Input.is_action_pressed("p1_right") and not Input.is_action_pressed("p1_left")
+	return Input.is_action_pressed("p2_left") and not Input.is_action_pressed("p2_right")
+
+
+func _get_sprint_speed_mult() -> float:
+	if not _sprint_active:
+		return 1.0
+	if not _is_holding_forward_only():
+		return 1.0
+	return sprint_speed_multiplier
+
+
+func _is_sprint_speed_boost_active() -> bool:
+	return input_enabled and _sprint_active and _is_holding_forward_only()
+
+
+func _interrupt_sprint() -> void:
+	_sprint_active = false
+
+
+func _update_sprint_double_tap() -> void:
+	if not input_enabled:
+		return
+	if not _forward_action_just_pressed():
+		return
+	var now_s := Time.get_ticks_msec() * 0.001
+	var dt := now_s - _last_forward_tap_time_s
+	_last_forward_tap_time_s = now_s
+	if dt > 0.0 and dt <= sprint_double_tap_window:
+		_sprint_active = true
+		_last_forward_tap_time_s = -100.0
 
 
 func _shoot_just_pressed() -> bool:
@@ -496,12 +572,14 @@ func _enforce_arena_half() -> void:
 
 
 func take_damage(amount: int) -> void:
+	_interrupt_sprint()
 	hp = maxi(0, hp - amount)
 	health_changed.emit(hp)
 	print("Player ", player_id, " HP: ", hp)
 
 
 func apply_knockback(knockback: Vector2) -> void:
+	_interrupt_sprint()
 	velocity += knockback
 	_control_lock_left = maxf(_control_lock_left, hit_stun_time)
 
