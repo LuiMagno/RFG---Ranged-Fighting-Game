@@ -9,7 +9,7 @@ class_name Arrow
 
 signal hit_player(victim: Player, damage: int)
 
-var _explosion_scene := preload("res://scenes/Explosion.tscn")
+var _explosion_scene := preload("res://projectiles/explosion/explosion.tscn")
 
 # Damage dealt on player hit.
 @export var damage := 20

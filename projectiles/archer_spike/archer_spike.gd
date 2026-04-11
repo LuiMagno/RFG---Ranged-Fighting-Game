@@ -24,7 +24,7 @@ var _stuck_left: float = 0.0
 @onready var _body: Polygon2D = $Body
 @onready var _hurt: Area2D = $HurtZone
 
-var _explosion_scene: PackedScene = preload("res://scenes/Explosion.tscn")
+var _explosion_scene: PackedScene = preload("res://projectiles/explosion/explosion.tscn")
 
 
 func setup(owner_player: Player, initial_velocity: Vector2) -> void:

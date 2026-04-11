@@ -13,7 +13,7 @@ var _owner: Player
 var _damage: int = 10
 var _life_left: float = 0.0
 
-var _explosion_scene: PackedScene = preload("res://scenes/Explosion.tscn")
+var _explosion_scene: PackedScene = preload("res://projectiles/explosion/explosion.tscn")
 
 
 func setup(owner_player: Player, initial_velocity: Vector2, charge_t: float) -> void:

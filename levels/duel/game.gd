@@ -13,9 +13,9 @@ class_name Game
 @export var grenade_scene: PackedScene
 @export var archer_spike_scene: PackedScene
 
-const PISTOLEIRO_PLAYER_SCRIPT := "res://scripts/PistoleiroPlayer.gd"
-const ARQUEIRO_PLAYER_SCRIPT := "res://scripts/ArqueiroPlayer.gd"
-const MAGO_PLAYER_SCRIPT := "res://scripts/MagoPlayer.gd"
+const PISTOLEIRO_PLAYER_SCRIPT := "res://characters/pistoleiro_player.gd"
+const ARQUEIRO_PLAYER_SCRIPT := "res://characters/arqueiro_player.gd"
+const MAGO_PLAYER_SCRIPT := "res://characters/mago_player.gd"
 
 @onready var left_player: Player = $LeftPlayer
 @onready var right_player: Player = $RightPlayer
@@ -136,7 +136,7 @@ func _setup_training_menu_ui() -> void:
 
 func _on_training_back_to_menu_pressed() -> void:
 	RunConfig.clear_p1_shoot_mouse_binding()
-	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+	get_tree().change_scene_to_file("res://ui/menu.tscn")
 
 
 func _on_training_dummy_toggled(pressed: bool) -> void:
@@ -283,7 +283,7 @@ func _spawn_arrow(owner_player: Player, spawn_position: Vector2, initial_velocit
 		_spawn_archer_spike_volley(owner_player, spawn_position, initial_velocity)
 		return
 	if arrow_scene == null:
-		push_error("Game: 'arrow_scene' is not assigned. Set it in Main.tscn inspector.")
+		push_error("Game: 'arrow_scene' is not assigned. Set it in main.tscn inspector.")
 		return
 
 	_spawn_one_arrow(owner_player, spawn_position, initial_velocity, shot_flags)
@@ -291,7 +291,7 @@ func _spawn_arrow(owner_player: Player, spawn_position: Vector2, initial_velocit
 
 func _spawn_grenade(owner_player: Player, spawn_position: Vector2, throw_velocity: Vector2) -> void:
 	if grenade_scene == null:
-		push_error("Game: 'grenade_scene' não está atribuído em Main.tscn.")
+		push_error("Game: 'grenade_scene' não está atribuído em main.tscn.")
 		return
 	var gr := grenade_scene.instantiate() as Grenade
 	if gr == null:
@@ -307,7 +307,7 @@ func _spawn_grenade(owner_player: Player, spawn_position: Vector2, throw_velocit
 
 func _spawn_ice_missile(owner_player: Player, spawn_position: Vector2, initial_velocity: Vector2) -> void:
 	if ice_missile_scene == null:
-		push_error("Game: 'ice_missile_scene' não está atribuído em Main.tscn.")
+		push_error("Game: 'ice_missile_scene' não está atribuído em main.tscn.")
 		return
 	var im := ice_missile_scene.instantiate() as IceMissile
 	if im == null:
@@ -339,7 +339,7 @@ func _on_ice_detonate_requested(owner_player: Player) -> void:
 
 func _spawn_gravity_orb(owner_player: Player, spawn_position: Vector2, charge_t: float) -> void:
 	if gravity_orb_scene == null:
-		push_error("Game: 'gravity_orb_scene' não está atribuído em Main.tscn.")
+		push_error("Game: 'gravity_orb_scene' não está atribuído em main.tscn.")
 		return
 	var target := right_player
 	if owner_player == right_player:
@@ -410,7 +410,7 @@ func _spawn_one_arrow(
 ) -> void:
 	if shot_flags.get("spike_shot", false) and owner_player is ArqueiroPlayer:
 		if archer_spike_scene == null:
-			push_error("Game: 'archer_spike_scene' não está atribuído em Main.tscn.")
+			push_error("Game: 'archer_spike_scene' não está atribuído em main.tscn.")
 			return
 		var sp := archer_spike_scene.instantiate() as ArcherSpike
 		if sp == null:
@@ -422,7 +422,7 @@ func _spawn_one_arrow(
 
 	var want_homing := owner_player.is_mago()
 	if want_homing and homing_missile_scene == null:
-		push_error("Game: 'homing_missile_scene' não está atribuído em Main.tscn.")
+		push_error("Game: 'homing_missile_scene' não está atribuído em main.tscn.")
 		want_homing = false
 	if (not want_homing) and arrow_scene == null:
 		return

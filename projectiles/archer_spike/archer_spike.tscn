@@ -1,6 +1,6 @@
 [gd_scene load_steps=4 format=3]
 
-[ext_resource type="Script" path="res://scripts/ArcherSpike.gd" id="1_spk"]
+[ext_resource type="Script" path="res://projectiles/archer_spike/archer_spike.gd" id="1_spk"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_core"]
 radius = 7.0

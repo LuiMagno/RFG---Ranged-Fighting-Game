@@ -96,7 +96,7 @@ func _apply_character_selection() -> void:
 func _on_vs_pressed() -> void:
 	_apply_character_selection()
 	RunConfig.mode = RunConfig.Mode.VS_PLAYER
-	get_tree().change_scene_to_file("res://scenes/Main.tscn")
+	get_tree().change_scene_to_file("res://levels/duel/main.tscn")
 
 
 func _on_training_pressed() -> void:
@@ -104,4 +104,4 @@ func _on_training_pressed() -> void:
 	RunConfig.mode = RunConfig.Mode.TRAINING
 	RunConfig.training_dummy_shoot = chk_dummy_shoot.button_pressed
 	RunConfig.training_dummy_interval = 3.0
-	get_tree().change_scene_to_file("res://scenes/Main.tscn")
+	get_tree().change_scene_to_file("res://levels/duel/main.tscn")

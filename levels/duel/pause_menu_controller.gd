@@ -50,7 +50,7 @@ func _on_resume_pressed() -> void:
 func _on_menu_pressed() -> void:
 	get_tree().paused = false
 	RunConfig.clear_p1_shoot_mouse_binding()
-	get_tree().change_scene_to_file("res://scenes/Menu.tscn")
+	get_tree().change_scene_to_file("res://ui/menu.tscn")
 
 
 func _apply_panel_style() -> void:

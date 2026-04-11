@@ -15,7 +15,7 @@ var p1_character: int = 0
 var p2_character: int = 1
 
 
-## O Main adiciona o botão esquerdo do rato a `p1_shoot`; sem limpar, o menu deixa de receber cliques.
+## O duelo (`main.tscn`) adiciona o botão esquerdo do rato a `p1_shoot`; sem limpar, o menu deixa de receber cliques.
 func clear_p1_shoot_mouse_binding() -> void:
 	if not InputMap.has_action("p1_shoot"):
 		return
