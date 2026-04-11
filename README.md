@@ -20,12 +20,16 @@ Projeto Godot 2D simples e expansível: dois arqueiros nas laterais atiram flech
 
 ## Estrutura
 
+Organização alinhada ao guia Godot em `docs/project_organization.rst` (`snake_case`, recursos junto às cenas em `projectiles/`).
+
 - `project.godot`: configurações do projeto + Input Map
-- `scenes/Main.tscn`: cena principal (spawna jogadores e flechas)
-- `scenes/Arrow.tscn`: cena da flecha
-- `scripts/Game.gd`: coordena o jogo (spawn de flechas, regras futuras)
-- `scripts/Player.gd`: movimento, tiro (via sinal), HP
-- `scripts/Arrow.gd`: movimento balístico, colisão e cleanup
+- `docs/.gdignore`: a pasta `docs/` não é importada pelo editor
+- `core/run_config.gd`: autoload (modo de jogo, personagens)
+- `ui/menu.tscn` + `ui/menu.gd`: menu principal
+- `levels/duel/main.tscn` + `levels/duel/game.gd`: cena de duelo e coordenação (spawn, regras)
+- `levels/duel/pause_menu_controller.gd`: pausa durante o duelo
+- `characters/`: scripts base e variantes de jogador (`player.gd`, etc.)
+- `projectiles/<nome>/`: cada projétil com `.tscn` e `.gd` na mesma pasta (ex.: `projectiles/arrow/`)
 
 ## Observações
 

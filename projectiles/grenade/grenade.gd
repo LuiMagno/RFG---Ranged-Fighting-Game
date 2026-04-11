@@ -17,7 +17,7 @@ var _fuse_left: float = 0.0
 var _exploded: bool = false
 var _alive_s: float = 0.0
 var _manual_detonate_requested: bool = false
-var _explosion_scene: PackedScene = preload("res://scenes/Explosion.tscn")
+var _explosion_scene: PackedScene = preload("res://projectiles/explosion/explosion.tscn")
 
 @onready var _body: Polygon2D = $Body
 

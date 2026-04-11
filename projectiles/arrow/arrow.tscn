@@ -1,19 +1,18 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/HomingMissile.gd" id="1_hm"]
+[ext_resource type="Script" path="res://projectiles/arrow/arrow.gd" id="1_3c5ts"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_1"]
 radius = 10.0
 
-[node name="HomingMissile" type="CharacterBody2D"]
+[node name="Arrow" type="CharacterBody2D"]
 collision_layer = 2
 collision_mask = 11
-script = ExtResource("1_hm")
+script = ExtResource("1_3c5ts")
 
 [node name="Body" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-14, -4, 14, -4, 14, 4, -14, 4)
-color = Color(0.7, 0.45, 1, 1)
+polygon = PackedVector2Array(-14, -3, 14, -3, 14, 3, -14, 3)
+color = Color(0.95, 0.95, 0.95, 1)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_1")
-

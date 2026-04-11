@@ -5,7 +5,7 @@ class_name IceMissile
 @export var freeze_duration: float = 2.0
 @export var field_radius: float = 120.0
 
-var _field_scene: PackedScene = preload("res://scenes/IceField.tscn")
+var _field_scene: PackedScene = preload("res://projectiles/ice_field/ice_field.tscn")
 var _detonated: bool = false
 
 
