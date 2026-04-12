@@ -6,3 +6,6 @@
 .DS_Store
 Thumbs.db
 *.swp
+
+# Godot documentation wiki clone (local reference only)
+docs/godot-docs/

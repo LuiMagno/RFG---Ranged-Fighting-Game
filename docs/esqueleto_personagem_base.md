@@ -18,7 +18,7 @@ Os números e comportamentos do **Esqueleto** definem o **padrão de referência
 
 | Ação | Player 1 | Player 2 |
 |------|-----------|-----------|
-| Tiro principal (carregar + soltar) | Botão esquerdo do rato (`p1_shoot`) | **L** (`p2_shoot`) |
+| Tiro principal (carregar + soltar) | Botão esquerdo do mouse (`p1_shoot`) | **L** (`p2_shoot`) |
 | Skill “raio” (carregar + soltar) | **F** (`p1_grenade`) | **J** (`p2_grenade`) |
 | Skill “triplo” (arma o próximo disparo) | **G** (`p1_special`) | **O** (`p2_special`) |
 | **Dash (Esqueleto e Ongma Epilef)** | Duplo toque **D**→**D** (dash para a direita / “frente”); duplo **A**→**A** (dash para trás). A tecla `p1_dash` **não** inicia dash nestes scripts. | Duplo toque na seta **esquerda** (em direção ao adversário); duplo toque na seta **direita** (para trás). `p2_dash` ignorado da mesma forma. |
@@ -125,7 +125,7 @@ O esqueleto **sobrescreve** `_get_dash_stats()`, **ignora** o dash por tecla ded
 
 **No ar:** com `gravity_scale` **0**, durante o dash não há aceleração gravitacional; ao terminar o dash, a queda volta ao normal.
 
-**Pulo durante o dash:** o esqueleto sobrescreve `_apply_jump_during_dash()`: cancela o dash, aplica `velocity.y = -jump_speed * dash_jump_vertical_mul` (export **0,5** por defeito) e `velocity.x = _dash_dir_sign * max(|velocity.x|, dash_jump_horizontal_speed)` com `dash_jump_horizontal_speed` = **520** por defeito — mais ênfase horizontal que o pulo normal.
+**Pulo durante o dash:** o esqueleto sobrescreve `_apply_jump_during_dash()`: cancela o dash, aplica `velocity.y = -jump_speed * dash_jump_vertical_mul` (export **0,5** por padrão) e `velocity.x = _dash_dir_sign * max(|velocity.x|, dash_jump_horizontal_speed)` com `dash_jump_horizontal_speed` = **520** por padrão — mais ênfase horizontal que o pulo normal.
 
 ---
 

@@ -50,6 +50,12 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 @export var trajectory_points: int = 24
 @export var trajectory_step: float = 0.08
 @export var arena_padding_x: float = 36.0
+## Controle: zona morta no vetor do stick direito (após sensibilidade), ~0,2–0,3 reduz drift.
+@export_range(0.20, 0.30, 0.01) var gamepad_aim_deadzone: float = 0.25
+## Controle: multiplica o vetor cru antes da deadzone; depois limita ao círculo unitário.
+@export_range(0.50, 2.00, 0.05) var gamepad_aim_sensitivity: float = 1.0
+## Controle: tempo de suavização (1ª ordem, segundos); menor = mais “seco”, maior = mais fluido.
+@export_range(0.03, 0.35, 0.01) var gamepad_aim_smooth_time: float = 0.10
 
 @export var recoil_normal: float = 170.0
 @export var recoil_special: float = 290.0
@@ -90,6 +96,8 @@ var _orig_bow_modulate: Color = Color.WHITE
 var _hover_float_left: float = 0.0
 var _sprint_active: bool = false
 var _last_forward_tap_time_s: float = -100.0
+## Direção de mira no plano do jogo (normalizado). Mouse atualiza de imediato; controle com deadzone + smoothing.
+var _aim_direction: Vector2 = Vector2.RIGHT
 
 
 func is_pistoleiro() -> bool:
@@ -275,6 +283,8 @@ func _ready() -> void:
 	if _bow_visual != null:
 		_orig_bow_modulate = _bow_visual.modulate
 	_frozen_prev = false
+	_reset_aim_direction_to_forward()
+	_sync_launch_angle_from_aim_direction()
 
 
 func _physics_process(delta: float) -> void:
@@ -442,25 +452,71 @@ func _try_special_air_jump() -> bool:
 	return false
 
 
-func _apply_mouse_aim() -> void:
-	var to_mouse := get_global_mouse_position() - muzzle.global_position
-	if to_mouse.length_squared() <= 0.0001:
+func _apply_aim_from_world_direction(dir: Vector2) -> void:
+	if dir.length_squared() <= 0.0001:
 		return
-	var dir := to_mouse.normalized()
+	var d := dir.normalized()
 	var forward := Vector2.RIGHT if player_id == 1 else Vector2.LEFT
-	var signed_from_axis := forward.angle_to(dir)
-	if forward.dot(dir) < 0.0:
-		launch_angle_degrees = aim_limit_deg if dir.y < 0.0 else -aim_limit_deg
+	var signed_from_axis := forward.angle_to(d)
+	if forward.dot(d) < 0.0:
+		launch_angle_degrees = aim_limit_deg if d.y < 0.0 else -aim_limit_deg
 	else:
 		var clamped := clampf(signed_from_axis, deg_to_rad(-aim_limit_deg), deg_to_rad(aim_limit_deg))
 		launch_angle_degrees = -rad_to_deg(clamped)
 
 
-func _update_aim(_delta: float) -> void:
+func _reset_aim_direction_to_forward() -> void:
+	_aim_direction = Vector2.RIGHT if player_id == 1 else Vector2.LEFT
+
+
+func _sync_launch_angle_from_aim_direction() -> void:
+	if _aim_direction.length_squared() <= 0.0001:
+		return
+	_apply_aim_from_world_direction(_aim_direction)
+
+
+func _get_gamepad_aim_vector_raw() -> Vector2:
+	var ax_l := "p1_aim_left" if player_id == 1 else "p2_aim_left"
+	var ax_r := "p1_aim_right" if player_id == 1 else "p2_aim_right"
+	var ax_u := "p1_aim_up" if player_id == 1 else "p2_aim_up"
+	var ax_d := "p1_aim_down" if player_id == 1 else "p2_aim_down"
+	# deadzone 0.0: a zona morta “oficial” é só `gamepad_aim_deadzone` abaixo.
+	return Input.get_vector(ax_l, ax_r, ax_u, ax_d, 0.0)
+
+
+func _update_aim_direction_mouse() -> void:
+	var raw := get_global_mouse_position() - muzzle.global_position
+	if raw.length_squared() <= 0.0001:
+		return
+	_aim_direction = raw.normalized()
+
+
+func _update_aim_direction_gamepad(delta: float) -> void:
+	var raw_stick := _get_gamepad_aim_vector_raw()
+	var v := raw_stick * gamepad_aim_sensitivity
+	if v.length_squared() > 1.0001:
+		v = v.limit_length(1.0)
+	if v.length() < gamepad_aim_deadzone:
+		return
+	var target := v.normalized()
+	var tau := maxf(gamepad_aim_smooth_time, 0.0001)
+	var alpha := 1.0 - exp(-delta / tau)
+	_aim_direction = _aim_direction.lerp(target, alpha)
+	if _aim_direction.length_squared() > 0.0001:
+		_aim_direction = _aim_direction.normalized()
+	else:
+		_aim_direction = target
+
+
+func _update_aim(delta: float) -> void:
 	if not input_enabled:
 		_update_bow_visual()
 		return
-	_apply_mouse_aim()
+	if RunConfig.is_player_using_gamepad(player_id):
+		_update_aim_direction_gamepad(delta)
+	else:
+		_update_aim_direction_mouse()
+	_sync_launch_angle_from_aim_direction()
 	launch_angle_degrees = clampf(launch_angle_degrees, -aim_limit_deg, aim_limit_deg)
 	_update_bow_visual()
 
@@ -652,6 +708,8 @@ func prepare_for_vs_round_respawn(local_spawn: Vector2) -> void:
 		_shield_charges = max_c
 		_shield_cd_left = 0.0
 	special_buff_changed.emit(false, 0, 0.0)
+	_reset_aim_direction_to_forward()
+	_sync_launch_angle_from_aim_direction()
 	_extra_reset_for_vs_round()
 
 

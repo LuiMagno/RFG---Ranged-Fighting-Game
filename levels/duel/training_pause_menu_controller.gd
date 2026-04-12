@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-## Treinamento: Enter ou Start abre/fecha; Continuar, definições (boneco) ou voltar à seleção de modo.
+## Treinamento: Enter ou Start abre/fecha; continuar, configurações do treino (boneco) ou voltar à seleção de modo.
 ## PROCESS_MODE_ALWAYS para funcionar com get_tree().paused.
 
 @onready var _root: Control = $Root
@@ -10,6 +10,8 @@ extends CanvasLayer
 @onready var _btn_settings: Button = $Root/Center/Panel/MainMenu/BtnTrainingSettings
 @onready var _btn_mode_menu: Button = $Root/Center/Panel/MainMenu/BtnModeMenu
 @onready var _opt_p1_class: OptionButton = $Root/Center/Panel/SettingsMenu/ClassP1Row/OptP1Class
+@onready var _opt_p1_scheme: OptionButton = $Root/Center/Panel/SettingsMenu/InputP1Row/OptP1Scheme
+@onready var _opt_p1_device: OptionButton = $Root/Center/Panel/SettingsMenu/InputP1Row/OptP1Device
 @onready var _chk_dummy: CheckBox = $Root/Center/Panel/SettingsMenu/ChkDummyShoot
 @onready var _btn_back_settings: Button = $Root/Center/Panel/SettingsMenu/BtnBackSettings
 
@@ -24,6 +26,12 @@ func _ready() -> void:
 	_chk_dummy.toggled.connect(_on_dummy_toggled)
 	MenuThemeUtil.fill_class_option(_opt_p1_class)
 	MenuThemeUtil.style_option(_opt_p1_class)
+	MenuThemeUtil.fill_input_scheme_option(_opt_p1_scheme)
+	MenuThemeUtil.fill_joy_device_option(_opt_p1_device)
+	MenuThemeUtil.style_option(_opt_p1_scheme)
+	MenuThemeUtil.style_option(_opt_p1_device)
+	_opt_p1_scheme.item_selected.connect(_on_p1_scheme_selected)
+	_opt_p1_device.item_selected.connect(_on_p1_device_selected)
 	var imax := maxi(_opt_p1_class.item_count - 1, 0)
 	_opt_p1_class.select(clampi(RunConfig.p1_character, 0, imax))
 	_opt_p1_class.item_selected.connect(_on_p1_class_selected)
@@ -93,7 +101,27 @@ func _on_mode_menu_pressed() -> void:
 func _sync_settings_controls() -> void:
 	var imax := maxi(_opt_p1_class.item_count - 1, 0)
 	_opt_p1_class.select(clampi(RunConfig.p1_character, 0, imax))
+	_opt_p1_scheme.select(clampi(int(RunConfig.p1_input_scheme), 0, maxi(_opt_p1_scheme.item_count - 1, 0)))
+	_opt_p1_device.select(clampi(RunConfig.p1_joy_device, 0, maxi(_opt_p1_device.item_count - 1, 0)))
+	_opt_p1_device.visible = RunConfig.p1_input_scheme == RunConfig.InputScheme.GAMEPAD
 	_chk_dummy.set_pressed_no_signal(RunConfig.training_dummy_shoot)
+
+
+func _push_input_map_to_game() -> void:
+	var g := get_tree().current_scene
+	if g != null and g.has_method("apply_input_map_from_run_config"):
+		(g as Object).call("apply_input_map_from_run_config")
+
+
+func _on_p1_scheme_selected(index: int) -> void:
+	RunConfig.p1_input_scheme = index as RunConfig.InputScheme
+	_opt_p1_device.visible = RunConfig.p1_input_scheme == RunConfig.InputScheme.GAMEPAD
+	_push_input_map_to_game()
+
+
+func _on_p1_device_selected(index: int) -> void:
+	RunConfig.p1_joy_device = index
+	_push_input_map_to_game()
 
 
 func _on_p1_class_selected(index: int) -> void:

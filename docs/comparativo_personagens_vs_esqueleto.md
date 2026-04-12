@@ -104,7 +104,7 @@ Documento canónico: [esqueleto_personagem_base.md](esqueleto_personagem_base.md
 |--------|-----------|--------------|--------|
 | Script | `EsqueletoPlayer` | `OngmaEpilefPlayer` **extends EsqueletoPlayer** | Mesmo kit até overrides |
 | `CharacterKind` | **3** | **4** | Menu / `RunConfig` |
-| Projétil / dash / skills | baseline | **=** por defeito | `Game` usa `is EsqueletoPlayer` para flecha reta e HUD do triplo |
+| Projétil / dash / skills | baseline | **=** por padrão | `Game` usa `is EsqueletoPlayer` para flecha reta e HUD do triplo |
 
 **Ficha:** [personagens/ongma_epilef.md](personagens/ongma_epilef.md)
 

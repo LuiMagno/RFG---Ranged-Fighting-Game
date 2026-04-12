@@ -3,7 +3,7 @@ class_name EsqueletoPlayer
 
 ## Personagem base: tiro carregado (velocidade ∝ carga), trajetória reta (sem gravidade) como o pistoleiro.
 ## Tiro base: mínimo 1 s entre disparos (cooldown após soltar o carregamento).
-## Dash, salto duplo. G: arma o próximo disparo do rato como 3 tiros (uma vez, cooldown).
+## Dash, salto duplo. G: arma o próximo disparo do mouse como 3 tiros (uma vez, cooldown).
 ## F/J: segura para carregar um projétil grande em linha reta (tamanho e impulso ∝ carga).
 
 const MIN_SHOOT_COOLDOWN_S := 1.0

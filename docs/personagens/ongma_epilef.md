@@ -1,7 +1,7 @@
 # Ongma Epilef — ficha (personagem de teste)
 
 - **Script:** [`characters/ongma_epilef_player.gd`](../../characters/ongma_epilef_player.gd) (`OngmaEpilefPlayer`).
-- **Herdança:** `extends EsqueletoPlayer` — mesmo kit que o [Esqueleto (baseline)](../esqueleto_personagem_base.md) (tiro carregado, triplo com rato, raio G, dash por duplo toque, etc.), para experimentar mecânicas com overrides mínimos.
+- **Herdança:** `extends EsqueletoPlayer` — mesmo kit que o [Esqueleto (baseline)](../esqueleto_personagem_base.md) (tiro carregado, triplo com mouse, raio G, dash por duplo toque, etc.), para experimentar mecânicas com overrides mínimos.
 - **Enum:** `Player.CharacterKind.ONGMA_EPILEF` (valor **4**).
 
 ## Regra de trabalho

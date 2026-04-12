@@ -41,7 +41,7 @@ const VS_ROUNDS_TO_WIN := 3
 @onready var _vs_round_banner_label: Label = $VsRoundBannerLayer/BannerRoot/BannerCenter/RoundBannerLabel
 @onready var _vs_match_end_menu: VsMatchEndMenu = $VsMatchEndLayer
 
-# Flecha especial do arqueiro no ar (segundo clique em atirar fragmenta).
+# Flecha especial do arqueiro no ar (segundo disparo fragmenta).
 var _archer_carriers: Dictionary = {}
 var _active_grenades: Dictionary = {}
 var _active_ice: Dictionary = {}
@@ -64,6 +64,11 @@ func _enter_tree() -> void:
 
 func _exit_tree() -> void:
 	RunConfig.clear_p1_shoot_mouse_binding()
+
+
+## Reaplica teclas + eventos de comando conforme `RunConfig` (útil se mudares input em pausa no treino).
+func apply_input_map_from_run_config() -> void:
+	_ensure_input_map()
 
 
 func _assign_player_scripts_from_run_config() -> void:
@@ -109,7 +114,7 @@ func _assign_player_script(node: Node, kind: int) -> void:
 
 
 func _ready() -> void:
-	_ensure_input_map()
+	apply_input_map_from_run_config()
 	# Centralized wiring keeps Player and Arrow decoupled from "game rules".
 	left_player.shoot_requested.connect(_spawn_arrow)
 	left_player.shots_requested.connect(_spawn_shots)
@@ -360,8 +365,6 @@ func _ensure_input_map() -> void:
 	_add_action_if_missing("p1_hover_down", KEY_S)
 	if not InputMap.has_action("p1_shoot"):
 		InputMap.add_action("p1_shoot")
-	# Tiro básico P1: só rato. Tira F do project.godot se existir (F = skills, não tiro).
-	_ensure_action_has_mouse_button("p1_shoot", MOUSE_BUTTON_LEFT)
 	_strip_key_from_action("p1_shoot", KEY_F)
 	_add_action_if_missing("p1_grenade", KEY_F)
 	_add_action_if_missing("p1_archer_spike", KEY_F)
@@ -373,6 +376,20 @@ func _ensure_input_map() -> void:
 	_ensure_dash_action("p1_dash", true)
 	_ensure_ui_game_pause_input()
 	_ensure_p2_default_keyboard()
+
+	_ensure_aim_action_quartet("p1")
+	_ensure_aim_action_quartet("p2")
+	_strip_joypad_events_from_actions(_player_action_names("p1"))
+	_strip_joypad_events_from_actions(_player_action_names("p2"))
+	if RunConfig.p1_input_scheme == RunConfig.InputScheme.GAMEPAD:
+		_add_gamepad_mappings_for_player("p1", RunConfig.p1_joy_device)
+	if RunConfig.p2_input_scheme == RunConfig.InputScheme.GAMEPAD:
+		_add_gamepad_mappings_for_player("p2", RunConfig.p2_joy_device)
+
+	if RunConfig.p1_input_scheme == RunConfig.InputScheme.KEYBOARD_MOUSE:
+		_ensure_action_has_mouse_button("p1_shoot", MOUSE_BUTTON_LEFT)
+	else:
+		RunConfig.clear_p1_shoot_mouse_binding()
 
 ## P2 no mesmo teclado (vs local): setas + L tiro; não remover teclas.
 func _ensure_p2_default_keyboard() -> void:
@@ -390,6 +407,89 @@ func _ensure_p2_default_keyboard() -> void:
 	_add_action_if_missing("p2_shield", KEY_SLASH)
 	_add_action_if_missing("p2_mage_float", KEY_Y)
 	_ensure_dash_action("p2_dash", false)
+
+
+func _player_action_names(prefix: String) -> Array:
+	var p := prefix + "_"
+	return [
+		p + "left",
+		p + "right",
+		p + "jump",
+		p + "hover_up",
+		p + "hover_down",
+		p + "shoot",
+		p + "grenade",
+		p + "archer_spike",
+		p + "special",
+		p + "mage_float",
+		p + "shield",
+		p + "dash",
+		p + "aim_left",
+		p + "aim_right",
+		p + "aim_up",
+		p + "aim_down",
+	]
+
+
+func _ensure_aim_action_quartet(prefix: String) -> void:
+	var dz := 0.35
+	for s in ["aim_left", "aim_right", "aim_up", "aim_down"]:
+		var an: StringName = StringName("%s_%s" % [prefix, s])
+		if not InputMap.has_action(an):
+			InputMap.add_action(an, dz)
+
+
+func _strip_joypad_events_from_actions(action_names: Array) -> void:
+	for an in action_names:
+		if not InputMap.has_action(an):
+			continue
+		var to_remove: Array = []
+		for ev in InputMap.action_get_events(an):
+			if ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
+				to_remove.append(ev)
+		for ev in to_remove:
+			InputMap.action_erase_event(an, ev)
+
+
+func _joy_btn(dev: int, button: JoyButton) -> InputEventJoypadButton:
+	var j := InputEventJoypadButton.new()
+	j.device = dev
+	j.button_index = button
+	return j
+
+
+func _joy_motion(dev: int, axis: JoyAxis, axis_value: float) -> InputEventJoypadMotion:
+	var m := InputEventJoypadMotion.new()
+	m.device = dev
+	m.axis = axis
+	m.axis_value = axis_value
+	return m
+
+
+func _add_gamepad_mappings_for_player(prefix: String, device: int) -> void:
+	var p := prefix + "_"
+	# Movimento: stick esquerdo + D-pad horizontal (doc: get_axis em left/right).
+	InputMap.action_add_event(p + "left", _joy_motion(device, JOY_AXIS_LEFT_X, -1.0))
+	InputMap.action_add_event(p + "left", _joy_btn(device, JOY_BUTTON_DPAD_LEFT))
+	InputMap.action_add_event(p + "right", _joy_motion(device, JOY_AXIS_LEFT_X, 1.0))
+	InputMap.action_add_event(p + "right", _joy_btn(device, JOY_BUTTON_DPAD_RIGHT))
+	# Hover na flutuação: gatilhos (evita D-pad vertical em conflito com menus / movimento).
+	InputMap.action_add_event(p + "hover_up", _joy_motion(device, JOY_AXIS_TRIGGER_RIGHT, 1.0))
+	InputMap.action_add_event(p + "hover_down", _joy_motion(device, JOY_AXIS_TRIGGER_LEFT, 1.0))
+	# Mira: stick direito → get_vector nas ações aim_*.
+	InputMap.action_add_event(p + "aim_left", _joy_motion(device, JOY_AXIS_RIGHT_X, -1.0))
+	InputMap.action_add_event(p + "aim_right", _joy_motion(device, JOY_AXIS_RIGHT_X, 1.0))
+	InputMap.action_add_event(p + "aim_up", _joy_motion(device, JOY_AXIS_RIGHT_Y, -1.0))
+	InputMap.action_add_event(p + "aim_down", _joy_motion(device, JOY_AXIS_RIGHT_Y, 1.0))
+	# Xbox-like: tiro RB, pulo A, dash B, especial Y, escudo LB, granada X, mago levitar R3, espinho L3.
+	InputMap.action_add_event(p + "shoot", _joy_btn(device, JOY_BUTTON_RIGHT_SHOULDER))
+	InputMap.action_add_event(p + "jump", _joy_btn(device, JOY_BUTTON_A))
+	InputMap.action_add_event(p + "dash", _joy_btn(device, JOY_BUTTON_B))
+	InputMap.action_add_event(p + "special", _joy_btn(device, JOY_BUTTON_Y))
+	InputMap.action_add_event(p + "shield", _joy_btn(device, JOY_BUTTON_LEFT_SHOULDER))
+	InputMap.action_add_event(p + "grenade", _joy_btn(device, JOY_BUTTON_X))
+	InputMap.action_add_event(p + "mage_float", _joy_btn(device, JOY_BUTTON_RIGHT_STICK))
+	InputMap.action_add_event(p + "archer_spike", _joy_btn(device, JOY_BUTTON_LEFT_STICK))
 
 
 func _ensure_dash_action(action_name: StringName, left_shift: bool) -> void:
@@ -443,6 +543,7 @@ func _ensure_ui_game_pause_input() -> void:
 		if e is InputEventJoypadButton and (e as InputEventJoypadButton).button_index == JOY_BUTTON_START:
 			return
 	var jev := InputEventJoypadButton.new()
+	jev.device = -1
 	jev.button_index = JOY_BUTTON_START
 	InputMap.action_add_event("ui_game_pause", jev)
 
@@ -730,6 +831,7 @@ func _on_right_hp_changed(hp: int) -> void:
 	_check_vs_ko_after_hp_change()
 
 func _on_left_special_buff_changed(active: bool, uses_left: int, _time_left: float) -> void:
+	var s1 := RunConfig.get_shoot_hint_token_for_player(1)
 	if left_player.is_pistoleiro():
 		p1_special_label.visible = active
 		if active:
@@ -742,17 +844,18 @@ func _on_left_special_buff_changed(active: bool, uses_left: int, _time_left: flo
 			if uses_left >= 2:
 				p1_special_label.text = "P1: mire e solte o tiro especial"
 			else:
-				p1_special_label.text = "P1: clique atirar de novo p/ 5 flechas"
+				p1_special_label.text = "P1: %s atirar de novo p/ 5 flechas" % s1
 		else:
 			p1_special_label.text = ""
 	elif left_player is EsqueletoPlayer:
 		p1_special_label.visible = active
-		p1_special_label.text = "P1: próximo tiro (rato) = 3 flechas" if active else ""
+		p1_special_label.text = ("P1: próximo tiro (%s) = 3 flechas" % s1) if active else ""
 	else:
 		p1_special_label.visible = false
 		p1_special_label.text = ""
 
 func _on_right_special_buff_changed(active: bool, uses_left: int, _time_left: float) -> void:
+	var s2 := RunConfig.get_shoot_hint_token_for_player(2)
 	if right_player.is_pistoleiro():
 		p2_special_label.visible = active
 		if active:
@@ -765,12 +868,12 @@ func _on_right_special_buff_changed(active: bool, uses_left: int, _time_left: fl
 			if uses_left >= 2:
 				p2_special_label.text = "P2: mire e solte o tiro especial"
 			else:
-				p2_special_label.text = "P2: clique atirar de novo p/ 5 flechas"
+				p2_special_label.text = "P2: %s atirar de novo p/ 5 flechas" % s2
 		else:
 			p2_special_label.text = ""
 	elif right_player is EsqueletoPlayer:
 		p2_special_label.visible = active
-		p2_special_label.text = "P2: próximo tiro (rato) = 3 flechas" if active else ""
+		p2_special_label.text = ("P2: próximo tiro (%s) = 3 flechas" % s2) if active else ""
 	else:
 		p2_special_label.visible = false
 		p2_special_label.text = ""
@@ -781,9 +884,10 @@ func _on_left_archer_spike_hud(remaining: int, volley_armed: bool) -> void:
 		p1_archer_spike_label.visible = false
 		p1_archer_spike_label.text = ""
 		return
+	var s1 := RunConfig.get_shoot_hint_token_for_player(1)
 	p1_archer_spike_label.visible = remaining > 0 or volley_armed
 	if volley_armed:
-		p1_archer_spike_label.text = "P1 ESPINHOS: solte o tiro → 5 no chão (leque)"
+		p1_archer_spike_label.text = "P1 ESPINHOS: solte (%s) → 5 no chão (leque)" % s1
 	elif remaining > 0:
 		p1_archer_spike_label.text = "P1 ESPINHOS: %d tiro(s) buffado(s)" % remaining
 	else:
@@ -795,9 +899,10 @@ func _on_right_archer_spike_hud(remaining: int, volley_armed: bool) -> void:
 		p2_archer_spike_label.visible = false
 		p2_archer_spike_label.text = ""
 		return
+	var s2 := RunConfig.get_shoot_hint_token_for_player(2)
 	p2_archer_spike_label.visible = remaining > 0 or volley_armed
 	if volley_armed:
-		p2_archer_spike_label.text = "P2 ESPINHOS: solte o tiro → 5 no chão (leque)"
+		p2_archer_spike_label.text = "P2 ESPINHOS: solte (%s) → 5 no chão (leque)" % s2
 	elif remaining > 0:
 		p2_archer_spike_label.text = "P2 ESPINHOS: %d tiro(s) buffado(s)" % remaining
 	else:

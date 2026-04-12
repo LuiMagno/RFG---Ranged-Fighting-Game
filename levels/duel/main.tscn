@@ -434,11 +434,11 @@ text = "Continuar"
 
 [node name="BtnTrainingSettings" type="Button" parent="TrainingPauseLayer/Root/Center/Panel/MainMenu"]
 layout_mode = 2
-text = "Definições de treino"
+text = "Configurações do treino"
 
 [node name="BtnModeMenu" type="Button" parent="TrainingPauseLayer/Root/Center/Panel/MainMenu"]
 layout_mode = 2
-text = "Voltar à seleção de jogo"
+text = "Voltar à seleção de modo"
 
 [node name="SettingsMenu" type="VBoxContainer" parent="TrainingPauseLayer/Root/Center/Panel"]
 visible = false
@@ -454,7 +454,7 @@ theme_override_constants/separation = 14
 
 [node name="SettingsTitle" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu"]
 layout_mode = 2
-text = "Definições de treino"
+text = "Configurações do treino"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(0.92, 0.95, 1, 1)
@@ -478,6 +478,30 @@ vertical_alignment = 1
 [node name="OptP1Class" type="OptionButton" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/ClassP1Row"]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="SectionInputP1" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu"]
+layout_mode = 2
+text = "Controles (P1)"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+
+[node name="InputP1Row" type="HBoxContainer" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="InputP1Label" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/InputP1Row"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "P1 — Entrada"
+vertical_alignment = 1
+
+[node name="OptP1Scheme" type="OptionButton" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/InputP1Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="OptP1Device" type="OptionButton" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/InputP1Row"]
+custom_minimum_size = Vector2(170, 0)
+layout_mode = 2
 
 [node name="CharChangeHint" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu"]
 layout_mode = 2

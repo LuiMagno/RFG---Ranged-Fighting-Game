@@ -3,11 +3,14 @@ extends Control
 @onready var btn_vs: Button = $Center/MainPanel/VBox/BtnVs
 @onready var btn_training: Button = $Center/MainPanel/VBox/BtnTraining
 @onready var btn_quit: Button = $Center/MainPanel/VBox/BtnQuit
+@onready var _hint: Label = $Center/MainPanel/VBox/Hint
 @onready var _main_panel: Panel = $Center/MainPanel
 
 
 func _ready() -> void:
 	RunConfig.clear_p1_shoot_mouse_binding()
+	if _hint != null:
+		_hint.text = RunConfig.get_main_menu_controls_hint()
 	MenuThemeUtil.apply_main_panel_style(_main_panel)
 	MenuThemeUtil.style_menu_button(btn_vs, true)
 	MenuThemeUtil.style_menu_button(btn_training, false)

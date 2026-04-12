@@ -28,7 +28,7 @@ O retângulo visual “chão” (`Ground` ColorRect) ocupa **y = 780 … 864**, 
 
 ### Metades e “cerca” por jogador
 
-O jogador não atravessa o meio do ecrã: em `_enforce_arena_half()` (`player.gd`) usa-se o retângulo do viewport, um ponto médio `mid = width / 2` e `arena_padding_x` (**36** px por defeito).
+O jogador não atravessa o meio da tela: em `_enforce_arena_half()` (`player.gd`) usa-se o retângulo do viewport, um ponto médio `mid = width / 2` e `arena_padding_x` (**36** px por padrão).
 
 - **Player 1:** `x` clampado entre **36** e **`mid − 36`** → em 1920 px, aprox. **36 … 924**.
 - **Player 2:** `x` clampado entre **`mid + 36`** e **1884** → aprox. **996 … 1884**.
@@ -47,7 +47,7 @@ Em `main.tscn`, os dois lutadores partilham a mesma geometria base:
 |----------|--------|
 | `CollisionShape2D` | Retângulo **40 × 90** px |
 | `collision_mask` | **3** (colide com as layers 1 e 2 da máscara — tipicamente mundo + projéteis, conforme layers do projeto) |
-| `collision_layer` | Não definido na cena → **layer 1** por defeito do Godot |
+| `collision_layer` | Não definido na cena → **layer 1** por padrão do Godot |
 
 Posições iniciais de exemplo na cena: P1 **(210, 672)**, P2 **(1710, 672)** (podem mudar em outros modos/respawns).
 
@@ -56,7 +56,7 @@ Posições iniciais de exemplo na cena: P1 **(210, 672)**, P2 **(1710, 672)** (p
 - Velocidade base: `move_speed` = **260** px/s.
 - Input: eixo esquerdo/direito (`_get_move_axis`).
 - Com **corrida** ativa e **só** a tecla “para a frente” (em direção ao adversário): multiplicador `sprint_speed_multiplier` = **1,42** → até **~369** px/s.
-- **Corrida (Pistoleiro, Arqueiro, Mago):** duplo toque na tecla “frente” dentro de `sprint_double_tap_window` (**0,50** s por defeito em `Player`, `_update_double_tap_forward_movement`). Dash por tecla ou knockback interrompem a corrida.
+- **Corrida (Pistoleiro, Arqueiro, Mago):** duplo toque na tecla “frente” dentro de `sprint_double_tap_window` (**0,50** s por padrão em `Player`, `_update_double_tap_forward_movement`). Dash por tecla ou knockback interrompem a corrida.
 - **Esqueleto / Ongma Epilef:** a mesma janela `sprint_double_tap_window` mede o intervalo para **dash** (duplo frente ou duplo trás); **não** activam sprint. Ver `EsqueletoPlayer._update_double_tap_forward_movement()` e [esqueleto_personagem_base.md](esqueleto_personagem_base.md) secções 5–7.
 
 ### Gravidade e pulo
@@ -71,7 +71,7 @@ No chão, se `velocity.y > 0`, é forcado a **0** (colagem ao solo).
 
 ### Dash (comportamento base)
 
-Valores **por defeito** em `_get_dash_stats()` na classe `Player`:
+Valores **por padrão** em `_get_dash_stats()` na classe `Player`:
 
 | Campo | Valor |
 |-------|--------|
@@ -101,7 +101,7 @@ Regras importantes:
 
 ### Vida e combate comum
 
-- `max_hp` = **100** por defeito.
+- `max_hp` = **100** por padrão.
 - Mira: ângulo limitado a **±85°** (`aim_limit_deg`); P1 mira com eixo “frente” **direita**, P2 **esquerda** (`_apply_mouse_aim`).
 - Tiro carregado na base: `min_launch_speed` / `max_launch_speed` **420 / 900**, `max_charge_time` **1,0** s; prévia com `trajectory_points` **24** e `trajectory_step` **0,08** s.
 - Recoil: acumula `_recoil_vel` e decai com `recoil_decay` **2400**; ver exports `recoil_*` em `player.gd`.

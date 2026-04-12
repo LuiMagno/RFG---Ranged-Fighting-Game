@@ -4,13 +4,13 @@ Estrutura alinhada a [Esqueleto — personagem base (referência de design)](../
 
 **Script:** `characters/arqueiro_player.gd` (`ArqueiroPlayer`).
 
-**Controles (duelo):** tiro com carga = P1 rato / P2 **L**. Buff de espinhos: **F** (`p1_archer_spike`) / **U** (`p2_archer_spike`). Especial **G** / **O**: sem buff ativo entra no fluxo “flecha portadora + split”; com tiros de espinho buffados pode armar leque de 5 (`spike_volley`). Ver `levels/duel/game.gd`.
+**Controles (duelo):** tiro com carga = P1 mouse / P2 **L**. Buff de espinhos: **F** (`p1_archer_spike`) / **U** (`p2_archer_spike`). Especial **G** / **O**: sem buff ativo entra no fluxo “flecha portadora + split”; com tiros de espinho buffados pode armar leque de 5 (`spike_volley`). Ver `levels/duel/game.gd`.
 
 ---
 
 ## 1. Física do projétil principal (tiro carregado)
 
-Usa `Arrow` por defeito. O `Game` **não** aplica a regra pistoleiro/esqueleto: gravidade no voo = **`arrow.gravity_accel`** (**1200** px/s²), ricochetes **0**.
+Usa `Arrow` por padrão. O `Game` **não** aplica a regra pistoleiro/esqueleto: gravidade no voo = **`arrow.gravity_accel`** (**1200** px/s²), ricochetes **0**.
 
 | Parâmetro | Valor | Notas |
 |-----------|--------|--------|

@@ -20,7 +20,7 @@ O `Game` instancia **`HomingMissile`** (`projectiles/homing_missile/`), não a f
 | Homing (export no míssil) | Ex.: **120** °/s de rotação, lead **0,06** s, `homing_min_speed` **340**, etc. | `homing_missile.gd` |
 | Recoil no disparo | **recoil_normal × 0,82** (= **139,4**) | `_process_combat` mago |
 
-Cooldown após tiro: **`shoot_cooldown`** do `Player` (**0,4** s por defeito).
+Cooldown após tiro: **`shoot_cooldown`** do `Player` (**0,4** s por padrão).
 
 ---
 

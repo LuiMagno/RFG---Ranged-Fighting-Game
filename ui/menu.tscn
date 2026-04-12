@@ -96,5 +96,5 @@ layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.5, 0.55, 0.62, 1)
 theme_override_font_sizes/font_size = 11
-text = "P1 tiro: rato  •  P2 tiro: L  •  F: skills  •  Mago: C levitar, G orbe  •  Enter no Vs: pausa"
+text = "Dica de controles carregada ao abrir o menu."
 autowrap_mode = 3

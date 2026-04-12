@@ -63,6 +63,18 @@ static func fill_class_option(ob: OptionButton) -> void:
 	ob.add_item("Ongma Epilef (teste)")
 
 
+static func fill_input_scheme_option(ob: OptionButton) -> void:
+	ob.clear()
+	ob.add_item("Teclado e mouse", RunConfig.InputScheme.KEYBOARD_MOUSE)
+	ob.add_item("Controle", RunConfig.InputScheme.GAMEPAD)
+
+
+static func fill_joy_device_option(ob: OptionButton) -> void:
+	ob.clear()
+	for i in 8:
+		ob.add_item("Controle nº %d" % i, i)
+
+
 ## Índice = Player.CharacterKind (0..4). Usado no HUD do Vs.
 static func vs_character_name(kind: int) -> String:
 	match clampi(kind, 0, 4):

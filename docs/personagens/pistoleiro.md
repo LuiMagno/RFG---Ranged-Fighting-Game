@@ -4,13 +4,13 @@ Estrutura alinhada a [Esqueleto — personagem base (referência de design)](../
 
 **Script:** `characters/pistoleiro_player.gd` (`PistoleiroPlayer`).
 
-**Controles (duelo):** tiro principal = mesmo mapa que os outros (P1 rato, P2 **L**). **F** / **J** = granada instantânea (arremesso fixo em velocidade máxima ou detonar se já existir). **G** / **O** = especial (buff de sequência de 3 ataques). Ver `levels/duel/game.gd` (`_ensure_input_map`).
+**Controles (duelo):** tiro principal = mesmo mapa que os outros (P1 mouse, P2 **L**). **F** / **J** = granada instantânea (arremesso fixo em velocidade máxima ou detonar se já existir). **G** / **O** = especial (buff de sequência de 3 ataques). Ver `levels/duel/game.gd` (`_ensure_input_map`).
 
 ---
 
 ## 1. Física do projétil principal (tiro carregado + cadeia)
 
-Usa `projectiles/arrow/arrow.tscn`. O `Game` trata pistoleiro como tiro **sem gravidade** e com **1 ricochete** por defeito nos spawns normais.
+Usa `projectiles/arrow/arrow.tscn`. O `Game` trata pistoleiro como tiro **sem gravidade** e com **1 ricochete** por padrão nos spawns normais.
 
 | Parâmetro | Valor | Notas |
 |-----------|--------|--------|
@@ -105,5 +105,5 @@ Sem overrides — igual ao sprint descrito na [secção 7 do baseline do Esquele
 ## 9. Arquivos
 
 - `characters/pistoleiro_player.gd`
-- `levels/duel/game.gd` — spawn `Arrow` com `g=0`, `bounces=1` por defeito
+- `levels/duel/game.gd` — spawn `Arrow` com `g=0`, `bounces=1` por padrão
 - `projectiles/grenade/` — granada
