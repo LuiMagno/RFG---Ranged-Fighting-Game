@@ -2,9 +2,9 @@ extends CharacterBody2D
 class_name Player
 
 ## Classe base: movimento, mira, vida, tiro carregado (lógica comum) e sinais.
-## Jogabilidade específica: PistoleiroPlayer, ArqueiroPlayer, MagoPlayer, EsqueletoPlayer (base reta).
+## Jogabilidade específica: PistoleiroPlayer, ArqueiroPlayer, MagoPlayer, EsqueletoPlayer, OngmaEpilefPlayer.
 
-enum CharacterKind { PISTOLEIRO, ARQUEIRO, MAGO, ESQUELETO }
+enum CharacterKind { PISTOLEIRO, ARQUEIRO, MAGO, ESQUELETO, ONGMA_EPILEF }
 
 signal shoot_requested(owner_player: Player, spawn_position: Vector2, initial_velocity: Vector2, shot_flags: Dictionary)
 signal health_changed(current_hp: int)
@@ -105,6 +105,10 @@ func is_mago() -> bool:
 
 
 func is_esqueleto() -> bool:
+	return false
+
+
+func is_ongma_epilef() -> bool:
 	return false
 
 
@@ -357,12 +361,14 @@ func _physics_process(delta: float) -> void:
 	if is_on_floor():
 		_jumps_left = max_jumps
 
-	if (not hovering) and _jump_just_pressed() and _jumps_left > 0 and _allow_jump_while_concentrating():
-		if _dash_time_left > 0.0:
-			_apply_jump_during_dash()
-		else:
-			velocity.y = -jump_speed
-			_jumps_left -= 1
+	if (not hovering) and _jump_just_pressed() and _allow_jump_while_concentrating():
+		var special := _try_special_air_jump()
+		if not special and _jumps_left > 0:
+			if _dash_time_left > 0.0:
+				_apply_jump_during_dash()
+			else:
+				velocity.y = -jump_speed
+				_jumps_left -= 1
 
 	# Dash com gravidade “zerada”: sem aceleração para baixo e sem continuar acumulando queda (vy > 0).
 	if _dash_time_left > 0.0 and not is_on_floor() and not hovering:
@@ -429,6 +435,11 @@ func _refresh_sprint_body_modulate() -> void:
 
 func _allow_jump_while_concentrating() -> bool:
 	return true
+
+
+## Subclasses (ex.: Ongma Epilef) podem consumir o input de pulo no ar antes do salto normal.
+func _try_special_air_jump() -> bool:
+	return false
 
 
 func _apply_mouse_aim() -> void:

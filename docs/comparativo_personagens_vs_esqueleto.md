@@ -1,6 +1,6 @@
 # Comparativo: personagens vs. Esqueleto (baseline)
 
-O **Esqueleto** é a referência de design; os valores “Esqueleto” abaixo resumem o que está em [esqueleto_personagem_base.md](esqueleto_personagem_base.md). Fichas detalhadas por personagem: [personagens/](personagens/).
+O **Esqueleto** é a referência de design; os valores “Esqueleto” abaixo resumem o que está em [esqueleto_personagem_base.md](esqueleto_personagem_base.md). Fichas detalhadas por personagem: [personagens/](personagens/). **Ongma Epilef** herda o esqueleto (`extends EsqueletoPlayer`); para comparativo numérico coincide com o baseline até haver overrides — ver [personagens/ongma_epilef.md](personagens/ongma_epilef.md).
 
 **Legenda:** “=” igual ao baseline herdado de `Player` ou à mesma cena; “≠” diferente.
 
@@ -12,9 +12,9 @@ O **Esqueleto** é a referência de design; os valores “Esqueleto” abaixo re
 |------|----------------|
 | Projétil principal | `Arrow`; velocidade **420–900**; carga **1,0** s; **g = 0**; **0** ricochetes; cooldown **≥ 1,0** s |
 | Recoil tiro simples | **170** |
-| Dash | **620** px/s, **0,20** s, CD **0,92** s, grav. **0,46** |
+| Dash | **620** px/s, **0,20** s, CD **0,1** s, **`gravity_scale` 0** (sem queda durante o dash no ar); activação por **duplo toque** frente/trás — **não** por Shift |
 | Escudo | **Nenhum** (0 cargas) |
-| Movimento / pulo / sprint | `move_speed` **260**, `jump_speed` **650**, `max_jumps` **2**, sprint **×1,42** |
+| Movimento / pulo | `move_speed` **260**, `jump_speed` **650**, `max_jumps` **2**; **sem sprint** por duplo toque (o duplo toque dispara **dash**) |
 | Corpo (hitbox) | **40×90** px |
 | Skills | Triplo (CD **5** s) + raio carregável (CD **4,25** s, dano **36**, escala **1,85–3,45**) |
 
@@ -35,10 +35,11 @@ O **Esqueleto** é a referência de design; os valores “Esqueleto” abaixo re
 | Skills | Triplo + raio | Buff 3 ataques + granada | ≠ |
 | Dash velocidade | 620 | **520** | ≠ dash mais lento, mais longo no tempo |
 | Dash duração | 0,20 s | **0,28** s | ≠ |
-| Dash cooldown | 0,92 s | **1,05** s | ≠ |
-| Dash grav. scale | 0,46 | **0,55** | ≠ |
+| Dash cooldown | 0,1 s | **1,05** s | ≠ |
+| Dash grav. scale | **0** | **0,55** | ≠ |
+| Dash input | Duplo toque frente/trás | Tecla Shift | ≠ |
 | Escudo | Não | **Sim**, 4 cargas, CD **4,25** s | ≠ |
-| Pulo / corrida / HP / hitbox | baseline | baseline | = (salto bloqueado no especial grande) |
+| Pulo / corrida / HP / hitbox | baseline (sem sprint; pulo no dash especial) | baseline + sprint por duplo D | = hitbox/HP; ≠ sprint e dash |
 
 **Ficha:** [personagens/pistoleiro.md](personagens/pistoleiro.md)
 
@@ -57,10 +58,11 @@ O **Esqueleto** é a referência de design; os valores “Esqueleto” abaixo re
 | Skills | Triplo + raio | Espinhos + split + volley | ≠ |
 | Dash velocidade | 620 | **980** | ≠ dash ofensivo / escape |
 | Dash duração | 0,20 s | **0,1** s | ≠ “snappy” |
-| Dash cooldown | 0,92 s | **0,8** s | ≠ |
-| Dash grav. scale | 0,46 | **0,32** | ≠ |
+| Dash cooldown | 0,1 s | **0,8** s | ≠ |
+| Dash grav. scale | **0** | **0,32** | ≠ |
+| Dash input | Duplo toque | Shift | ≠ |
 | Escudo | Não | **Sim**, 3 cargas; refletir cura **+6** HP | ≠ |
-| Pulo / corrida / hitbox | baseline | baseline | = |
+| Pulo / corrida / hitbox | baseline (sem sprint) | baseline + sprint | = hitbox/pulo base |
 
 **Ficha:** [personagens/arqueiro.md](personagens/arqueiro.md)
 
@@ -80,10 +82,11 @@ O **Esqueleto** é a referência de design; os valores “Esqueleto” abaixo re
 | Skills | Triplo + raio | Gelo + levitação + orbe | ≠ |
 | Dash velocidade | 620 | **760** | ≠ |
 | Dash duração | 0,20 s | **0,16** s | ≠ |
-| Dash cooldown | 0,92 s | **1,0** s | ≠ |
-| Dash grav. scale | 0,46 | **0,42** | ≈ |
+| Dash cooldown | 0,1 s | **1,0** s | ≠ |
+| Dash grav. scale | **0** | **0,42** | ≠ |
+| Dash input | Duplo toque | Shift | ≠ |
 | Escudo | Não | Não | = |
-| Pulo / corrida / hitbox | baseline | baseline | = (interações com carga de orbe) |
+| Pulo / corrida / hitbox | baseline (sem sprint) | baseline + sprint | = hitbox; orbe etc. |
 
 **Ficha:** [personagens/mago.md](personagens/mago.md)
 
@@ -92,6 +95,18 @@ O **Esqueleto** é a referência de design; os valores “Esqueleto” abaixo re
 ## Esqueleto vs. Esqueleto
 
 Documento canónico: [esqueleto_personagem_base.md](esqueleto_personagem_base.md) · Índice curto: [personagens/esqueleto.md](personagens/esqueleto.md).
+
+---
+
+## Ongma Epilef vs. Esqueleto
+
+| Tópico | Esqueleto | Ongma Epilef | Notas |
+|--------|-----------|--------------|--------|
+| Script | `EsqueletoPlayer` | `OngmaEpilefPlayer` **extends EsqueletoPlayer** | Mesmo kit até overrides |
+| `CharacterKind` | **3** | **4** | Menu / `RunConfig` |
+| Projétil / dash / skills | baseline | **=** por defeito | `Game` usa `is EsqueletoPlayer` para flecha reta e HUD do triplo |
+
+**Ficha:** [personagens/ongma_epilef.md](personagens/ongma_epilef.md)
 
 ---
 

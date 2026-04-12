@@ -56,7 +56,8 @@ Posições iniciais de exemplo na cena: P1 **(210, 672)**, P2 **(1710, 672)** (p
 - Velocidade base: `move_speed` = **260** px/s.
 - Input: eixo esquerdo/direito (`_get_move_axis`).
 - Com **corrida** ativa e **só** a tecla “para a frente” (em direção ao adversário): multiplicador `sprint_speed_multiplier` = **1,42** → até **~369** px/s.
-- **Corrida:** duplo toque na tecla “frente” dentro de `sprint_double_tap_window` = **0,50** s (`_update_double_tap_forward_movement`). Dash ou knockback interrompem a corrida.
+- **Corrida (Pistoleiro, Arqueiro, Mago):** duplo toque na tecla “frente” dentro de `sprint_double_tap_window` (**0,50** s por defeito em `Player`, `_update_double_tap_forward_movement`). Dash por tecla ou knockback interrompem a corrida.
+- **Esqueleto / Ongma Epilef:** a mesma janela `sprint_double_tap_window` mede o intervalo para **dash** (duplo frente ou duplo trás); **não** activam sprint. Ver `EsqueletoPlayer._update_double_tap_forward_movement()` e [esqueleto_personagem_base.md](esqueleto_personagem_base.md) secções 5–7.
 
 ### Gravidade e pulo
 
@@ -81,11 +82,14 @@ Valores **por defeito** em `_get_dash_stats()` na classe `Player`:
 
 Regras importantes:
 
+- O início do dash por tecla passa por **`start_dash_with_direction(dir_sign)`**, que respeita `_can_start_dash()` (cooldown, carregar tiro, etc.).
 - Durante o dash, **`velocity.x`** mantém-se fixo no sentido do dash; o cooldown de dash só começa quando `duration` expira.
 - **Não** se pode iniciar dash se `input_enabled` for falso, se o cooldown ainda não acabou, se estiver a carregar tiro (`_is_charging`) ou se a subclasse reportar carregamento de granada (`_is_grenade_charging_active()`).
-- **Pulo durante o dash:** se há pulos restantes, `_apply_jump_during_dash()` cancela o dash (`_dash_time_left = 0`), aplica `velocity.y = -jump_speed` e gasta um pulo.
-- Se `gravity_scale <= 0` (ex.: dash “sem gravidade”), em ar o código **limita** `velocity.y` a não subir por inércia de queda durante o dash (`velocity.y = minf(velocity.y, 0.0)`).
-- Subclasses (Esqueleto, Pistoleiro, Arqueiro, Mago) **substituem** `_get_dash_stats()` com números próprios.
+- **Pulo durante o dash:** com pulos restantes, chama-se `_apply_jump_during_dash()` (na base: cancela dash, `velocity.y = -jump_speed`, gasta um pulo). **`EsqueletoPlayer`** sobrescreve com pulo mais horizontal — ver ficha do esqueleto.
+- **Gravidade:** só se aplica `velocity.y += gravity_accel * gmul * delta` se `gmul > 0.0001` (evita somar gravidade com multiplicador ~0).
+- Se `gravity_scale <= 0` durante dash **no ar**, após o bloco de pulo o código faz `velocity.y = minf(velocity.y, 0.0)` — remove componente de **queda** durante o dash, mantendo subida (`vy < 0`).
+- **Esqueleto / Ongma:** `_dash_just_pressed()` no esqueleto é **false**; o dash vem só do duplo toque. Pistoleiro, Arqueiro e Mago usam **Shift** (`p1_dash` / `p2_dash`) como antes.
+- Subclasses **substituem** `_get_dash_stats()` com números próprios (ex.: esqueleto com `gravity_scale` **0** e cooldown **0,1** s).
 
 ### Stun, knockback e congelamento
 
@@ -111,7 +115,7 @@ Regras importantes:
 ## 3. Projéteis (visão global)
 
 - A **flecha** base (`projectiles/arrow/arrow.tscn`) usa `CharacterBody2D`, **layer 2**, **mask 11**, colisor circular **raio 10**.
-- O **spawn** e regras (gravidade no voo, ricochetes, cenas alternativas) estão centralizados em `Game._spawn_one_arrow` e sinais em `Player`.
+- O **spawn** e regras (gravidade no voo, ricochetes, cenas alternativas) estão centralizados em `Game._spawn_one_arrow` e sinais em `Player`. Flecha **sem** gravidade no voo para pistoleiro ou qualquer dono com `owner_player is EsqueletoPlayer` (Esqueleto, Ongma Epilef).
 - Projéteis saem do **muzzle**; o corpo do jogador é apenas corrigido na **metade** da arena, não há “soft kill” por sair da tela para o jogador (flechas podem ser destruídas ao sair do viewport na própria lógica da `Arrow`).
 
 ---

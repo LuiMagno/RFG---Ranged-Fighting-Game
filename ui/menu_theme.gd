@@ -60,11 +60,12 @@ static func fill_class_option(ob: OptionButton) -> void:
 	ob.add_item("Arqueiro")
 	ob.add_item("Mago")
 	ob.add_item("Esqueleto")
+	ob.add_item("Ongma Epilef (teste)")
 
 
-## Índice = Player.CharacterKind (0..3). Usado no HUD do Vs.
+## Índice = Player.CharacterKind (0..4). Usado no HUD do Vs.
 static func vs_character_name(kind: int) -> String:
-	match clampi(kind, 0, 3):
+	match clampi(kind, 0, 4):
 		0:
 			return "Pistoleiro"
 		1:
@@ -73,13 +74,15 @@ static func vs_character_name(kind: int) -> String:
 			return "Mago"
 		3:
 			return "Esqueleto"
+		4:
+			return "Ongma Epilef"
 		_:
 			return "—"
 
 
 ## Cor de destaque por classe (legível sobre fundo escuro).
 static func vs_character_accent_color(kind: int) -> Color:
-	match clampi(kind, 0, 3):
+	match clampi(kind, 0, 4):
 		0:
 			return Color(0.52, 0.82, 1.0)
 		1:
@@ -88,5 +91,7 @@ static func vs_character_accent_color(kind: int) -> Color:
 			return Color(0.78, 0.52, 1.0)
 		3:
 			return Color(0.92, 0.86, 0.58)
+		4:
+			return Color(0.55, 0.78, 0.95)
 		_:
 			return Color(0.9, 0.92, 0.96, 1)

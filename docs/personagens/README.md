@@ -10,5 +10,6 @@ Cada lutador tem uma **ficha** com a mesma estrutura conceitual do documento bas
 | Pistoleiro | [pistoleiro.md](pistoleiro.md) |
 | Arqueiro | [arqueiro.md](arqueiro.md) |
 | Mago | [mago.md](mago.md) |
+| Ongma Epilef (teste) | [ongma_epilef.md](ongma_epilef.md) |
 
 **Comparativo numérico** (todos vs. Esqueleto): [comparativo_personagens_vs_esqueleto.md](../comparativo_personagens_vs_esqueleto.md)

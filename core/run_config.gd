@@ -10,7 +10,7 @@ var mode: Mode = Mode.VS_PLAYER
 var training_dummy_shoot: bool = true
 var training_dummy_interval: float = 3.0
 
-# Personagem: 0 = pistoleiro, 1 = arqueiro, 2 = mago, 3 = esqueleto. Ver Game._assign_player_script.
+# Personagem: 0 = pistoleiro, 1 = arqueiro, 2 = mago, 3 = esqueleto, 4 = ongma epilef (teste). Ver Game._assign_player_script.
 var p1_character: int = 0
 var p2_character: int = 1
 

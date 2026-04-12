@@ -17,6 +17,7 @@ const PISTOLEIRO_PLAYER_SCRIPT := "res://characters/pistoleiro_player.gd"
 const ARQUEIRO_PLAYER_SCRIPT := "res://characters/arqueiro_player.gd"
 const MAGO_PLAYER_SCRIPT := "res://characters/mago_player.gd"
 const ESQUELETO_PLAYER_SCRIPT := "res://characters/esqueleto_player.gd"
+const ONGMA_EPILEF_PLAYER_SCRIPT := "res://characters/ongma_epilef_player.gd"
 
 const VS_ROUND_DURATION_S := 60.0
 const VS_ROUNDS_TO_WIN := 3
@@ -98,6 +99,8 @@ func _assign_player_script(node: Node, kind: int) -> void:
 		path = MAGO_PLAYER_SCRIPT
 	elif kind == Player.CharacterKind.ESQUELETO:
 		path = ESQUELETO_PLAYER_SCRIPT
+	elif kind == Player.CharacterKind.ONGMA_EPILEF:
+		path = ONGMA_EPILEF_PLAYER_SCRIPT
 	else:
 		path = MAGO_PLAYER_SCRIPT
 	var scr := load(path) as Script
@@ -619,7 +622,7 @@ func _spawn_one_arrow(
 	var g := gravity_override
 	var b := bounces_override
 	if g == INF:
-		g = 0.0 if (owner_player.is_pistoleiro() or owner_player.is_esqueleto()) else arrow.gravity_accel
+		g = 0.0 if (owner_player.is_pistoleiro() or (owner_player is EsqueletoPlayer)) else arrow.gravity_accel
 	if b < 0:
 		b = 1 if owner_player.is_pistoleiro() else 0
 
@@ -742,7 +745,7 @@ func _on_left_special_buff_changed(active: bool, uses_left: int, _time_left: flo
 				p1_special_label.text = "P1: clique atirar de novo p/ 5 flechas"
 		else:
 			p1_special_label.text = ""
-	elif left_player.is_esqueleto():
+	elif left_player is EsqueletoPlayer:
 		p1_special_label.visible = active
 		p1_special_label.text = "P1: próximo tiro (rato) = 3 flechas" if active else ""
 	else:
@@ -765,7 +768,7 @@ func _on_right_special_buff_changed(active: bool, uses_left: int, _time_left: fl
 				p2_special_label.text = "P2: clique atirar de novo p/ 5 flechas"
 		else:
 			p2_special_label.text = ""
-	elif right_player.is_esqueleto():
+	elif right_player is EsqueletoPlayer:
 		p2_special_label.visible = active
 		p2_special_label.text = "P2: próximo tiro (rato) = 3 flechas" if active else ""
 	else:

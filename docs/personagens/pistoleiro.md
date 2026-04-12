@@ -89,7 +89,7 @@ Sem overrides no script — iguais ao `Player` / baseline Esqueleto (`jump_speed
 
 ## 7. Corrida (sprint)
 
-Sem overrides — igual ao [baseline](../esqueleto_personagem_base.md#7-corrida-sprint-por-duplo-toque-para-frente).
+Sem overrides — igual ao sprint descrito na [secção 7 do baseline do Esqueleto](../esqueleto_personagem_base.md) (ramo “outros personagens”, não o kit duplo‑toque‑dash).
 
 ---
 
