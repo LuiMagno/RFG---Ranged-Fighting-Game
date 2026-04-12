@@ -344,11 +344,12 @@ func _physics_process(delta: float) -> void:
 	_recoil_vel = _recoil_vel.move_toward(Vector2.ZERO, recoil_decay * delta)
 
 	if not is_on_floor():
-		var gmul := 1.0
-		if _dash_time_left > 0.0:
-			gmul = float(_get_dash_stats().get("gravity_scale", 0.42))
 		if not hovering:
-			velocity.y += gravity_accel * gmul * delta
+			var gmul := 1.0
+			if _dash_time_left > 0.0:
+				gmul = float(_get_dash_stats().get("gravity_scale", 0.42))
+			if gmul > 0.0001:
+				velocity.y += gravity_accel * gmul * delta
 	else:
 		if velocity.y > 0.0:
 			velocity.y = 0.0
@@ -362,6 +363,12 @@ func _physics_process(delta: float) -> void:
 		else:
 			velocity.y = -jump_speed
 			_jumps_left -= 1
+
+	# Dash com gravidade “zerada”: sem aceleração para baixo e sem continuar acumulando queda (vy > 0).
+	if _dash_time_left > 0.0 and not is_on_floor() and not hovering:
+		var gs := float(_get_dash_stats().get("gravity_scale", 0.42))
+		if gs <= 0.0001:
+			velocity.y = minf(velocity.y, 0.0)
 
 	_refresh_sprint_body_modulate()
 	move_and_slide()
