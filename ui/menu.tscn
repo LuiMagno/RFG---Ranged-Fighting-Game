@@ -34,7 +34,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="MainPanel" type="Panel" parent="Center"]
-custom_minimum_size = Vector2(560, 520)
+custom_minimum_size = Vector2(520, 320)
 layout_mode = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center/MainPanel"]
@@ -50,56 +50,19 @@ theme_override_constants/separation = 14
 
 [node name="Title" type="Label" parent="Center/MainPanel/VBox"]
 layout_mode = 2
-text = "ARCO"
+text = "RFG - Ranged Fighting Game"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 28
 theme_override_colors/font_color = Color(0.88, 0.93, 1, 1)
 
 [node name="Subtitle" type="Label" parent="Center/MainPanel/VBox"]
 layout_mode = 2
-text = "Duelo de arqueiros"
+text = "Escolha o modo de jogo"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 15
 theme_override_colors/font_color = Color(0.55, 0.62, 0.75, 1)
 
 [node name="SepTop" type="HSeparator" parent="Center/MainPanel/VBox"]
-layout_mode = 2
-
-[node name="SectionClasses" type="Label" parent="Center/MainPanel/VBox"]
-layout_mode = 2
-text = "Classes"
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
-
-[node name="ClassP1Row" type="HBoxContainer" parent="Center/MainPanel/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="ClassP1Label" type="Label" parent="Center/MainPanel/VBox/ClassP1Row"]
-custom_minimum_size = Vector2(150, 0)
-layout_mode = 2
-text = "Jogador 1 (esq.)"
-vertical_alignment = 1
-
-[node name="OptP1Class" type="OptionButton" parent="Center/MainPanel/VBox/ClassP1Row"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="ClassP2Row" type="HBoxContainer" parent="Center/MainPanel/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="ClassP2Label" type="Label" parent="Center/MainPanel/VBox/ClassP2Row"]
-custom_minimum_size = Vector2(150, 0)
-layout_mode = 2
-text = "Jogador 2 (dir.)"
-vertical_alignment = 1
-
-[node name="OptP2Class" type="OptionButton" parent="Center/MainPanel/VBox/ClassP2Row"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="SepMid" type="HSeparator" parent="Center/MainPanel/VBox"]
 layout_mode = 2
 
 [node name="BtnVs" type="Button" parent="Center/MainPanel/VBox"]
@@ -111,21 +74,6 @@ text = "Vs Player"
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 text = "Treinamento"
-
-[node name="TrainingBox" type="VBoxContainer" parent="Center/MainPanel/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="TrainingLabel" type="Label" parent="Center/MainPanel/VBox/TrainingBox"]
-layout_mode = 2
-text = "Opções do treino"
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
-
-[node name="ChkDummyShoot" type="CheckBox" parent="Center/MainPanel/VBox/TrainingBox"]
-layout_mode = 2
-button_pressed = true
-text = "Boneco atira a cada 3 segundos"
 
 [node name="SepBottom" type="HSeparator" parent="Center/MainPanel/VBox"]
 layout_mode = 2

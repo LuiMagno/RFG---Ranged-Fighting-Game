@@ -15,7 +15,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Arco - Duelo de Arqueiros"
-run/main_scene="res://ui/menu.tscn"
+run/main_scene="res://ui/start_game.tscn"
 config/features=PackedStringArray("4.6")
 
 [autoload]

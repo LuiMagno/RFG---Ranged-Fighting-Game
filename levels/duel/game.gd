@@ -28,9 +28,6 @@ const ESQUELETO_PLAYER_SCRIPT := "res://characters/esqueleto_player.gd"
 @onready var p2_special_label: Label = $UI/P2Special
 @onready var p1_archer_spike_label: Label = $UI/P1ArcherSpike
 @onready var p2_archer_spike_label: Label = $UI/P2ArcherSpike
-@onready var training_panel: Control = get_node_or_null("UI/TrainingPanel") as Control
-@onready var training_chk_dummy: CheckBox = get_node_or_null("UI/TrainingPanel/VBox/ChkDummyShoot") as CheckBox
-@onready var training_btn_menu: Button = get_node_or_null("UI/TrainingPanel/VBox/BtnBackToMenu") as Button
 
 # Flecha especial do arqueiro no ar (segundo clique em atirar fragmenta).
 var _archer_carriers: Dictionary = {}
@@ -122,30 +119,7 @@ func _ready() -> void:
 	_on_left_archer_spike_hud(0, false)
 	_on_right_archer_spike_hud(0, false)
 
-	_setup_training_menu_ui()
 	_apply_mode()
-
-
-func _setup_training_menu_ui() -> void:
-	var is_training := RunConfig.mode == RunConfig.Mode.TRAINING
-	if training_panel != null:
-		training_panel.visible = is_training
-	if not is_training:
-		return
-	if training_chk_dummy != null:
-		training_chk_dummy.button_pressed = RunConfig.training_dummy_shoot
-		training_chk_dummy.toggled.connect(_on_training_dummy_toggled)
-	if training_btn_menu != null:
-		training_btn_menu.pressed.connect(_on_training_back_to_menu_pressed)
-
-
-func _on_training_back_to_menu_pressed() -> void:
-	RunConfig.clear_p1_shoot_mouse_binding()
-	get_tree().change_scene_to_file("res://ui/menu.tscn")
-
-
-func _on_training_dummy_toggled(pressed: bool) -> void:
-	RunConfig.training_dummy_shoot = pressed
 
 
 func _apply_mode() -> void:
@@ -208,7 +182,7 @@ func _ensure_input_map() -> void:
 	_add_action_if_missing("p1_mage_float", KEY_C)
 	_add_action_if_missing("p1_shield", KEY_Q)
 	_ensure_dash_action("p1_dash", true)
-	_add_action_if_missing("ui_game_pause", KEY_ENTER)
+	_ensure_ui_game_pause_input()
 	_ensure_p2_default_keyboard()
 
 ## P2 no mesmo teclado (vs local): setas + L tiro; não remover teclas.
@@ -270,6 +244,19 @@ func _ensure_action_has_key(action_name: StringName, keycode: int) -> void:
 	var ev := InputEventKey.new()
 	ev.keycode = keycode as Key
 	InputMap.action_add_event(action_name, ev)
+
+
+func _ensure_ui_game_pause_input() -> void:
+	_add_action_if_missing("ui_game_pause", KEY_ENTER)
+	if not InputMap.has_action("ui_game_pause"):
+		return
+	for e in InputMap.action_get_events("ui_game_pause"):
+		if e is InputEventJoypadButton and (e as InputEventJoypadButton).button_index == JOY_BUTTON_START:
+			return
+	var jev := InputEventJoypadButton.new()
+	jev.button_index = JOY_BUTTON_START
+	InputMap.action_add_event("ui_game_pause", jev)
+
 
 func _ensure_action_has_mouse_button(action_name: StringName, button_index: int) -> void:
 	if not InputMap.has_action(action_name):

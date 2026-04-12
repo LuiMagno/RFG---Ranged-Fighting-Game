@@ -1,0 +1,119 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/vs_character_menu.gd" id="1_vs"]
+
+[node name="VsCharacterMenu" type="Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_vs")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.05, 0.06, 0.09, 1)
+
+[node name="Vignette" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0.25)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MainPanel" type="Panel" parent="Center"]
+custom_minimum_size = Vector2(560, 420)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center/MainPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 22.0
+offset_top = 22.0
+offset_right = -22.0
+offset_bottom = -22.0
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+text = "Vs Player"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 30
+theme_override_colors/font_color = Color(0.88, 0.93, 1, 1)
+
+[node name="Subtitle" type="Label" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+text = "Escolha o personagem de cada jogador"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.55, 0.62, 0.75, 1)
+
+[node name="SepTop" type="HSeparator" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+
+[node name="SectionClasses" type="Label" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+text = "Classes"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+
+[node name="ClassP1Row" type="HBoxContainer" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ClassP1Label" type="Label" parent="Center/MainPanel/VBox/ClassP1Row"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Jogador 1 (esq.)"
+vertical_alignment = 1
+
+[node name="OptP1Class" type="OptionButton" parent="Center/MainPanel/VBox/ClassP1Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ClassP2Row" type="HBoxContainer" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ClassP2Label" type="Label" parent="Center/MainPanel/VBox/ClassP2Row"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Jogador 2 (dir.)"
+vertical_alignment = 1
+
+[node name="OptP2Class" type="OptionButton" parent="Center/MainPanel/VBox/ClassP2Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SepMid" type="HSeparator" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+
+[node name="ButtonRow" type="HBoxContainer" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="BtnBack" type="Button" parent="Center/MainPanel/VBox/ButtonRow"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Voltar"
+
+[node name="BtnStart" type="Button" parent="Center/MainPanel/VBox/ButtonRow"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Começar"
