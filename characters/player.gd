@@ -25,7 +25,7 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 @export var input_enabled: bool = true
 
 ## Duplo toque na tecla “para frente” (em direção ao adversário) ativa corrida contínua até ser interrompida.
-@export var sprint_double_tap_window: float = 0.28
+@export var sprint_double_tap_window: float = 0.50
 @export_range(1.05, 1.75, 0.01) var sprint_speed_multiplier: float = 1.42
 ## Multiplicador de cor no corpo / arco enquanto a corrida está ativa (sobre `modulate` original).
 @export var sprint_visual_body_mult: Color = Color(1.2, 1.05, 0.72, 1.0)
@@ -154,6 +154,22 @@ func _can_start_dash() -> bool:
 	return true
 
 
+func start_dash_with_direction(dir_sign: float) -> void:
+	if not _can_start_dash():
+		return
+	_interrupt_sprint()
+	_dash_dir_sign = signf(dir_sign) if absf(dir_sign) > 0.001 else _dash_direction_sign()
+	var st0: Dictionary = _get_dash_stats()
+	_dash_time_left = float(st0.get("duration", 0.18))
+	velocity.x = _dash_dir_sign * float(st0.get("speed", 700.0))
+
+
+func _apply_jump_during_dash() -> void:
+	_dash_time_left = 0.0
+	velocity.y = -jump_speed
+	_jumps_left -= 1
+
+
 func _dash_just_pressed() -> bool:
 	if player_id == 1:
 		return Input.is_action_just_pressed("p1_dash")
@@ -268,7 +284,7 @@ func _physics_process(delta: float) -> void:
 	_extra_timer_tick(delta)
 
 	if _frozen_left <= 0.0:
-		_update_sprint_double_tap()
+		_update_double_tap_forward_movement()
 		if _sprint_active and not _is_holding_forward_only():
 			_interrupt_sprint()
 
@@ -305,7 +321,7 @@ func _physics_process(delta: float) -> void:
 		var st_d: Dictionary = _get_dash_stats()
 		velocity.x = _dash_dir_sign * float(st_d.get("speed", 700.0))
 		if _dash_time_left <= 0.0:
-			_dash_cd_left = float(st_d.get("cooldown", 0.9))
+			_dash_cd_left = float(st_d.get("cooldown", 0.3))
 	elif _control_lock_left <= 0.0:
 		if hovering:
 			# hy>0 = intenção “para cima” na tela; em 2D velocity.y positivo é para baixo.
@@ -316,12 +332,8 @@ func _physics_process(delta: float) -> void:
 			var dir := 0.0 if not input_enabled else _get_move_axis()
 			var sp := _get_sprint_speed_mult()
 			velocity.x = dir * move_speed * sp
-		if _can_start_dash() and _dash_just_pressed():
-			_interrupt_sprint()
-			_dash_dir_sign = _dash_direction_sign()
-			var st0: Dictionary = _get_dash_stats()
-			_dash_time_left = float(st0.get("duration", 0.18))
-			velocity.x = _dash_dir_sign * float(st0.get("speed", 700.0))
+		if _dash_just_pressed():
+			start_dash_with_direction(_dash_direction_sign())
 	else:
 		if hovering:
 			velocity = velocity.move_toward(Vector2.ZERO, knockback_friction * delta)
@@ -345,8 +357,11 @@ func _physics_process(delta: float) -> void:
 		_jumps_left = max_jumps
 
 	if (not hovering) and _jump_just_pressed() and _jumps_left > 0 and _allow_jump_while_concentrating():
-		velocity.y = -jump_speed
-		_jumps_left -= 1
+		if _dash_time_left > 0.0:
+			_apply_jump_during_dash()
+		else:
+			velocity.y = -jump_speed
+			_jumps_left -= 1
 
 	_refresh_sprint_body_modulate()
 	move_and_slide()
@@ -478,7 +493,7 @@ func _interrupt_sprint() -> void:
 	_sprint_active = false
 
 
-func _update_sprint_double_tap() -> void:
+func _update_double_tap_forward_movement() -> void:
 	if not input_enabled:
 		return
 	if not _forward_action_just_pressed():
@@ -489,6 +504,12 @@ func _update_sprint_double_tap() -> void:
 	if dt > 0.0 and dt <= sprint_double_tap_window:
 		_sprint_active = true
 		_last_forward_tap_time_s = -100.0
+
+
+func _backward_action_just_pressed() -> bool:
+	if player_id == 1:
+		return Input.is_action_just_pressed("p1_left")
+	return Input.is_action_just_pressed("p2_right")
 
 
 func _shoot_just_pressed() -> bool:
