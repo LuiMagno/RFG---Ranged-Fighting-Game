@@ -175,15 +175,41 @@ horizontal_alignment = 1
 theme_override_font_sizes/font_size = 34
 theme_override_colors/font_color = Color(0.95, 0.97, 1, 1)
 
+[node name="VsP1CharacterLabel" type="Label" parent="UI/VsHud"]
+layout_mode = 1
+anchors_preset = 9
+anchor_right = 0.5
+offset_left = 24.0
+offset_top = 48.0
+offset_right = -12.0
+offset_bottom = 86.0
+grow_horizontal = 2
+text = "Jogador 1 — Pistoleiro"
+horizontal_alignment = 0
+theme_override_font_sizes/font_size = 20
+
+[node name="VsP2CharacterLabel" type="Label" parent="UI/VsHud"]
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 0.5
+offset_left = 12.0
+offset_top = 48.0
+offset_right = -24.0
+offset_bottom = 86.0
+grow_horizontal = 2
+text = "Jogador 2 — Arqueiro"
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 20
+
 [node name="VsScoreLabel" type="Label" parent="UI/VsHud"]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
 offset_left = -320.0
-offset_top = 44.0
+offset_top = 92.0
 offset_right = 320.0
-offset_bottom = 78.0
+offset_bottom = 126.0
 grow_horizontal = 2
 text = "Vitórias: 0 — 0  (primeiro a 3)"
 horizontal_alignment = 1

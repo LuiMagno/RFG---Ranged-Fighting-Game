@@ -33,6 +33,8 @@ const VS_ROUNDS_TO_WIN := 3
 @onready var p2_archer_spike_label: Label = $UI/P2ArcherSpike
 @onready var _vs_hud: Control = $UI/VsHud
 @onready var _vs_timer_label: Label = $UI/VsHud/VsTimerLabel
+@onready var _vs_p1_character_label: Label = $UI/VsHud/VsP1CharacterLabel
+@onready var _vs_p2_character_label: Label = $UI/VsHud/VsP2CharacterLabel
 @onready var _vs_score_label: Label = $UI/VsHud/VsScoreLabel
 @onready var _vs_round_banner_root: Control = $VsRoundBannerLayer/BannerRoot
 @onready var _vs_round_banner_label: Label = $VsRoundBannerLayer/BannerRoot/BannerCenter/RoundBannerLabel
@@ -185,6 +187,7 @@ func _start_vs_round() -> void:
 	right_player.input_enabled = true
 	_vs_round_time_left = VS_ROUND_DURATION_S
 	_vs_round_playing = true
+	_refresh_vs_character_labels()
 	_update_vs_hud()
 
 
@@ -212,6 +215,19 @@ func _update_vs_hud() -> void:
 	var sc := whole % 60
 	_vs_timer_label.text = "%d:%02d" % [mn, sc]
 	_vs_score_label.text = "Vitórias: %d — %d  (primeiro a %d)" % [_p1_rounds_won, _p2_rounds_won, VS_ROUNDS_TO_WIN]
+
+
+func _refresh_vs_character_labels() -> void:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
+		return
+	var k1 := RunConfig.p1_character
+	var k2 := RunConfig.p2_character
+	var n1 := MenuThemeUtil.vs_character_name(k1)
+	var n2 := MenuThemeUtil.vs_character_name(k2)
+	_vs_p1_character_label.text = "Jogador 1 — %s" % n1
+	_vs_p1_character_label.add_theme_color_override("font_color", MenuThemeUtil.vs_character_accent_color(k1))
+	_vs_p2_character_label.text = "Jogador 2 — %s" % n2
+	_vs_p2_character_label.add_theme_color_override("font_color", MenuThemeUtil.vs_character_accent_color(k2))
 
 
 func _check_vs_ko_after_hp_change() -> void:
