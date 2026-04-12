@@ -34,7 +34,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="MainPanel" type="Panel" parent="Center"]
-custom_minimum_size = Vector2(520, 320)
+custom_minimum_size = Vector2(520, 380)
 layout_mode = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center/MainPanel"]
@@ -74,6 +74,11 @@ text = "Vs Player"
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 text = "Treinamento"
+
+[node name="BtnQuit" type="Button" parent="Center/MainPanel/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Sair do jogo"
 
 [node name="SepBottom" type="HSeparator" parent="Center/MainPanel/VBox"]
 layout_mode = 2

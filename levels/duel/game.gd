@@ -18,6 +18,9 @@ const ARQUEIRO_PLAYER_SCRIPT := "res://characters/arqueiro_player.gd"
 const MAGO_PLAYER_SCRIPT := "res://characters/mago_player.gd"
 const ESQUELETO_PLAYER_SCRIPT := "res://characters/esqueleto_player.gd"
 
+const VS_ROUND_DURATION_S := 60.0
+const VS_ROUNDS_TO_WIN := 3
+
 @onready var left_player: Player = $LeftPlayer
 @onready var right_player: Player = $RightPlayer
 @onready var p1_hp_label: Label = $UI/P1HP
@@ -28,12 +31,28 @@ const ESQUELETO_PLAYER_SCRIPT := "res://characters/esqueleto_player.gd"
 @onready var p2_special_label: Label = $UI/P2Special
 @onready var p1_archer_spike_label: Label = $UI/P1ArcherSpike
 @onready var p2_archer_spike_label: Label = $UI/P2ArcherSpike
+@onready var _vs_hud: Control = $UI/VsHud
+@onready var _vs_timer_label: Label = $UI/VsHud/VsTimerLabel
+@onready var _vs_score_label: Label = $UI/VsHud/VsScoreLabel
+@onready var _vs_round_banner_root: Control = $VsRoundBannerLayer/BannerRoot
+@onready var _vs_round_banner_label: Label = $VsRoundBannerLayer/BannerRoot/BannerCenter/RoundBannerLabel
+@onready var _vs_match_end_menu: VsMatchEndMenu = $VsMatchEndLayer
 
 # Flecha especial do arqueiro no ar (segundo clique em atirar fragmenta).
 var _archer_carriers: Dictionary = {}
 var _active_grenades: Dictionary = {}
 var _active_ice: Dictionary = {}
 var _training_loop_running: bool = false
+
+var _vs_p1_spawn: Vector2
+var _vs_p2_spawn: Vector2
+var _vs_round_time_left: float = 0.0
+var _vs_round_playing: bool = false
+var _vs_resolving_round: bool = false
+var _vs_round_interstitial_active: bool = false
+var _vs_match_end_menu_open: bool = false
+var _p1_rounds_won: int = 0
+var _p2_rounds_won: int = 0
 
 
 func _enter_tree() -> void:
@@ -119,7 +138,158 @@ func _ready() -> void:
 	_on_left_archer_spike_hud(0, false)
 	_on_right_archer_spike_hud(0, false)
 
+	_vs_p1_spawn = left_player.position
+	_vs_p2_spawn = right_player.position
 	_apply_mode()
+	if RunConfig.mode == RunConfig.Mode.VS_PLAYER:
+		_vs_hud.visible = true
+		_start_vs_round()
+	else:
+		_vs_hud.visible = false
+
+
+func blocks_vs_pause_menu() -> bool:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
+		return false
+	return _vs_match_end_menu_open or _vs_round_interstitial_active or _vs_resolving_round
+
+
+func rematch_vs_after_post_game() -> void:
+	_vs_match_end_menu_open = false
+	_vs_match_end_menu.close_menu()
+	_p1_rounds_won = 0
+	_p2_rounds_won = 0
+	_start_vs_round()
+
+
+func _process(delta: float) -> void:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
+		return
+	if not _vs_round_playing or _vs_match_end_menu_open or _vs_resolving_round:
+		return
+	if get_tree().paused:
+		return
+	_vs_round_time_left -= delta
+	_update_vs_hud()
+	if _vs_round_time_left <= 0.0:
+		_finish_vs_round_timeout()
+
+
+func _start_vs_round() -> void:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
+		return
+	_clear_vs_projectiles_and_carry_state()
+	left_player.prepare_for_vs_round_respawn(_vs_p1_spawn)
+	right_player.prepare_for_vs_round_respawn(_vs_p2_spawn)
+	left_player.input_enabled = true
+	right_player.input_enabled = true
+	_vs_round_time_left = VS_ROUND_DURATION_S
+	_vs_round_playing = true
+	_update_vs_hud()
+
+
+func _clear_vs_projectiles_and_carry_state() -> void:
+	_archer_carriers.clear()
+	_active_grenades.clear()
+	_active_ice.clear()
+	for c in get_children():
+		if (
+			c is Arrow
+			or c is Grenade
+			or c is GravityOrb
+			or c is ArcherSpike
+			or c is Fireball
+			or c is IceField
+		):
+			c.queue_free()
+
+
+func _update_vs_hud() -> void:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
+		return
+	var whole := maxi(0, ceili(_vs_round_time_left))
+	var mn := whole / 60
+	var sc := whole % 60
+	_vs_timer_label.text = "%d:%02d" % [mn, sc]
+	_vs_score_label.text = "Vitórias: %d — %d  (primeiro a %d)" % [_p1_rounds_won, _p2_rounds_won, VS_ROUNDS_TO_WIN]
+
+
+func _check_vs_ko_after_hp_change() -> void:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
+		return
+	if not _vs_round_playing or _vs_resolving_round or _vs_match_end_menu_open:
+		return
+	if left_player.hp <= 0:
+		_finish_vs_round_ko(2)
+	elif right_player.hp <= 0:
+		_finish_vs_round_ko(1)
+
+
+func _finish_vs_round_ko(winner_id: int) -> void:
+	if _vs_resolving_round or not _vs_round_playing:
+		return
+	_vs_resolving_round = true
+	_vs_round_playing = false
+	left_player.input_enabled = false
+	right_player.input_enabled = false
+	await _show_round_banner_and_wait("Jogador %d vence o round!" % winner_id)
+	if winner_id == 1:
+		_p1_rounds_won += 1
+	else:
+		_p2_rounds_won += 1
+	await _try_finish_match_or_continue()
+	_vs_resolving_round = false
+
+
+func _finish_vs_round_timeout() -> void:
+	if _vs_resolving_round or not _vs_round_playing:
+		return
+	_vs_resolving_round = true
+	_vs_round_playing = false
+	left_player.input_enabled = false
+	right_player.input_enabled = false
+	var lh := left_player.hp
+	var rh := right_player.hp
+	var msg: String
+	if lh > rh:
+		msg = "Tempo! Jogador 1 vence o round (mais HP)."
+	elif rh > lh:
+		msg = "Tempo! Jogador 2 vence o round (mais HP)."
+	else:
+		msg = "Tempo esgotado — empate! Novo round."
+	await _show_round_banner_and_wait(msg)
+	if lh > rh:
+		_p1_rounds_won += 1
+	elif rh > lh:
+		_p2_rounds_won += 1
+	await _try_finish_match_or_continue()
+	_vs_resolving_round = false
+
+
+func _show_round_banner_and_wait(message: String) -> void:
+	_vs_round_interstitial_active = true
+	_vs_round_banner_label.text = message
+	_vs_round_banner_root.visible = true
+	await get_tree().create_timer(2.5).timeout
+	_vs_round_banner_root.visible = false
+	_vs_round_interstitial_active = false
+
+
+func _try_finish_match_or_continue() -> void:
+	_update_vs_hud()
+	if _p1_rounds_won >= VS_ROUNDS_TO_WIN or _p2_rounds_won >= VS_ROUNDS_TO_WIN:
+		var mw := 1 if _p1_rounds_won >= VS_ROUNDS_TO_WIN else 2
+		_open_vs_match_end(mw)
+	else:
+		_start_vs_round()
+
+
+func _open_vs_match_end(match_winner_id: int) -> void:
+	_vs_match_end_menu_open = true
+	_vs_round_playing = false
+	left_player.input_enabled = false
+	right_player.input_enabled = false
+	_vs_match_end_menu.open_for_match_winner(match_winner_id)
 
 
 func _apply_mode() -> void:
@@ -533,10 +703,12 @@ func _on_arrow_hit_player(_victim: Player, _damage: int) -> void:
 func _on_left_hp_changed(hp: int) -> void:
 	p1_hp_label.text = "P1 HP: %d" % hp
 	p1_hp_bar.value = hp
+	_check_vs_ko_after_hp_change()
 
 func _on_right_hp_changed(hp: int) -> void:
 	p2_hp_label.text = "P2 HP: %d" % hp
 	p2_hp_bar.value = hp
+	_check_vs_ko_after_hp_change()
 
 func _on_left_special_buff_changed(active: bool, uses_left: int, _time_left: float) -> void:
 	if left_player.is_pistoleiro():

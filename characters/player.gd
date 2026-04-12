@@ -112,6 +112,11 @@ func _extra_timer_tick(_delta: float) -> void:
 	pass
 
 
+## Subclasses limpam buffs / estados de combate entre rounds no Vs.
+func _extra_reset_for_vs_round() -> void:
+	pass
+
+
 func _special_uses_left() -> int:
 	return 0
 
@@ -576,6 +581,39 @@ func take_damage(amount: int) -> void:
 	hp = maxi(0, hp - amount)
 	health_changed.emit(hp)
 	print("Player ", player_id, " HP: ", hp)
+
+
+## Respawn entre rounds (modo Vs): posição local na arena, vida cheia, cooldowns zerados.
+func prepare_for_vs_round_respawn(local_spawn: Vector2) -> void:
+	_interrupt_sprint()
+	position = local_spawn
+	velocity = Vector2.ZERO
+	hp = max_hp
+	health_changed.emit(hp)
+	_cooldown_left = 0.0
+	_special_cd_left = 0.0
+	_is_charging = false
+	_charge_time = 0.0
+	_jumps_left = max_jumps
+	_control_lock_left = 0.0
+	_recoil_vel = Vector2.ZERO
+	_special_buff_left = 0.0
+	_was_special_active = false
+	_frozen_left = 0.0
+	_frozen_prev = false
+	_hover_float_left = 0.0
+	_dash_time_left = 0.0
+	_dash_cd_left = 0.0
+	_set_frozen_visual(false)
+	_hide_charge_trajectory_ui()
+	if shield_visual != null:
+		shield_visual.visible = false
+	var max_c := _max_shield_charges()
+	if max_c > 0:
+		_shield_charges = max_c
+		_shield_cd_left = 0.0
+	special_buff_changed.emit(false, 0, 0.0)
+	_extra_reset_for_vs_round()
 
 
 func apply_knockback(knockback: Vector2) -> void:

@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" path="res://projectiles/gravity_orb/gravity_orb.tscn" id="9_orb"]
 [ext_resource type="Script" path="res://levels/duel/pause_menu_controller.gd" id="10_pause"]
 [ext_resource type="Script" path="res://levels/duel/training_pause_menu_controller.gd" id="11_trpause"]
+[ext_resource type="Script" path="res://levels/duel/vs_match_end_menu.gd" id="12_vs_end"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_2"]
 size = Vector2(1920, 84)
@@ -148,6 +149,139 @@ offset_right = 1896.0
 offset_bottom = 106.0
 theme_override_colors/font_color = Color(0.55, 0.95, 0.65, 1)
 horizontal_alignment = 2
+
+[node name="VsHud" type="Control" parent="UI"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VsTimerLabel" type="Label" parent="UI/VsHud"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -100.0
+offset_top = 4.0
+offset_right = 100.0
+offset_bottom = 48.0
+grow_horizontal = 2
+text = "1:00"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 34
+theme_override_colors/font_color = Color(0.95, 0.97, 1, 1)
+
+[node name="VsScoreLabel" type="Label" parent="UI/VsHud"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -320.0
+offset_top = 44.0
+offset_right = 320.0
+offset_bottom = 78.0
+grow_horizontal = 2
+text = "Vitórias: 0 — 0  (primeiro a 3)"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.72, 0.8, 0.92, 1)
+
+[node name="VsRoundBannerLayer" type="CanvasLayer" parent="."]
+layer = 35
+
+[node name="BannerRoot" type="Control" parent="VsRoundBannerLayer"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="BannerDim" type="ColorRect" parent="VsRoundBannerLayer/BannerRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.02, 0.03, 0.06, 0.55)
+
+[node name="BannerCenter" type="CenterContainer" parent="VsRoundBannerLayer/BannerRoot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="RoundBannerLabel" type="Label" parent="VsRoundBannerLayer/BannerRoot/BannerCenter"]
+layout_mode = 2
+text = "Jogador 1 vence o round!"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 38
+theme_override_colors/font_color = Color(0.95, 0.98, 1, 1)
+
+[node name="VsMatchEndLayer" type="CanvasLayer" parent="."]
+layer = 86
+script = ExtResource("12_vs_end")
+
+[node name="Root" type="Control" parent="VsMatchEndLayer"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="VsMatchEndLayer/Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.02, 0.03, 0.06, 0.78)
+
+[node name="Center" type="CenterContainer" parent="VsMatchEndLayer/Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Panel" type="Panel" parent="VsMatchEndLayer/Root/Center"]
+custom_minimum_size = Vector2(440, 340)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="VsMatchEndLayer/Root/Center/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 22.0
+offset_top = 22.0
+offset_right = -22.0
+offset_bottom = -22.0
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="VsMatchEndLayer/Root/Center/Panel/VBox"]
+layout_mode = 2
+text = "Jogador 1 venceu a partida!"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.92, 0.96, 1, 1)
+autowrap_mode = 3
+
+[node name="BtnRematch" type="Button" parent="VsMatchEndLayer/Root/Center/Panel/VBox"]
+layout_mode = 2
+text = "Revanche"
+
+[node name="BtnCharacters" type="Button" parent="VsMatchEndLayer/Root/Center/Panel/VBox"]
+layout_mode = 2
+text = "Escolher personagem"
+
+[node name="BtnExit" type="Button" parent="VsMatchEndLayer/Root/Center/Panel/VBox"]
+layout_mode = 2
+text = "Sair"
 
 [node name="PauseLayer" type="CanvasLayer" parent="."]
 layer = 100

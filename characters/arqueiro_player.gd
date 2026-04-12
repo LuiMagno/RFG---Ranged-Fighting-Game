@@ -150,6 +150,14 @@ func _sync_archer_spike_hud() -> void:
 	archer_spike_hud_changed.emit(_archer_spike_shots_left, _archer_spike_g_volley_armed)
 
 
+func _extra_reset_for_vs_round() -> void:
+	_archer_phase = 0
+	_archer_spike_buff_cd_left = 0.0
+	_archer_spike_shots_left = 0
+	_archer_spike_g_volley_armed = false
+	archer_spike_hud_changed.emit(0, false)
+
+
 func _ready() -> void:
 	super._ready()
 	call_deferred("_sync_archer_spike_hud")

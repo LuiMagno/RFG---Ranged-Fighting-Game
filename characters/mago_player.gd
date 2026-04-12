@@ -158,3 +158,12 @@ func _mage_float_just_pressed() -> bool:
 	if player_id == 1:
 		return Input.is_action_just_pressed("p1_mage_float")
 	return Input.is_action_just_pressed("p2_mage_float")
+
+
+func _extra_reset_for_vs_round() -> void:
+	_ice_cd_left = 0.0
+	_ice_active = false
+	_float_cd_left = 0.0
+	_orb_skill_hold = 0.0
+	_orb_press_armed = false
+	_hide_orb_visual()

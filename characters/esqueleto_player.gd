@@ -182,3 +182,11 @@ func _process_combat(delta: float) -> void:
 		if _is_charging and not _beam_charging:
 			_is_charging = false
 			_hide_charge_trajectory_ui()
+
+
+func _extra_reset_for_vs_round() -> void:
+	_triple_cd_left = 0.0
+	_triple_armed = false
+	_beam_cd_left = 0.0
+	_beam_charging = false
+	_beam_charge_time = 0.0

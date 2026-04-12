@@ -21,6 +21,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not event.is_action_pressed("ui_game_pause"):
 		return
+	var main := get_parent()
+	if main is Game and (main as Game).blocks_vs_pause_menu():
+		get_viewport().set_input_as_handled()
+		return
 	get_viewport().set_input_as_handled()
 	_toggle_pause()
 

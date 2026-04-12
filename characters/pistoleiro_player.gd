@@ -275,3 +275,13 @@ func _update_grenade_trajectory_preview(speed: float) -> void:
 		p += v * trajectory_step
 		if not viewport.has_point(p):
 			break
+
+
+func _extra_reset_for_vs_round() -> void:
+	_special_attack_index = 0
+	_is_special_concentrating = false
+	_pistol_chain_step = 0
+	_grenade_cd_left = 0.0
+	_is_grenade_charging = false
+	_grenade_charge_time = 0.0
+	_grenade_active = false
