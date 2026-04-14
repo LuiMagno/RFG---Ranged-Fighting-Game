@@ -18,7 +18,8 @@ var p1_character: int = 0
 var p2_character: int = 1
 
 var p1_input_scheme: InputScheme = InputScheme.KEYBOARD_MOUSE
-var p2_input_scheme: InputScheme = InputScheme.KEYBOARD_MOUSE
+## No Vs só um jogador pode usar teclado+mouse; o outro usa controle (padrão: P2 em controle).
+var p2_input_scheme: InputScheme = InputScheme.GAMEPAD
 ## Índice SDL do comando (0 = primeiro ligado). Usado só quando o esquema desse jogador é GAMEPAD.
 var p1_joy_device: int = 0
 var p2_joy_device: int = 1
@@ -40,7 +41,7 @@ func is_player_using_gamepad(player_id: int) -> bool:
 func get_shoot_hint_token_for_player(player_id: int) -> String:
 	if is_player_using_gamepad(player_id):
 		return "RB"
-	return "mouse" if player_id == 1 else "L"
+	return "mouse"
 
 
 ## Linha de ajuda no menu principal (controles gerais).
@@ -48,16 +49,45 @@ func get_main_menu_controls_hint() -> String:
 	return "Menus: cruz direcional ou analógico esquerdo • A ou Enter para confirmar • B para voltar • No Vs: Start ou Enter para pausar • No combate, escolha a entrada no Vs ou no Treino"
 
 
-## Nos menus, remove o clique esquerdo do mouse em `p1_shoot` (no duelo esse botão vira o tiro do P1 em teclado+mouse).
+## Nos menus, remove o clique esquerdo do mouse em `p1_shoot` / `p2_shoot` para os botões funcionarem.
 func clear_p1_shoot_mouse_binding() -> void:
-	if not InputMap.has_action("p1_shoot"):
+	_clear_mouse_left_from_action("p1_shoot")
+
+
+func clear_p2_shoot_mouse_binding() -> void:
+	_clear_mouse_left_from_action("p2_shoot")
+
+
+func clear_shoot_mouse_bindings_for_menu() -> void:
+	clear_p1_shoot_mouse_binding()
+	clear_p2_shoot_mouse_binding()
+
+
+func _clear_mouse_left_from_action(action_name: StringName) -> void:
+	if not InputMap.has_action(action_name):
 		return
 	var to_remove: Array = []
-	for ev in InputMap.action_get_events("p1_shoot"):
+	for ev in InputMap.action_get_events(action_name):
 		if ev is InputEventMouseButton and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
 			to_remove.append(ev)
 	for ev in to_remove:
-		InputMap.action_erase_event("p1_shoot", ev)
+		InputMap.action_erase_event(action_name, ev)
+
+
+## Só um jogador pode estar em `KEYBOARD_MOUSE` no Vs. `prefer_player_id` = quem acabou de escolher teclado+mouse (1 ou 2).
+func resolve_exclusive_keyboard_mouse(prefer_player_id: int) -> void:
+	if p1_input_scheme != InputScheme.KEYBOARD_MOUSE or p2_input_scheme != InputScheme.KEYBOARD_MOUSE:
+		return
+	if prefer_player_id == 1:
+		p2_input_scheme = InputScheme.GAMEPAD
+	else:
+		p1_input_scheme = InputScheme.GAMEPAD
+
+
+## Garante estado válido antes de montar o InputMap (ex.: saves antigos com os dois em teclado+mouse).
+func ensure_valid_input_scheme_pair() -> void:
+	if p1_input_scheme == InputScheme.KEYBOARD_MOUSE and p2_input_scheme == InputScheme.KEYBOARD_MOUSE:
+		p2_input_scheme = InputScheme.GAMEPAD
 
 
 ## Garante `ui_*` com teclado + qualquer comando (device -1) para navegação nos menus.

@@ -32,13 +32,13 @@ func close_menu() -> void:
 
 func _on_exit_pressed() -> void:
 	get_tree().paused = false
-	RunConfig.clear_p1_shoot_mouse_binding()
+	RunConfig.clear_shoot_mouse_bindings_for_menu()
 	get_tree().change_scene_to_file("res://ui/menu.tscn")
 
 
 func _on_characters_pressed() -> void:
 	get_tree().paused = false
-	RunConfig.clear_p1_shoot_mouse_binding()
+	RunConfig.clear_shoot_mouse_bindings_for_menu()
 	get_tree().change_scene_to_file("res://ui/vs_character_menu.tscn")
 
 

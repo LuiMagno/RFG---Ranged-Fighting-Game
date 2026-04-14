@@ -70,12 +70,7 @@ Igual ao baseline — [Esqueleto sec. 3](../esqueleto_personagem_base.md#3-taman
 
 ## 5. Dash
 
-| Parâmetro | Valor |
-|-----------|--------|
-| Velocidade | **760** px/s |
-| Duração | **0,16** s |
-| Cooldown | **1,0** s |
-| Gravidade durante dash | **0,42** × |
+Sem overrides — igual ao `Player` / Esqueleto (**620** px/s, **0,20** s, CD **0,1** s, `gravity_scale` **0**).
 
 ---
 
@@ -87,7 +82,7 @@ Sem overrides no script — igual ao baseline. **Nota:** carregar orbe (G/O) pod
 
 ## 7. Corrida (sprint)
 
-Sem overrides — igual ao baseline.
+Sem overrides — igual ao `Player`: sprint ao manter só “frente” (`sprint_forward_hold_seconds`); duplo toque frente/trás = dash.
 
 ---
 

@@ -8,7 +8,7 @@ extends Control
 
 
 func _ready() -> void:
-	RunConfig.clear_p1_shoot_mouse_binding()
+	RunConfig.clear_shoot_mouse_bindings_for_menu()
 	if _hint != null:
 		_hint.text = RunConfig.get_main_menu_controls_hint()
 	MenuThemeUtil.apply_main_panel_style(_main_panel)

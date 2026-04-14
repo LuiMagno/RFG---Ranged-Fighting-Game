@@ -44,15 +44,6 @@ func _shield_reload_seconds() -> float:
 	return 4.25
 
 
-func _get_dash_stats() -> Dictionary:
-	return {
-		"speed": 520.0,
-		"duration": 0.28,
-		"cooldown": 1.05,
-		"gravity_scale": 0.55,
-	}
-
-
 func _extra_timer_tick(delta: float) -> void:
 	_grenade_cd_left = maxf(0.0, _grenade_cd_left - delta)
 

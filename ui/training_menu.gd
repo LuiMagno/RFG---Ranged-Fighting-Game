@@ -10,7 +10,7 @@ extends Control
 
 
 func _ready() -> void:
-	RunConfig.clear_p1_shoot_mouse_binding()
+	RunConfig.clear_shoot_mouse_bindings_for_menu()
 	MenuThemeUtil.apply_main_panel_style(_main_panel)
 	MenuThemeUtil.fill_class_option(opt_p1_class)
 	MenuThemeUtil.style_option(opt_p1_class)

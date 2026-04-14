@@ -12,9 +12,9 @@ O **Esqueleto** é a referência de design; os valores “Esqueleto” abaixo re
 |------|----------------|
 | Projétil principal | `Arrow`; velocidade **420–900**; carga **1,0** s; **g = 0**; **0** ricochetes; cooldown **≥ 1,0** s |
 | Recoil tiro simples | **170** |
-| Dash | **620** px/s, **0,20** s, CD **0,1** s, **`gravity_scale` 0** (sem queda durante o dash no ar); activação por **duplo toque** frente/trás — **não** por Shift |
+| Dash | **620** px/s, **0,20** s, CD **0,1** s, **`gravity_scale` 0** (sem queda durante o dash no ar); activação por **duplo toque** frente/trás (todos os duelistas) |
 | Escudo | **Nenhum** (0 cargas) |
-| Movimento / pulo | `move_speed` **260**, `jump_speed` **650**, `max_jumps` **2**; **sem sprint** por duplo toque (o duplo toque dispara **dash**) |
+| Movimento / pulo | `move_speed` **260**, `jump_speed` **650**, `max_jumps` **2**; sprint ao **manter só frente** (`sprint_forward_hold_seconds`); duplo toque = **dash**; **wall jump** na base |
 | Corpo (hitbox) | **40×90** px |
 | Skills | Triplo (CD **5** s) + raio carregável (CD **4,25** s, dano **36**, escala **1,85–3,45**) |
 
@@ -33,13 +33,10 @@ O **Esqueleto** é a referência de design; os valores “Esqueleto” abaixo re
 | Padrão de tiro | 1 projétil (ou triplo / raio) | Cadeia 3 passos (top / bottom / duplo) | ≠ identidade |
 | Recoil tiro simples | 170 | 170 (passos 0–1); **190,4** passo 2 | ≈ |
 | Skills | Triplo + raio | Buff 3 ataques + granada | ≠ |
-| Dash velocidade | 620 | **520** | ≠ dash mais lento, mais longo no tempo |
-| Dash duração | 0,20 s | **0,28** s | ≠ |
-| Dash cooldown | 0,1 s | **1,05** s | ≠ |
-| Dash grav. scale | **0** | **0,55** | ≠ |
-| Dash input | Duplo toque frente/trás | Tecla Shift | ≠ |
+| Dash (stats) | 620 / 0,20 / 0,1 / g=0 | **=** | = mesmo `Player._get_dash_stats()` |
+| Dash input | Duplo toque frente/trás | **=** (mesmo em `Player`) | = |
 | Escudo | Não | **Sim**, 4 cargas, CD **4,25** s | ≠ |
-| Pulo / corrida / HP / hitbox | baseline (sem sprint; pulo no dash especial) | baseline + sprint por duplo D | = hitbox/HP; ≠ sprint e dash |
+| Pulo / corrida / HP / hitbox | baseline | baseline + escudo; números de dash diferentes | = hitbox/HP/pulo/wall jump; ≠ dash stats e escudo |
 
 **Ficha:** [personagens/pistoleiro.md](personagens/pistoleiro.md)
 
@@ -56,13 +53,10 @@ O **Esqueleto** é a referência de design; os valores “Esqueleto” abaixo re
 | Cooldown tiro | ≥ 1,0 s | **0,4** s (`shoot_cooldown`) | ≠ mais disparos por segundo |
 | Recoil | 170 (e variantes skills) | **170** nos ramos atuais | = |
 | Skills | Triplo + raio | Espinhos + split + volley | ≠ |
-| Dash velocidade | 620 | **980** | ≠ dash ofensivo / escape |
-| Dash duração | 0,20 s | **0,1** s | ≠ “snappy” |
-| Dash cooldown | 0,1 s | **0,8** s | ≠ |
-| Dash grav. scale | **0** | **0,32** | ≠ |
-| Dash input | Duplo toque | Shift | ≠ |
+| Dash (stats) | baseline | **=** | = |
+| Dash input | Duplo toque frente/trás | **=** | = |
 | Escudo | Não | **Sim**, 3 cargas; refletir cura **+6** HP | ≠ |
-| Pulo / corrida / hitbox | baseline (sem sprint) | baseline + sprint | = hitbox/pulo base |
+| Pulo / corrida / hitbox | baseline | baseline + escudo | = hitbox/pulo/wall jump; ≠ escudo |
 
 **Ficha:** [personagens/arqueiro.md](personagens/arqueiro.md)
 
@@ -80,13 +74,10 @@ O **Esqueleto** é a referência de design; os valores “Esqueleto” abaixo re
 | Cooldown tiro | ≥ 1,0 s | **0,4** s | ≠ |
 | Recoil no disparo principal | 170 | **139,4** (×0,82) | ≠ menos empurrão |
 | Skills | Triplo + raio | Gelo + levitação + orbe | ≠ |
-| Dash velocidade | 620 | **760** | ≠ |
-| Dash duração | 0,20 s | **0,16** s | ≠ |
-| Dash cooldown | 0,1 s | **1,0** s | ≠ |
-| Dash grav. scale | **0** | **0,42** | ≠ |
-| Dash input | Duplo toque | Shift | ≠ |
+| Dash (stats) | baseline | **=** | = |
+| Dash input | Duplo toque frente/trás | **=** | = |
 | Escudo | Não | Não | = |
-| Pulo / corrida / hitbox | baseline (sem sprint) | baseline + sprint | = hitbox; orbe etc. |
+| Pulo / corrida / hitbox | baseline | baseline | = hitbox/wall jump; skills ≠ |
 
 **Ficha:** [personagens/mago.md](personagens/mago.md)
 

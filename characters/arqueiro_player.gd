@@ -31,15 +31,6 @@ func _shield_handle_arrow(arrow: Arrow) -> void:
 	health_changed.emit(hp)
 
 
-func _get_dash_stats() -> Dictionary:
-	return {
-		"speed": 980.0,
-		"duration": 0.1,
-		"cooldown": 0.8,
-		"gravity_scale": 0.32,
-	}
-
-
 func _extra_timer_tick(delta: float) -> void:
 	_archer_spike_buff_cd_left = maxf(0.0, _archer_spike_buff_cd_left - delta)
 

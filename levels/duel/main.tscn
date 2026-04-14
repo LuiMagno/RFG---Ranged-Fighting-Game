@@ -150,6 +150,25 @@ offset_bottom = 106.0
 theme_override_colors/font_color = Color(0.55, 0.95, 0.65, 1)
 horizontal_alignment = 2
 
+[node name="P1SkillHints" type="Label" parent="UI"]
+offset_left = 24.0
+offset_top = 112.0
+offset_right = 920.0
+offset_bottom = 220.0
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.62, 0.7, 0.8, 1)
+autowrap_mode = 3
+
+[node name="P2SkillHints" type="Label" parent="UI"]
+offset_left = 1000.0
+offset_top = 112.0
+offset_right = 1896.0
+offset_bottom = 220.0
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.62, 0.7, 0.8, 1)
+autowrap_mode = 3
+
 [node name="VsHud" type="Control" parent="UI"]
 visible = false
 layout_mode = 1
@@ -539,6 +558,10 @@ script = ExtResource("3_2lq0l")
 color = Color(0.25, 0.6, 1, 1)
 polygon = PackedVector2Array(-20, -45, 20, -45, 20, 45, -20, 45)
 
+[node name="BodySprite" type="AnimatedSprite2D" parent="LeftPlayer" unique_id=37644555]
+visible = false
+z_index = 2
+
 [node name="Bow" type="Polygon2D" parent="LeftPlayer" unique_id=448013143]
 z_index = 40
 position = Vector2(18, -10)
@@ -594,6 +617,10 @@ player_id = 2
 [node name="Body" type="Polygon2D" parent="RightPlayer" unique_id=584743274]
 color = Color(1, 0.45, 0.25, 1)
 polygon = PackedVector2Array(-20, -45, 20, -45, 20, 45, -20, 45)
+
+[node name="BodySprite" type="AnimatedSprite2D" parent="RightPlayer" unique_id=584743275]
+visible = false
+z_index = 2
 
 [node name="Bow" type="Polygon2D" parent="RightPlayer" unique_id=743516786]
 z_index = 40

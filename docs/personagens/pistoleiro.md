@@ -4,7 +4,7 @@ Estrutura alinhada a [Esqueleto — personagem base (referência de design)](../
 
 **Script:** `characters/pistoleiro_player.gd` (`PistoleiroPlayer`).
 
-**Controles (duelo):** tiro principal = mesmo mapa que os outros (P1 mouse, P2 **L**). **F** / **J** = granada instantânea (arremesso fixo em velocidade máxima ou detonar se já existir). **G** / **O** = especial (buff de sequência de 3 ataques). Ver `levels/duel/game.gd` (`_ensure_input_map`).
+**Controles (duelo):** tiro principal = **mouse** no esquema teclado+mouse (só um jogador usa teclado+mouse no Vs; o outro usa controle). **F** = granada instantânea (arremesso fixo em velocidade máxima ou detonar se já existir). **G** = especial (buff de sequência de 3 ataques). Ver `levels/duel/game.gd` (`_ensure_input_map`).
 
 ---
 
@@ -70,12 +70,7 @@ Igual ao baseline da arena: ver secção **3** do [documento do Esqueleto](../es
 
 ## 5. Dash
 
-| Parâmetro | Valor |
-|-----------|--------|
-| Velocidade | **520** px/s |
-| Duração | **0,28** s |
-| Cooldown | **1,05** s |
-| Gravidade durante dash | **0,55** × |
+Sem overrides — igual ao `Player` / Esqueleto (**620** px/s, **0,20** s, CD **0,1** s, `gravity_scale` **0**).
 
 ---
 
@@ -89,7 +84,7 @@ Sem overrides no script — iguais ao `Player` / baseline Esqueleto (`jump_speed
 
 ## 7. Corrida (sprint)
 
-Sem overrides — igual ao sprint descrito na [secção 7 do baseline do Esqueleto](../esqueleto_personagem_base.md) (ramo “outros personagens”, não o kit duplo‑toque‑dash).
+Sem overrides — igual ao sprint em `Player` ([secção 7 do baseline](../esqueleto_personagem_base.md)): manter só “frente” durante `sprint_forward_hold_seconds`. O duplo toque em frente/trás inicia **dash**, não sprint.
 
 ---
 

@@ -8,10 +8,6 @@ class_name EsqueletoPlayer
 
 const MIN_SHOOT_COOLDOWN_S := 1.0
 
-## Pulo no meio do dash: mais horizontal, menos vertical que o pulo normal.
-@export_range(0.2, 1.0, 0.01) var dash_jump_vertical_mul: float = 0.5
-@export var dash_jump_horizontal_speed: float = 520.0
-
 ## Espaçamento lateral entre os 3 tiros paralelos (mesma direção que o tiro normal).
 @export var triple_parallel_lane_spacing: float = 10.0
 @export var triple_shot_cooldown: float = 5.0
@@ -28,7 +24,6 @@ var _triple_armed := false
 var _beam_cd_left := 0.0
 var _beam_charging := false
 var _beam_charge_time := 0.0
-var _last_back_tap_time_s := -100.0
 
 
 func is_esqueleto() -> bool:
@@ -38,48 +33,6 @@ func is_esqueleto() -> bool:
 func _ready() -> void:
 	shoot_cooldown = maxf(MIN_SHOOT_COOLDOWN_S, shoot_cooldown)
 	super._ready()
-
-
-func _get_dash_stats() -> Dictionary:
-	return {
-		"speed": 620.0,
-		"duration": 0.2,
-		"cooldown": 0.1,
-		"gravity_scale": 0.0,
-	}
-
-
-func _dash_just_pressed() -> bool:
-	return false
-
-
-func _update_double_tap_forward_movement() -> void:
-	if not input_enabled:
-		return
-	if _forward_action_just_pressed():
-		var now_s := Time.get_ticks_msec() * 0.001
-		var dt := now_s - _last_forward_tap_time_s
-		_last_forward_tap_time_s = now_s
-		if dt > 0.0 and dt <= sprint_double_tap_window:
-			var fwd := 1.0 if player_id == 1 else -1.0
-			start_dash_with_direction(fwd)
-			_last_forward_tap_time_s = -100.0
-	if _backward_action_just_pressed():
-		var now_b := Time.get_ticks_msec() * 0.001
-		var dtb := now_b - _last_back_tap_time_s
-		_last_back_tap_time_s = now_b
-		if dtb > 0.0 and dtb <= sprint_double_tap_window:
-			var back := -1.0 if player_id == 1 else 1.0
-			start_dash_with_direction(back)
-			_last_back_tap_time_s = -100.0
-
-
-func _apply_jump_during_dash() -> void:
-	_dash_time_left = 0.0
-	velocity.y = -jump_speed * dash_jump_vertical_mul
-	var h := maxf(absf(velocity.x), dash_jump_horizontal_speed)
-	velocity.x = _dash_dir_sign * h
-	_jumps_left -= 1
 
 
 func _extra_timer_tick(delta: float) -> void:

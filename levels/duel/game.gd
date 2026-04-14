@@ -32,6 +32,8 @@ const VS_ROUNDS_TO_WIN := 3
 @onready var p2_special_label: Label = $UI/P2Special
 @onready var p1_archer_spike_label: Label = $UI/P1ArcherSpike
 @onready var p2_archer_spike_label: Label = $UI/P2ArcherSpike
+@onready var p1_skill_hints: Label = $UI/P1SkillHints
+@onready var p2_skill_hints: Label = $UI/P2SkillHints
 @onready var _vs_hud: Control = $UI/VsHud
 @onready var _vs_timer_label: Label = $UI/VsHud/VsTimerLabel
 @onready var _vs_p1_character_label: Label = $UI/VsHud/VsP1CharacterLabel
@@ -63,12 +65,13 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
-	RunConfig.clear_p1_shoot_mouse_binding()
+	RunConfig.clear_shoot_mouse_bindings_for_menu()
 
 
 ## Reaplica teclas + eventos de comando conforme `RunConfig` (útil se mudares input em pausa no treino).
 func apply_input_map_from_run_config() -> void:
 	_ensure_input_map()
+	_refresh_skill_hint_labels()
 
 
 func _assign_player_scripts_from_run_config() -> void:
@@ -236,6 +239,69 @@ func _refresh_vs_character_labels() -> void:
 	_vs_p1_character_label.add_theme_color_override("font_color", MenuThemeUtil.vs_character_accent_color(k1))
 	_vs_p2_character_label.text = "Jogador 2 — %s" % n2
 	_vs_p2_character_label.add_theme_color_override("font_color", MenuThemeUtil.vs_character_accent_color(k2))
+	_refresh_skill_hint_labels()
+
+
+func _character_kind(p: Player) -> int:
+	if p.is_ongma_epilef():
+		return Player.CharacterKind.ONGMA_EPILEF
+	if p.is_esqueleto():
+		return Player.CharacterKind.ESQUELETO
+	if p.is_mago():
+		return Player.CharacterKind.MAGO
+	if p.is_arqueiro():
+		return Player.CharacterKind.ARQUEIRO
+	if p.is_pistoleiro():
+		return Player.CharacterKind.PISTOLEIRO
+	return Player.CharacterKind.PISTOLEIRO
+
+
+func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
+	if gamepad:
+		var base_pad := (
+			"Mov analógico esq / D-pad · Mira analógico dir · A pulo · B dash · LB escudo · RB tiro · Y especial"
+			+ " · Flutuar (no ar): gatilho RT cima / LT baixo"
+		)
+		match kind:
+			Player.CharacterKind.PISTOLEIRO:
+				return base_pad + " · X granada"
+			Player.CharacterKind.ARQUEIRO:
+				return base_pad + " · L3 espinhos · Y especial (leque com combo)"
+			Player.CharacterKind.MAGO:
+				return base_pad + " · X gelo · R3 levitar · Y segure/solta orbe"
+			Player.CharacterKind.ESQUELETO, Player.CharacterKind.ONGMA_EPILEF:
+				return (
+					base_pad
+					+ " · X segure/solta feixe · Y triplo antes do tiro · Dash: duplo toque frente/trás no stick"
+				)
+			_:
+				return base_pad
+	# Teclado+mouse: mesmo layout para P1 e P2 (no Vs só um usa teclado+mouse por vez).
+	var base_kb := (
+		"Mov A/D · Espaço pulo · Shift esq dash · Q escudo · W/S flutuar (no ar) · Mouse mira e tiro"
+	)
+	match kind:
+		Player.CharacterKind.PISTOLEIRO:
+			return base_kb + " · F granada · G especial"
+		Player.CharacterKind.ARQUEIRO:
+			return base_kb + " · F espinhos · G especial (leque com combo)"
+		Player.CharacterKind.MAGO:
+			return base_kb + " · F gelo (F de novo detona) · C levitar · G segure e solte orbe"
+		Player.CharacterKind.ESQUELETO, Player.CharacterKind.ONGMA_EPILEF:
+			return base_kb + " · F segure feixe · G triplo (antes de soltar o tiro) · Dash: duplo A ou D"
+		_:
+			return base_kb
+
+
+func _refresh_skill_hint_labels() -> void:
+	if p1_skill_hints == null or p2_skill_hints == null:
+		return
+	if RunConfig.mode == RunConfig.Mode.TRAINING:
+		p1_skill_hints.text = _skill_hint_lines(1, _character_kind(left_player), RunConfig.is_player_using_gamepad(1))
+		p2_skill_hints.text = "Treino: boneco à direita é controlado pelo jogo (CPU)."
+		return
+	p1_skill_hints.text = _skill_hint_lines(1, _character_kind(left_player), RunConfig.is_player_using_gamepad(1))
+	p2_skill_hints.text = _skill_hint_lines(2, _character_kind(right_player), RunConfig.is_player_using_gamepad(2))
 
 
 func _check_vs_ko_after_hp_change() -> void:
@@ -358,6 +424,7 @@ func _fire_training_dummy_shot() -> void:
 func _ensure_input_map() -> void:
 	# Some environments/projects fail to import InputMap from project.godot on first load.
 	# To keep this prototype runnable, we ensure required actions exist at runtime.
+	RunConfig.ensure_valid_input_scheme_pair()
 	_add_action_if_missing("p1_left", KEY_A)
 	_add_action_if_missing("p1_right", KEY_D)
 	_add_action_if_missing("p1_jump", KEY_SPACE)
@@ -370,43 +437,74 @@ func _ensure_input_map() -> void:
 	_add_action_if_missing("p1_archer_spike", KEY_F)
 	_strip_key_from_action("p1_special", KEY_C)
 	_add_action_if_missing("p1_special", KEY_G)
-	# Mago: levitar = p1_mage_float (C) / p2_mage_float (Y); orbe = segurar G e soltar.
+	# Mago: levitar = p1_mage_float (C) / p2_mage_float (C no teclado+mouse); orbe = segurar G e soltar.
 	_add_action_if_missing("p1_mage_float", KEY_C)
 	_add_action_if_missing("p1_shield", KEY_Q)
 	_ensure_dash_action("p1_dash", true)
 	_ensure_ui_game_pause_input()
-	_ensure_p2_default_keyboard()
 
+	_ensure_p2_action_shells_without_keys()
 	_ensure_aim_action_quartet("p1")
 	_ensure_aim_action_quartet("p2")
+	_strip_keyboard_events_from_actions(_player_action_names("p2"))
+	_strip_mouse_button_from_action("p2_shoot", MOUSE_BUTTON_LEFT)
+	if RunConfig.p2_input_scheme == RunConfig.InputScheme.KEYBOARD_MOUSE:
+		_ensure_p2_keyboard_mouse_shared_layout()
+
 	_strip_joypad_events_from_actions(_player_action_names("p1"))
 	_strip_joypad_events_from_actions(_player_action_names("p2"))
 	if RunConfig.p1_input_scheme == RunConfig.InputScheme.GAMEPAD:
+		_strip_keyboard_events_from_actions(_player_action_names("p1"))
+		_strip_mouse_button_from_action("p1_shoot", MOUSE_BUTTON_LEFT)
 		_add_gamepad_mappings_for_player("p1", RunConfig.p1_joy_device)
 	if RunConfig.p2_input_scheme == RunConfig.InputScheme.GAMEPAD:
 		_add_gamepad_mappings_for_player("p2", RunConfig.p2_joy_device)
 
+	_strip_mouse_button_from_action("p1_shoot", MOUSE_BUTTON_LEFT)
+	_strip_mouse_button_from_action("p2_shoot", MOUSE_BUTTON_LEFT)
 	if RunConfig.p1_input_scheme == RunConfig.InputScheme.KEYBOARD_MOUSE:
 		_ensure_action_has_mouse_button("p1_shoot", MOUSE_BUTTON_LEFT)
-	else:
-		RunConfig.clear_p1_shoot_mouse_binding()
+	if RunConfig.p2_input_scheme == RunConfig.InputScheme.KEYBOARD_MOUSE:
+		_ensure_action_has_mouse_button("p2_shoot", MOUSE_BUTTON_LEFT)
 
-## P2 no mesmo teclado (vs local): setas + L tiro; não remover teclas.
-func _ensure_p2_default_keyboard() -> void:
-	_add_action_if_missing("p2_left", KEY_LEFT)
-	_add_action_if_missing("p2_right", KEY_RIGHT)
-	_add_action_if_missing("p2_jump", KEY_UP)
-	_add_action_if_missing("p2_hover_up", KEY_I)
-	_add_action_if_missing("p2_hover_down", KEY_K)
+
+func _ensure_p2_action_shells_without_keys() -> void:
+	for n: String in [
+		"p2_left",
+		"p2_right",
+		"p2_jump",
+		"p2_hover_up",
+		"p2_hover_down",
+		"p2_shoot",
+		"p2_grenade",
+		"p2_archer_spike",
+		"p2_special",
+		"p2_mage_float",
+		"p2_shield",
+		"p2_dash",
+	]:
+		if not InputMap.has_action(n):
+			InputMap.add_action(n)
+
+
+## P2 em teclado+mouse usa o mesmo mapa WASD + mouse que o P1 (exclusivo: o outro jogador fica em controle).
+func _ensure_p2_keyboard_mouse_shared_layout() -> void:
+	_add_action_if_missing("p2_left", KEY_A)
+	_add_action_if_missing("p2_right", KEY_D)
+	_add_action_if_missing("p2_jump", KEY_SPACE)
+	_add_action_if_missing("p2_hover_up", KEY_W)
+	_add_action_if_missing("p2_hover_down", KEY_S)
 	if not InputMap.has_action("p2_shoot"):
 		InputMap.add_action("p2_shoot")
-	_ensure_action_has_key("p2_shoot", KEY_L)
-	_add_action_if_missing("p2_grenade", KEY_J)
-	_add_action_if_missing("p2_archer_spike", KEY_U)
-	_add_action_if_missing("p2_special", KEY_O)
-	_add_action_if_missing("p2_shield", KEY_SLASH)
-	_add_action_if_missing("p2_mage_float", KEY_Y)
-	_ensure_dash_action("p2_dash", false)
+	_strip_key_from_action("p2_shoot", KEY_F)
+	_strip_key_from_action("p2_shoot", KEY_L)
+	_add_action_if_missing("p2_grenade", KEY_F)
+	_add_action_if_missing("p2_archer_spike", KEY_F)
+	_strip_key_from_action("p2_special", KEY_C)
+	_add_action_if_missing("p2_special", KEY_G)
+	_add_action_if_missing("p2_mage_float", KEY_C)
+	_add_action_if_missing("p2_shield", KEY_Q)
+	_ensure_dash_action("p2_dash", true)
 
 
 func _player_action_names(prefix: String) -> Array:
@@ -515,6 +613,30 @@ func _strip_key_from_action(action_name: StringName, keycode: Key) -> void:
 			to_remove.append(ev)
 	for ev in to_remove:
 		InputMap.action_erase_event(action_name, ev)
+
+
+func _strip_keyboard_events_from_actions(action_names: Array) -> void:
+	for an in action_names:
+		if not InputMap.has_action(an):
+			continue
+		var to_remove: Array = []
+		for ev in InputMap.action_get_events(an):
+			if ev is InputEventKey:
+				to_remove.append(ev)
+		for ev in to_remove:
+			InputMap.action_erase_event(an, ev)
+
+
+func _strip_mouse_button_from_action(action_name: StringName, button_index: int) -> void:
+	if not InputMap.has_action(action_name):
+		return
+	var to_remove: Array = []
+	for ev in InputMap.action_get_events(action_name):
+		if ev is InputEventMouseButton and int((ev as InputEventMouseButton).button_index) == button_index:
+			to_remove.append(ev)
+	for ev in to_remove:
+		InputMap.action_erase_event(action_name, ev)
+
 
 func _add_action_if_missing(action_name: StringName, keycode: int) -> void:
 	if InputMap.has_action(action_name):

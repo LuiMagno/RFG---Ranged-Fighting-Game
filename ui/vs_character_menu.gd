@@ -12,7 +12,8 @@ extends Control
 
 
 func _ready() -> void:
-	RunConfig.clear_p1_shoot_mouse_binding()
+	RunConfig.clear_shoot_mouse_bindings_for_menu()
+	RunConfig.ensure_valid_input_scheme_pair()
 	MenuThemeUtil.apply_main_panel_style(_main_panel)
 	MenuThemeUtil.fill_class_option(opt_p1_class)
 	MenuThemeUtil.fill_class_option(opt_p2_class)
@@ -58,7 +59,8 @@ func _refresh_device_controls_enabled() -> void:
 
 func _on_p1_scheme_selected(index: int) -> void:
 	RunConfig.p1_input_scheme = index as RunConfig.InputScheme
-	_refresh_device_controls_enabled()
+	RunConfig.resolve_exclusive_keyboard_mouse(1)
+	_sync_input_controls_from_run_config()
 
 
 func _on_p1_device_selected(index: int) -> void:
@@ -67,7 +69,8 @@ func _on_p1_device_selected(index: int) -> void:
 
 func _on_p2_scheme_selected(index: int) -> void:
 	RunConfig.p2_input_scheme = index as RunConfig.InputScheme
-	_refresh_device_controls_enabled()
+	RunConfig.resolve_exclusive_keyboard_mouse(2)
+	_sync_input_controls_from_run_config()
 
 
 func _on_p2_device_selected(index: int) -> void:
@@ -83,6 +86,7 @@ func _on_start_pressed() -> void:
 	RunConfig.p2_character = opt_p2_class.selected
 	RunConfig.p1_input_scheme = opt_p1_scheme.selected as RunConfig.InputScheme
 	RunConfig.p2_input_scheme = opt_p2_scheme.selected as RunConfig.InputScheme
+	RunConfig.ensure_valid_input_scheme_pair()
 	RunConfig.p1_joy_device = opt_p1_device.selected
 	RunConfig.p2_joy_device = opt_p2_device.selected
 	RunConfig.mode = RunConfig.Mode.VS_PLAYER

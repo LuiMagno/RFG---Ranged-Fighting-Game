@@ -1,6 +1,6 @@
 # Sistemas centrais: arena, movimento e física “por baixo dos panos”
 
-Este texto descreve o **design técnico comum** do duelo 2D: dimensões, colisões, movimento, dash, pulo, limites da arena e fluxo de simulação. Os valores citados vêm de `project.godot`, `levels/duel/main.tscn` e `characters/player.gd` (salvo nota em contrário). Personagens específicos podem sobrescrever dash e combate; ver [personagens/](personagens/) e [comparativo_personagens_vs_esqueleto.md](comparativo_personagens_vs_esqueleto.md).
+Este texto descreve o **design técnico comum** do duelo 2D: dimensões, colisões, movimento, dash, pulo, limites da arena e fluxo de simulação. Os valores citados vêm de `project.godot`, `levels/duel/main.tscn` e `characters/player.gd` (salvo nota em contrário). Personagens específicos sobrescrevem sobretudo `_get_dash_stats()` e combate; ver [personagens/](personagens/) e [comparativo_personagens_vs_esqueleto.md](comparativo_personagens_vs_esqueleto.md).
 
 ---
 
@@ -56,8 +56,8 @@ Posições iniciais de exemplo na cena: P1 **(210, 672)**, P2 **(1710, 672)** (p
 - Velocidade base: `move_speed` = **260** px/s.
 - Input: eixo esquerdo/direito (`_get_move_axis`).
 - Com **corrida** ativa e **só** a tecla “para a frente” (em direção ao adversário): multiplicador `sprint_speed_multiplier` = **1,42** → até **~369** px/s.
-- **Corrida (Pistoleiro, Arqueiro, Mago):** duplo toque na tecla “frente” dentro de `sprint_double_tap_window` (**0,50** s por padrão em `Player`, `_update_double_tap_forward_movement`). Dash por tecla ou knockback interrompem a corrida.
-- **Esqueleto / Ongma Epilef:** a mesma janela `sprint_double_tap_window` mede o intervalo para **dash** (duplo frente ou duplo trás); **não** activam sprint. Ver `EsqueletoPlayer._update_double_tap_forward_movement()` e [esqueleto_personagem_base.md](esqueleto_personagem_base.md) secções 5–7.
+- **Corrida (todos):** após manter **só** “frente” durante `sprint_forward_hold_seconds` (**0,12** s por padrão em `Player`, `_update_sprint_from_forward_hold`). Dash, hover, stun ou deixar de cumprir “só frente” repõem o temporizador.
+- **Dash (todos):** duplo toque **frente** ou **trás** dentro de `sprint_double_tap_window` (**0,50** s), via `Player._update_double_tap_forward_movement()` → `start_dash_with_direction(...)`. A tecla `p1_dash` / `p2_dash` **não** inicia dash.
 
 ### Gravidade e pulo
 
@@ -71,25 +71,29 @@ No chão, se `velocity.y > 0`, é forcado a **0** (colagem ao solo).
 
 ### Dash (comportamento base)
 
-Valores **por padrão** em `_get_dash_stats()` na classe `Player`:
+Valores em `_get_dash_stats()` na classe `Player` (**comuns a todos** os duelistas, alinhados ao Esqueleto / Ongma):
 
 | Campo | Valor |
 |-------|--------|
-| `speed` | **700** px/s |
-| `duration` | **0,18** s |
-| `cooldown` | **0,9** s após o dash terminar |
-| `gravity_scale` | **0,42** × a gravidade normal **enquanto o dash está ativo e o corpo está no ar** |
+| `speed` | **620** px/s |
+| `duration` | **0,20** s |
+| `cooldown` | **0,1** s após o dash terminar |
+| `gravity_scale` | **0** (sem gravidade extra no ar durante o dash; ver clamp `vy` no código) |
 
 Regras importantes:
 
-- O início do dash por tecla passa por **`start_dash_with_direction(dir_sign)`**, que respeita `_can_start_dash()` (cooldown, carregar tiro, etc.).
+- O início do dash passa por **`start_dash_with_direction(dir_sign)`**, que respeita `_can_start_dash()` (cooldown, carregar tiro, etc.).
 - Durante o dash, **`velocity.x`** mantém-se fixo no sentido do dash; o cooldown de dash só começa quando `duration` expira.
 - **Não** se pode iniciar dash se `input_enabled` for falso, se o cooldown ainda não acabou, se estiver a carregar tiro (`_is_charging`) ou se a subclasse reportar carregamento de granada (`_is_grenade_charging_active()`).
-- **Pulo durante o dash:** com pulos restantes, chama-se `_apply_jump_during_dash()` (na base: cancela dash, `velocity.y = -jump_speed`, gasta um pulo). **`EsqueletoPlayer`** sobrescreve com pulo mais horizontal — ver ficha do esqueleto.
+- **Pulo durante o dash:** com pulos restantes, `_apply_jump_during_dash()` cancela o dash, aplica `velocity.y` com `dash_jump_vertical_mul` e reforço horizontal com `dash_jump_horizontal_speed` (exports em `Player`).
 - **Gravidade:** só se aplica `velocity.y += gravity_accel * gmul * delta` se `gmul > 0.0001` (evita somar gravidade com multiplicador ~0).
 - Se `gravity_scale <= 0` durante dash **no ar**, após o bloco de pulo o código faz `velocity.y = minf(velocity.y, 0.0)` — remove componente de **queda** durante o dash, mantendo subida (`vy < 0`).
-- **Esqueleto / Ongma:** `_dash_just_pressed()` no esqueleto é **false**; o dash vem só do duplo toque. Pistoleiro, Arqueiro e Mago usam **Shift** (`p1_dash` / `p2_dash`) como antes.
-- Subclasses **substituem** `_get_dash_stats()` com números próprios (ex.: esqueleto com `gravity_scale` **0** e cooldown **0,1** s).
+- Subclasses **não** sobrescrevem `_get_dash_stats()` — um único perfil de dash na base.
+
+### Wall jump (comum)
+
+- Implementado em `Player._try_special_air_jump()`: no ar, até **um** wall jump por sequência aérea (repõe ao aterrar), com deteção por `is_on_wall_only()` e raios laterais (`wall_detect_distance`, `wall_detect_vertical_offset`), impulso `wall_jump_horizontal_speed` / `wall_jump_vertical_speed`, graça `wall_jump_move_grace` no eixo horizontal e flash breve (`wall_jump_visual_duration`, `wall_jump_body_flash`).
+- Não gasta `max_jumps`; cancela dash se estiver activo (com cooldown do dash).
 
 ### Stun, knockback e congelamento
 
