@@ -89,6 +89,7 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 
 
 
+
 var hp: int
 var _cooldown_left := 0.0
 var _special_cd_left := 0.0
@@ -121,6 +122,8 @@ var _wall_jump_move_grace_left: float = 0.0
 var _wall_jump_free_axis_sign: float = 0.0
 ## Direção de mira no plano do jogo (normalizado). Mouse atualiza de imediato; controle com deadzone + smoothing.
 var _aim_direction: Vector2 = Vector2.RIGHT
+#verificar tempo de clique para baixo do fall slide.
+var _last_down_tap_time_s: float = -100.0
 
 
 func is_pistoleiro() -> bool:
@@ -317,9 +320,6 @@ func _physics_process(delta: float) -> void:
 	_dash_cd_left = maxf(0.0, _dash_cd_left - delta)
 	_extra_timer_tick(delta)
 
-	if input_enabled and Input.is_key_pressed(KEY_CTRL):
-		if not is_on_floor():
-			_start_ground_pound_dash()
 		
 	if _frozen_left <= 0.0:
 		_update_double_tap_forward_movement()
@@ -728,7 +728,20 @@ func _update_double_tap_forward_movement() -> void:
 			var back := -1.0 if player_id == 1 else 1.0
 			start_dash_with_direction(back)
 			_last_back_tap_time_s = -100.0
+	# --- DASH PARA BAIXO (Ground Pound) ---
+	if _down_action_just_pressed():
+		var now_s := Time.get_ticks_msec() * 0.001
+		var dtd := now_s - _last_down_tap_time_s
+		_last_down_tap_time_s = now_s
+		if dtd > 0.0 and dtd <= sprint_double_tap_window:
+			_start_ground_pound_dash()
+			_last_down_tap_time_s = -100.0
 
+#dash para baixo.
+func _down_action_just_pressed() -> bool:
+	# Usa as ações de hover_down que já existem no seu Input Map [cite: 26]
+	var action = "p1_hover_down" if player_id == 1 else "p2_hover_down"
+	return Input.is_action_just_pressed(action)
 
 func _backward_action_just_pressed() -> bool:
 	if player_id == 1:
