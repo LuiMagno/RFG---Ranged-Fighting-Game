@@ -2,9 +2,9 @@ extends CharacterBody2D
 class_name Player
 
 ## Classe base: movimento, mira, vida, tiro carregado (lógica comum) e sinais.
-## Jogabilidade específica: PistoleiroPlayer, ArqueiroPlayer, MagoPlayer, EsqueletoPlayer (base reta).
+## Jogabilidade específica: PistoleiroPlayer, ArqueiroPlayer, MagoPlayer, EsqueletoPlayer, OngmaEpilefPlayer.
 
-enum CharacterKind { PISTOLEIRO, ARQUEIRO, MAGO, ESQUELETO }
+enum CharacterKind { PISTOLEIRO, ARQUEIRO, MAGO, ESQUELETO, ONGMA_EPILEF }
 
 signal shoot_requested(owner_player: Player, spawn_position: Vector2, initial_velocity: Vector2, shot_flags: Dictionary)
 signal health_changed(current_hp: int)
@@ -24,8 +24,8 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 @export var move_speed: float = 260.0
 @export var input_enabled: bool = true
 
-## Duplo toque na tecla “para frente” (em direção ao adversário) ativa corrida contínua até ser interrompida.
-@export var sprint_double_tap_window: float = 0.28
+## Janela temporal para duplo toque frente/trás (ativa dash). Corrida: ver `sprint_forward_hold_seconds`.
+@export var sprint_double_tap_window: float = 0.50
 @export_range(1.05, 1.75, 0.01) var sprint_speed_multiplier: float = 1.42
 ## Multiplicador de cor no corpo / arco enquanto a corrida está ativa (sobre `modulate` original).
 @export var sprint_visual_body_mult: Color = Color(1.2, 1.05, 0.72, 1.0)
@@ -50,6 +50,27 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 @export var trajectory_points: int = 24
 @export var trajectory_step: float = 0.08
 @export var arena_padding_x: float = 36.0
+## Pulo durante o dash: mais horizontal, menos vertical que o pulo normal.
+@export_range(0.2, 1.0, 0.01) var dash_jump_vertical_mul: float = 0.5
+@export var dash_jump_horizontal_speed: float = 520.0
+## Tempo a manter só “para frente” antes de ativar sprint (substitui corrida por duplo toque).
+@export_range(0.0, 0.5, 0.01) var sprint_forward_hold_seconds: float = 0.12
+## Wall jump: impulso diagonal na parede (no máximo uma vez por voo até ao solo).
+@export var wall_jump_horizontal_speed: float = 768.0
+@export var wall_jump_vertical_speed: float = 984.0
+@export_range(0.05, 0.6, 0.01) var wall_jump_visual_duration: float = 0.22
+@export var wall_jump_body_flash: Color = Color(1.38, 0.78, 1.52, 1.0)
+@export_range(4.0, 40.0, 1.0) var wall_detect_distance: float = 40.0
+@export var wall_detect_vertical_offset: float = -18.0
+@export_range(0.0, 0.35, 0.01) var wall_jump_move_grace: float = 0.14
+## Controle: zona morta no vetor do stick direito (após sensibilidade), ~0,2–0,3 reduz drift.
+@export_range(0.20, 0.30, 0.01) var gamepad_aim_deadzone: float = 0.25
+## Controle: multiplica o vetor cru antes da deadzone; depois limita ao círculo unitário.
+@export_range(0.50, 2.00, 0.05) var gamepad_aim_sensitivity: float = 1.0
+## Controle: tempo de suavização (1ª ordem, segundos); menor = mais “seco”, maior = mais fluido.
+@export_range(0.03, 0.35, 0.01) var gamepad_aim_smooth_time: float = 0.10
+
+@export var wall_slide_speed: float = 150.0
 
 @export var recoil_normal: float = 170.0
 @export var recoil_special: float = 290.0
@@ -65,6 +86,8 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 @onready var shield_visual: Polygon2D = get_node_or_null("ShieldVisual") as Polygon2D
 @onready var _body_visual: CanvasItem = get_node_or_null("Body") as CanvasItem
 @onready var _bow_visual: CanvasItem = bow as CanvasItem
+
+
 
 var hp: int
 var _cooldown_left := 0.0
@@ -90,6 +113,14 @@ var _orig_bow_modulate: Color = Color.WHITE
 var _hover_float_left: float = 0.0
 var _sprint_active: bool = false
 var _last_forward_tap_time_s: float = -100.0
+var _last_back_tap_time_s: float = -100.0
+var _forward_only_hold_s: float = 0.0
+var _wall_jump_used_this_airborne: bool = false
+var _wall_jump_flash_left: float = 0.0
+var _wall_jump_move_grace_left: float = 0.0
+var _wall_jump_free_axis_sign: float = 0.0
+## Direção de mira no plano do jogo (normalizado). Mouse atualiza de imediato; controle com deadzone + smoothing.
+var _aim_direction: Vector2 = Vector2.RIGHT
 
 
 func is_pistoleiro() -> bool:
@@ -108,7 +139,16 @@ func is_esqueleto() -> bool:
 	return false
 
 
+func is_ongma_epilef() -> bool:
+	return false
+
+
 func _extra_timer_tick(_delta: float) -> void:
+	pass
+
+
+## Subclasses limpam buffs / estados de combate entre rounds no Vs.
+func _extra_reset_for_vs_round() -> void:
 	pass
 
 
@@ -129,11 +169,12 @@ func _is_grenade_charging_active() -> bool:
 
 
 func _get_dash_stats() -> Dictionary:
+	# Igual ao Esqueleto / Ongma Epilef para todos os duelistas (velocidade, duração, distância e CD).
 	return {
-		"speed": 700.0,
-		"duration": 0.18,
-		"cooldown": 0.9,
-		"gravity_scale": 0.42,
+		"speed": 620.0,
+		"duration": 0.2,
+		"cooldown": 0.1,
+		"gravity_scale": 0.0,
 	}
 
 
@@ -149,10 +190,22 @@ func _can_start_dash() -> bool:
 	return true
 
 
-func _dash_just_pressed() -> bool:
-	if player_id == 1:
-		return Input.is_action_just_pressed("p1_dash")
-	return Input.is_action_just_pressed("p2_dash")
+func start_dash_with_direction(dir_sign: float) -> void:
+	if not _can_start_dash():
+		return
+	_interrupt_sprint()
+	_dash_dir_sign = signf(dir_sign) if absf(dir_sign) > 0.001 else _dash_direction_sign()
+	var st0: Dictionary = _get_dash_stats()
+	_dash_time_left = float(st0.get("duration", 0.18))
+	velocity.x = _dash_dir_sign * float(st0.get("speed", 700.0))
+
+
+func _apply_jump_during_dash() -> void:
+	_dash_time_left = 0.0
+	velocity.y = -jump_speed * dash_jump_vertical_mul
+	var h := maxf(absf(velocity.x), dash_jump_horizontal_speed)
+	velocity.x = _dash_dir_sign * h
+	_jumps_left -= 1
 
 
 func _dash_direction_sign() -> float:
@@ -250,6 +303,8 @@ func _ready() -> void:
 	if _bow_visual != null:
 		_orig_bow_modulate = _bow_visual.modulate
 	_frozen_prev = false
+	_reset_aim_direction_to_forward()
+	_sync_launch_angle_from_aim_direction()
 
 
 func _physics_process(delta: float) -> void:
@@ -262,8 +317,13 @@ func _physics_process(delta: float) -> void:
 	_dash_cd_left = maxf(0.0, _dash_cd_left - delta)
 	_extra_timer_tick(delta)
 
+	if input_enabled and Input.is_key_pressed(KEY_CTRL):
+		if not is_on_floor():
+			_start_ground_pound_dash()
+		
 	if _frozen_left <= 0.0:
-		_update_sprint_double_tap()
+		_update_double_tap_forward_movement()
+		_update_sprint_from_forward_hold(delta)
 		if _sprint_active and not _is_holding_forward_only():
 			_interrupt_sprint()
 
@@ -295,12 +355,14 @@ func _physics_process(delta: float) -> void:
 
 	var hovering := _hover_float_left > 0.0
 
+	_tick_wall_jump_pre_movement(delta)
+
 	if _dash_time_left > 0.0:
 		_dash_time_left = maxf(0.0, _dash_time_left - delta)
 		var st_d: Dictionary = _get_dash_stats()
 		velocity.x = _dash_dir_sign * float(st_d.get("speed", 700.0))
 		if _dash_time_left <= 0.0:
-			_dash_cd_left = float(st_d.get("cooldown", 0.9))
+			_dash_cd_left = float(st_d.get("cooldown", 0.3))
 	elif _control_lock_left <= 0.0:
 		if hovering:
 			# hy>0 = intenção “para cima” na tela; em 2D velocity.y positivo é para baixo.
@@ -311,12 +373,6 @@ func _physics_process(delta: float) -> void:
 			var dir := 0.0 if not input_enabled else _get_move_axis()
 			var sp := _get_sprint_speed_mult()
 			velocity.x = dir * move_speed * sp
-		if _can_start_dash() and _dash_just_pressed():
-			_interrupt_sprint()
-			_dash_dir_sign = _dash_direction_sign()
-			var st0: Dictionary = _get_dash_stats()
-			_dash_time_left = float(st0.get("duration", 0.18))
-			velocity.x = _dash_dir_sign * float(st0.get("speed", 700.0))
 	else:
 		if hovering:
 			velocity = velocity.move_toward(Vector2.ZERO, knockback_friction * delta)
@@ -325,29 +381,65 @@ func _physics_process(delta: float) -> void:
 
 	velocity += _recoil_vel
 	_recoil_vel = _recoil_vel.move_toward(Vector2.ZERO, recoil_decay * delta)
+	
 
 	if not is_on_floor():
-		var gmul := 1.0
-		if _dash_time_left > 0.0:
-			gmul = float(_get_dash_stats().get("gravity_scale", 0.42))
 		if not hovering:
-			velocity.y += gravity_accel * gmul * delta
+			var gmul := 1.0
+			if _dash_time_left > 0.0:
+				gmul = float(_get_dash_stats().get("gravity_scale", 0.42))
+			if gmul > 0.0001:
+				velocity.y += gravity_accel * gmul * delta
 	else:
 		if velocity.y > 0.0:
 			velocity.y = 0.0
-
+	
+	#função de wallslide.
+	if not is_on_floor() and is_on_wall():
+		# Verifica se o jogador está tentando se mover contra a parede
+		var move_dir = _get_move_axis() if input_enabled else 0.0
+		var wall_normal = get_wall_normal()
+		
+		# Se estiver caindo e empurrando o direcional contra a parede
+		if velocity.y > 0 and move_dir != 0 and sign(move_dir) != sign(wall_normal.x):
+			velocity.y = min(velocity.y, wall_slide_speed)
+		
 	if is_on_floor():
 		_jumps_left = max_jumps
 
-	if (not hovering) and _jump_just_pressed() and _jumps_left > 0 and _allow_jump_while_concentrating():
-		velocity.y = -jump_speed
-		_jumps_left -= 1
+	if (not hovering) and _jump_just_pressed() and _allow_jump_while_concentrating():
+		var special := _try_special_air_jump()
+		if not special and _jumps_left > 0:
+			if _dash_time_left > 0.0:
+				_apply_jump_during_dash()
+			else:
+				velocity.y = -jump_speed
+				_jumps_left -= 1
+
+	# Dash com gravidade “zerada”: sem aceleração para baixo e sem continuar acumulando queda (vy > 0).
+	if _dash_time_left > 0.0 and not is_on_floor() and not hovering:
+		var gs := float(_get_dash_stats().get("gravity_scale", 0.42))
+		if gs <= 0.0001:
+			velocity.y = minf(velocity.y, 0.0)
+	
 
 	_refresh_sprint_body_modulate()
 	move_and_slide()
 	_enforce_arena_half()
+	if is_on_floor():
+		_wall_jump_used_this_airborne = false
 	_process_combat(delta)
+	_apply_wall_jump_visual_flash(delta)
 
+#função de dash para baixo.
+func _start_ground_pound_dash() -> void:
+		
+		
+	_hover_float_left = 0.0
+	_interrupt_sprint()
+		
+	velocity.x = 0
+	velocity.y = 2000.0 
 
 func start_hover_float(seconds: float) -> void:
 	if seconds <= 0.0:
@@ -404,25 +496,145 @@ func _allow_jump_while_concentrating() -> bool:
 	return true
 
 
-func _apply_mouse_aim() -> void:
-	var to_mouse := get_global_mouse_position() - muzzle.global_position
-	if to_mouse.length_squared() <= 0.0001:
+## Subclasses podem override; por defeito aplica wall jump comum.
+func _try_special_air_jump() -> bool:
+	if not input_enabled or _control_lock_left > 0.0:
+		return false
+	if is_on_floor() or _wall_jump_used_this_airborne:
+		return false
+	var away_x := _get_wall_jump_away_sign()
+	if absf(away_x) < 0.1:
+		return false
+
+	if _dash_time_left > 0.0:
+		_dash_time_left = 0.0
+		_dash_cd_left = float(_get_dash_stats().get("cooldown", 0.3))
+
+	velocity.x = away_x * wall_jump_horizontal_speed
+	velocity.y = -wall_jump_vertical_speed
+	_wall_jump_used_this_airborne = true
+	_wall_jump_flash_left = wall_jump_visual_duration
+	_wall_jump_free_axis_sign = away_x
+	_wall_jump_move_grace_left = wall_jump_move_grace
+	return true
+
+
+func _tick_wall_jump_pre_movement(delta: float) -> void:
+	if is_on_floor():
+		_wall_jump_move_grace_left = 0.0
+		_wall_jump_free_axis_sign = 0.0
+	else:
+		_wall_jump_move_grace_left = maxf(0.0, _wall_jump_move_grace_left - delta)
+
+
+func _apply_wall_jump_visual_flash(delta: float) -> void:
+	if _wall_jump_flash_left <= 0.0:
 		return
-	var dir := to_mouse.normalized()
+	var u := clampf(_wall_jump_flash_left / maxf(wall_jump_visual_duration, 0.0001), 0.0, 1.0)
+	_wall_jump_flash_left = maxf(0.0, _wall_jump_flash_left - delta)
+	var mult := Color.WHITE.lerp(wall_jump_body_flash, u)
+	if _body_visual != null:
+		_body_visual.modulate *= mult
+	if _bow_visual != null:
+		_bow_visual.modulate *= mult
+
+
+func _get_wall_jump_away_sign() -> float:
+	if is_on_wall_only():
+		var wn := get_wall_normal()
+		if absf(wn.x) >= 0.1:
+			return signf(wn.x)
+	var from := global_position + Vector2(0.0, wall_detect_vertical_offset)
+	var d_left := _wall_ray_hit_dist(from, Vector2.LEFT)
+	var d_right := _wall_ray_hit_dist(from, Vector2.RIGHT)
+	var hit_left := d_left >= 0.0
+	var hit_right := d_right >= 0.0
+	if hit_left and not hit_right:
+		return 1.0
+	if hit_right and not hit_left:
+		return -1.0
+	if hit_left and hit_right:
+		return 1.0 if d_left < d_right else -1.0
+	return 0.0
+
+
+func _wall_ray_hit_dist(from: Vector2, dir: Vector2) -> float:
+	var to := from + dir.normalized() * wall_detect_distance
+	var pq := PhysicsRayQueryParameters2D.create(from, to)
+	pq.collision_mask = collision_mask
+	pq.exclude = [get_rid()]
+	var space := get_world_2d().direct_space_state
+	var r := space.intersect_ray(pq)
+	if r.is_empty():
+		return -1.0
+	return from.distance_to(r["position"] as Vector2)
+
+
+func _apply_aim_from_world_direction(dir: Vector2) -> void:
+	if dir.length_squared() <= 0.0001:
+		return
+	var d := dir.normalized()
 	var forward := Vector2.RIGHT if player_id == 1 else Vector2.LEFT
-	var signed_from_axis := forward.angle_to(dir)
-	if forward.dot(dir) < 0.0:
-		launch_angle_degrees = aim_limit_deg if dir.y < 0.0 else -aim_limit_deg
+	var signed_from_axis := forward.angle_to(d)
+	if forward.dot(d) < 0.0:
+		launch_angle_degrees = aim_limit_deg if d.y < 0.0 else -aim_limit_deg
 	else:
 		var clamped := clampf(signed_from_axis, deg_to_rad(-aim_limit_deg), deg_to_rad(aim_limit_deg))
 		launch_angle_degrees = -rad_to_deg(clamped)
 
 
-func _update_aim(_delta: float) -> void:
+func _reset_aim_direction_to_forward() -> void:
+	_aim_direction = Vector2.RIGHT if player_id == 1 else Vector2.LEFT
+
+
+func _sync_launch_angle_from_aim_direction() -> void:
+	if _aim_direction.length_squared() <= 0.0001:
+		return
+	_apply_aim_from_world_direction(_aim_direction)
+
+
+func _get_gamepad_aim_vector_raw() -> Vector2:
+	var ax_l := "p1_aim_left" if player_id == 1 else "p2_aim_left"
+	var ax_r := "p1_aim_right" if player_id == 1 else "p2_aim_right"
+	var ax_u := "p1_aim_up" if player_id == 1 else "p2_aim_up"
+	var ax_d := "p1_aim_down" if player_id == 1 else "p2_aim_down"
+	# deadzone 0.0: a zona morta “oficial” é só `gamepad_aim_deadzone` abaixo.
+	return Input.get_vector(ax_l, ax_r, ax_u, ax_d, 0.0)
+
+
+func _update_aim_direction_mouse() -> void:
+	var raw := get_global_mouse_position() - muzzle.global_position
+	if raw.length_squared() <= 0.0001:
+		return
+	_aim_direction = raw.normalized()
+
+
+func _update_aim_direction_gamepad(delta: float) -> void:
+	var raw_stick := _get_gamepad_aim_vector_raw()
+	var v := raw_stick * gamepad_aim_sensitivity
+	if v.length_squared() > 1.0001:
+		v = v.limit_length(1.0)
+	if v.length() < gamepad_aim_deadzone:
+		return
+	var target := v.normalized()
+	var tau := maxf(gamepad_aim_smooth_time, 0.0001)
+	var alpha := 1.0 - exp(-delta / tau)
+	_aim_direction = _aim_direction.lerp(target, alpha)
+	if _aim_direction.length_squared() > 0.0001:
+		_aim_direction = _aim_direction.normalized()
+	else:
+		_aim_direction = target
+
+
+func _update_aim(delta: float) -> void:
 	if not input_enabled:
 		_update_bow_visual()
 		return
-	_apply_mouse_aim()
+	if RunConfig.is_player_using_gamepad(player_id):
+		_update_aim_direction_gamepad(delta)
+	else:
+		_update_aim_direction_mouse()
+	_sync_launch_angle_from_aim_direction()
 	launch_angle_degrees = clampf(launch_angle_degrees, -aim_limit_deg, aim_limit_deg)
 	_update_bow_visual()
 
@@ -440,9 +652,14 @@ func _update_bow_visual() -> void:
 
 
 func _get_move_axis() -> float:
-	if player_id == 1:
-		return Input.get_axis("p1_left", "p1_right")
-	return Input.get_axis("p2_left", "p2_right")
+	var a := Input.get_axis("p1_left", "p1_right") if player_id == 1 else Input.get_axis("p2_left", "p2_right")
+	if _wall_jump_move_grace_left <= 0.0:
+		return a
+	if absf(a) < 0.02:
+		return a
+	if a * _wall_jump_free_axis_sign < 0.0:
+		return 0.0
+	return a
 
 
 func _forward_action_just_pressed() -> bool:
@@ -471,19 +688,52 @@ func _is_sprint_speed_boost_active() -> bool:
 
 func _interrupt_sprint() -> void:
 	_sprint_active = false
+	_forward_only_hold_s = 0.0
 
 
-func _update_sprint_double_tap() -> void:
+func _update_sprint_from_forward_hold(delta: float) -> void:
+	if sprint_forward_hold_seconds <= 0.0:
+		_forward_only_hold_s = 0.0
+		return
+	if not input_enabled:
+		_forward_only_hold_s = 0.0
+		return
+	if _dash_time_left > 0.0 or _hover_float_left > 0.0 or _control_lock_left > 0.0:
+		_forward_only_hold_s = 0.0
+		return
+	if _is_holding_forward_only():
+		_forward_only_hold_s += delta
+		if _forward_only_hold_s >= sprint_forward_hold_seconds:
+			_sprint_active = true
+	else:
+		_forward_only_hold_s = 0.0
+
+
+func _update_double_tap_forward_movement() -> void:
 	if not input_enabled:
 		return
-	if not _forward_action_just_pressed():
-		return
-	var now_s := Time.get_ticks_msec() * 0.001
-	var dt := now_s - _last_forward_tap_time_s
-	_last_forward_tap_time_s = now_s
-	if dt > 0.0 and dt <= sprint_double_tap_window:
-		_sprint_active = true
-		_last_forward_tap_time_s = -100.0
+	if _forward_action_just_pressed():
+		var now_s := Time.get_ticks_msec() * 0.001
+		var dt := now_s - _last_forward_tap_time_s
+		_last_forward_tap_time_s = now_s
+		if dt > 0.0 and dt <= sprint_double_tap_window:
+			var fwd := 1.0 if player_id == 1 else -1.0
+			start_dash_with_direction(fwd)
+			_last_forward_tap_time_s = -100.0
+	if _backward_action_just_pressed():
+		var now_b := Time.get_ticks_msec() * 0.001
+		var dtb := now_b - _last_back_tap_time_s
+		_last_back_tap_time_s = now_b
+		if dtb > 0.0 and dtb <= sprint_double_tap_window:
+			var back := -1.0 if player_id == 1 else 1.0
+			start_dash_with_direction(back)
+			_last_back_tap_time_s = -100.0
+
+
+func _backward_action_just_pressed() -> bool:
+	if player_id == 1:
+		return Input.is_action_just_pressed("p1_left")
+	return Input.is_action_just_pressed("p2_right")
 
 
 func _shoot_just_pressed() -> bool:
@@ -576,6 +826,48 @@ func take_damage(amount: int) -> void:
 	hp = maxi(0, hp - amount)
 	health_changed.emit(hp)
 	print("Player ", player_id, " HP: ", hp)
+
+
+## Respawn entre rounds (modo Vs): posição local na arena, vida cheia, cooldowns zerados.
+func prepare_for_vs_round_respawn(local_spawn: Vector2) -> void:
+	_interrupt_sprint()
+	position = local_spawn
+	velocity = Vector2.ZERO
+	hp = max_hp
+	health_changed.emit(hp)
+	_cooldown_left = 0.0
+	_special_cd_left = 0.0
+	_is_charging = false
+	_charge_time = 0.0
+	_jumps_left = max_jumps
+	_control_lock_left = 0.0
+	_recoil_vel = Vector2.ZERO
+	_special_buff_left = 0.0
+	_was_special_active = false
+	_frozen_left = 0.0
+	_frozen_prev = false
+	_hover_float_left = 0.0
+	_dash_time_left = 0.0
+	_dash_cd_left = 0.0
+	_wall_jump_used_this_airborne = false
+	_wall_jump_flash_left = 0.0
+	_wall_jump_move_grace_left = 0.0
+	_wall_jump_free_axis_sign = 0.0
+	_forward_only_hold_s = 0.0
+	_last_forward_tap_time_s = -100.0
+	_last_back_tap_time_s = -100.0
+	_set_frozen_visual(false)
+	_hide_charge_trajectory_ui()
+	if shield_visual != null:
+		shield_visual.visible = false
+	var max_c := _max_shield_charges()
+	if max_c > 0:
+		_shield_charges = max_c
+		_shield_cd_left = 0.0
+	special_buff_changed.emit(false, 0, 0.0)
+	_reset_aim_direction_to_forward()
+	_sync_launch_angle_from_aim_direction()
+	_extra_reset_for_vs_round()
 
 
 func apply_knockback(knockback: Vector2) -> void:

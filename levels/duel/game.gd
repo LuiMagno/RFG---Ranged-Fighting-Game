@@ -17,6 +17,10 @@ const PISTOLEIRO_PLAYER_SCRIPT := "res://characters/pistoleiro_player.gd"
 const ARQUEIRO_PLAYER_SCRIPT := "res://characters/arqueiro_player.gd"
 const MAGO_PLAYER_SCRIPT := "res://characters/mago_player.gd"
 const ESQUELETO_PLAYER_SCRIPT := "res://characters/esqueleto_player.gd"
+const ONGMA_EPILEF_PLAYER_SCRIPT := "res://characters/ongma_epilef_player.gd"
+
+const VS_ROUND_DURATION_S := 60.0
+const VS_ROUNDS_TO_WIN := 3
 
 @onready var left_player: Player = $LeftPlayer
 @onready var right_player: Player = $RightPlayer
@@ -28,15 +32,32 @@ const ESQUELETO_PLAYER_SCRIPT := "res://characters/esqueleto_player.gd"
 @onready var p2_special_label: Label = $UI/P2Special
 @onready var p1_archer_spike_label: Label = $UI/P1ArcherSpike
 @onready var p2_archer_spike_label: Label = $UI/P2ArcherSpike
-@onready var training_panel: Control = get_node_or_null("UI/TrainingPanel") as Control
-@onready var training_chk_dummy: CheckBox = get_node_or_null("UI/TrainingPanel/VBox/ChkDummyShoot") as CheckBox
-@onready var training_btn_menu: Button = get_node_or_null("UI/TrainingPanel/VBox/BtnBackToMenu") as Button
+@onready var p1_skill_hints: Label = $UI/P1SkillHints
+@onready var p2_skill_hints: Label = $UI/P2SkillHints
+@onready var _vs_hud: Control = $UI/VsHud
+@onready var _vs_timer_label: Label = $UI/VsHud/VsTimerLabel
+@onready var _vs_p1_character_label: Label = $UI/VsHud/VsP1CharacterLabel
+@onready var _vs_p2_character_label: Label = $UI/VsHud/VsP2CharacterLabel
+@onready var _vs_score_label: Label = $UI/VsHud/VsScoreLabel
+@onready var _vs_round_banner_root: Control = $VsRoundBannerLayer/BannerRoot
+@onready var _vs_round_banner_label: Label = $VsRoundBannerLayer/BannerRoot/BannerCenter/RoundBannerLabel
+@onready var _vs_match_end_menu: VsMatchEndMenu = $VsMatchEndLayer
 
-# Flecha especial do arqueiro no ar (segundo clique em atirar fragmenta).
+# Flecha especial do arqueiro no ar (segundo disparo fragmenta).
 var _archer_carriers: Dictionary = {}
 var _active_grenades: Dictionary = {}
 var _active_ice: Dictionary = {}
 var _training_loop_running: bool = false
+
+var _vs_p1_spawn: Vector2
+var _vs_p2_spawn: Vector2
+var _vs_round_time_left: float = 0.0
+var _vs_round_playing: bool = false
+var _vs_resolving_round: bool = false
+var _vs_round_interstitial_active: bool = false
+var _vs_match_end_menu_open: bool = false
+var _p1_rounds_won: int = 0
+var _p2_rounds_won: int = 0
 
 
 func _enter_tree() -> void:
@@ -44,7 +65,13 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
-	RunConfig.clear_p1_shoot_mouse_binding()
+	RunConfig.clear_shoot_mouse_bindings_for_menu()
+
+
+## Reaplica teclas + eventos de comando conforme `RunConfig` (útil se mudares input em pausa no treino).
+func apply_input_map_from_run_config() -> void:
+	_ensure_input_map()
+	_refresh_skill_hint_labels()
 
 
 func _assign_player_scripts_from_run_config() -> void:
@@ -80,6 +107,8 @@ func _assign_player_script(node: Node, kind: int) -> void:
 		path = MAGO_PLAYER_SCRIPT
 	elif kind == Player.CharacterKind.ESQUELETO:
 		path = ESQUELETO_PLAYER_SCRIPT
+	elif kind == Player.CharacterKind.ONGMA_EPILEF:
+		path = ONGMA_EPILEF_PLAYER_SCRIPT
 	else:
 		path = MAGO_PLAYER_SCRIPT
 	var scr := load(path) as Script
@@ -88,7 +117,7 @@ func _assign_player_script(node: Node, kind: int) -> void:
 
 
 func _ready() -> void:
-	_ensure_input_map()
+	apply_input_map_from_run_config()
 	# Centralized wiring keeps Player and Arrow decoupled from "game rules".
 	left_player.shoot_requested.connect(_spawn_arrow)
 	left_player.shots_requested.connect(_spawn_shots)
@@ -122,30 +151,235 @@ func _ready() -> void:
 	_on_left_archer_spike_hud(0, false)
 	_on_right_archer_spike_hud(0, false)
 
-	_setup_training_menu_ui()
+	_vs_p1_spawn = left_player.position
+	_vs_p2_spawn = right_player.position
 	_apply_mode()
+	if RunConfig.mode == RunConfig.Mode.VS_PLAYER:
+		_vs_hud.visible = true
+		_start_vs_round()
+	else:
+		_vs_hud.visible = false
 
 
-func _setup_training_menu_ui() -> void:
-	var is_training := RunConfig.mode == RunConfig.Mode.TRAINING
-	if training_panel != null:
-		training_panel.visible = is_training
-	if not is_training:
+func blocks_vs_pause_menu() -> bool:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
+		return false
+	return _vs_match_end_menu_open or _vs_round_interstitial_active or _vs_resolving_round
+
+
+func rematch_vs_after_post_game() -> void:
+	_vs_match_end_menu_open = false
+	_vs_match_end_menu.close_menu()
+	_p1_rounds_won = 0
+	_p2_rounds_won = 0
+	_start_vs_round()
+
+
+func _process(delta: float) -> void:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
 		return
-	if training_chk_dummy != null:
-		training_chk_dummy.button_pressed = RunConfig.training_dummy_shoot
-		training_chk_dummy.toggled.connect(_on_training_dummy_toggled)
-	if training_btn_menu != null:
-		training_btn_menu.pressed.connect(_on_training_back_to_menu_pressed)
+	if not _vs_round_playing or _vs_match_end_menu_open or _vs_resolving_round:
+		return
+	if get_tree().paused:
+		return
+	_vs_round_time_left -= delta
+	_update_vs_hud()
+	if _vs_round_time_left <= 0.0:
+		_finish_vs_round_timeout()
 
 
-func _on_training_back_to_menu_pressed() -> void:
-	RunConfig.clear_p1_shoot_mouse_binding()
-	get_tree().change_scene_to_file("res://ui/menu.tscn")
+func _start_vs_round() -> void:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
+		return
+	_clear_vs_projectiles_and_carry_state()
+	left_player.prepare_for_vs_round_respawn(_vs_p1_spawn)
+	right_player.prepare_for_vs_round_respawn(_vs_p2_spawn)
+	left_player.input_enabled = true
+	right_player.input_enabled = true
+	_vs_round_time_left = VS_ROUND_DURATION_S
+	_vs_round_playing = true
+	_refresh_vs_character_labels()
+	_update_vs_hud()
 
 
-func _on_training_dummy_toggled(pressed: bool) -> void:
-	RunConfig.training_dummy_shoot = pressed
+func _clear_vs_projectiles_and_carry_state() -> void:
+	_archer_carriers.clear()
+	_active_grenades.clear()
+	_active_ice.clear()
+	for c in get_children():
+		if (
+			c is Arrow
+			or c is Grenade
+			or c is GravityOrb
+			or c is ArcherSpike
+			or c is Fireball
+			or c is IceField
+		):
+			c.queue_free()
+
+
+func _update_vs_hud() -> void:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
+		return
+	var whole := maxi(0, ceili(_vs_round_time_left))
+	var mn := whole / 60
+	var sc := whole % 60
+	_vs_timer_label.text = "%d:%02d" % [mn, sc]
+	_vs_score_label.text = "Vitórias: %d — %d  (primeiro a %d)" % [_p1_rounds_won, _p2_rounds_won, VS_ROUNDS_TO_WIN]
+
+
+func _refresh_vs_character_labels() -> void:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
+		return
+	var k1 := RunConfig.p1_character
+	var k2 := RunConfig.p2_character
+	var n1 := MenuThemeUtil.vs_character_name(k1)
+	var n2 := MenuThemeUtil.vs_character_name(k2)
+	_vs_p1_character_label.text = "Jogador 1 — %s" % n1
+	_vs_p1_character_label.add_theme_color_override("font_color", MenuThemeUtil.vs_character_accent_color(k1))
+	_vs_p2_character_label.text = "Jogador 2 — %s" % n2
+	_vs_p2_character_label.add_theme_color_override("font_color", MenuThemeUtil.vs_character_accent_color(k2))
+	_refresh_skill_hint_labels()
+
+
+func _character_kind(p: Player) -> int:
+	if p.is_ongma_epilef():
+		return Player.CharacterKind.ONGMA_EPILEF
+	if p.is_esqueleto():
+		return Player.CharacterKind.ESQUELETO
+	if p.is_mago():
+		return Player.CharacterKind.MAGO
+	if p.is_arqueiro():
+		return Player.CharacterKind.ARQUEIRO
+	if p.is_pistoleiro():
+		return Player.CharacterKind.PISTOLEIRO
+	return Player.CharacterKind.PISTOLEIRO
+
+
+func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
+	if gamepad:
+		var base_pad := (
+			"Mov analógico esq / D-pad · Mira analógico dir · A pulo · B dash · LB escudo · RB tiro · Y especial"
+			+ " · Flutuar (no ar): gatilho RT cima / LT baixo"
+		)
+		match kind:
+			Player.CharacterKind.PISTOLEIRO:
+				return base_pad + " · X granada"
+			Player.CharacterKind.ARQUEIRO:
+				return base_pad + " · L3 espinhos · Y especial (leque com combo)"
+			Player.CharacterKind.MAGO:
+				return base_pad + " · X gelo · R3 levitar · Y segure/solta orbe"
+			Player.CharacterKind.ESQUELETO, Player.CharacterKind.ONGMA_EPILEF:
+				return (
+					base_pad
+					+ " · X segure/solta feixe · Y triplo antes do tiro · Dash: duplo toque frente/trás no stick"
+				)
+			_:
+				return base_pad
+	# Teclado+mouse: mesmo layout para P1 e P2 (no Vs só um usa teclado+mouse por vez).
+	var base_kb := (
+		"Mov A/D · Espaço pulo · Shift esq dash · Q escudo · W/S flutuar (no ar) · Mouse mira e tiro"
+	)
+	match kind:
+		Player.CharacterKind.PISTOLEIRO:
+			return base_kb + " · F granada · G especial"
+		Player.CharacterKind.ARQUEIRO:
+			return base_kb + " · F espinhos · G especial (leque com combo)"
+		Player.CharacterKind.MAGO:
+			return base_kb + " · F gelo (F de novo detona) · C levitar · G segure e solte orbe"
+		Player.CharacterKind.ESQUELETO, Player.CharacterKind.ONGMA_EPILEF:
+			return base_kb + " · F segure feixe · G triplo (antes de soltar o tiro) · Dash: duplo A ou D"
+		_:
+			return base_kb
+
+
+func _refresh_skill_hint_labels() -> void:
+	if p1_skill_hints == null or p2_skill_hints == null:
+		return
+	if RunConfig.mode == RunConfig.Mode.TRAINING:
+		p1_skill_hints.text = _skill_hint_lines(1, _character_kind(left_player), RunConfig.is_player_using_gamepad(1))
+		p2_skill_hints.text = "Treino: boneco à direita é controlado pelo jogo (CPU)."
+		return
+	p1_skill_hints.text = _skill_hint_lines(1, _character_kind(left_player), RunConfig.is_player_using_gamepad(1))
+	p2_skill_hints.text = _skill_hint_lines(2, _character_kind(right_player), RunConfig.is_player_using_gamepad(2))
+
+
+func _check_vs_ko_after_hp_change() -> void:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
+		return
+	if not _vs_round_playing or _vs_resolving_round or _vs_match_end_menu_open:
+		return
+	if left_player.hp <= 0:
+		_finish_vs_round_ko(2)
+	elif right_player.hp <= 0:
+		_finish_vs_round_ko(1)
+
+
+func _finish_vs_round_ko(winner_id: int) -> void:
+	if _vs_resolving_round or not _vs_round_playing:
+		return
+	_vs_resolving_round = true
+	_vs_round_playing = false
+	left_player.input_enabled = false
+	right_player.input_enabled = false
+	await _show_round_banner_and_wait("Jogador %d vence o round!" % winner_id)
+	if winner_id == 1:
+		_p1_rounds_won += 1
+	else:
+		_p2_rounds_won += 1
+	await _try_finish_match_or_continue()
+	_vs_resolving_round = false
+
+
+func _finish_vs_round_timeout() -> void:
+	if _vs_resolving_round or not _vs_round_playing:
+		return
+	_vs_resolving_round = true
+	_vs_round_playing = false
+	left_player.input_enabled = false
+	right_player.input_enabled = false
+	var lh := left_player.hp
+	var rh := right_player.hp
+	var msg: String
+	if lh > rh:
+		msg = "Tempo! Jogador 1 vence o round (mais HP)."
+	elif rh > lh:
+		msg = "Tempo! Jogador 2 vence o round (mais HP)."
+	else:
+		msg = "Tempo esgotado — empate! Novo round."
+	await _show_round_banner_and_wait(msg)
+	if lh > rh:
+		_p1_rounds_won += 1
+	elif rh > lh:
+		_p2_rounds_won += 1
+	await _try_finish_match_or_continue()
+	_vs_resolving_round = false
+
+
+func _show_round_banner_and_wait(message: String) -> void:
+	_vs_round_interstitial_active = true
+	_vs_round_banner_label.text = message
+	_vs_round_banner_root.visible = true
+	await get_tree().create_timer(2.5).timeout
+	_vs_round_banner_root.visible = false
+	_vs_round_interstitial_active = false
+
+
+func _try_finish_match_or_continue() -> void:
+	_update_vs_hud()
+	if _p1_rounds_won >= VS_ROUNDS_TO_WIN or _p2_rounds_won >= VS_ROUNDS_TO_WIN:
+		var mw := 1 if _p1_rounds_won >= VS_ROUNDS_TO_WIN else 2
+		_open_vs_match_end(mw)
+	else:
+		_start_vs_round()
+
+
+func _open_vs_match_end(match_winner_id: int) -> void:
+	_vs_match_end_menu_open = true
+	_vs_round_playing = false
+	left_player.input_enabled = false
+	right_player.input_enabled = false
+	_vs_match_end_menu.open_for_match_winner(match_winner_id)
 
 
 func _apply_mode() -> void:
@@ -190,6 +424,7 @@ func _fire_training_dummy_shot() -> void:
 func _ensure_input_map() -> void:
 	# Some environments/projects fail to import InputMap from project.godot on first load.
 	# To keep this prototype runnable, we ensure required actions exist at runtime.
+	RunConfig.ensure_valid_input_scheme_pair()
 	_add_action_if_missing("p1_left", KEY_A)
 	_add_action_if_missing("p1_right", KEY_D)
 	_add_action_if_missing("p1_jump", KEY_SPACE)
@@ -197,36 +432,162 @@ func _ensure_input_map() -> void:
 	_add_action_if_missing("p1_hover_down", KEY_S)
 	if not InputMap.has_action("p1_shoot"):
 		InputMap.add_action("p1_shoot")
-	# Tiro básico P1: só rato. Tira F do project.godot se existir (F = skills, não tiro).
-	_ensure_action_has_mouse_button("p1_shoot", MOUSE_BUTTON_LEFT)
 	_strip_key_from_action("p1_shoot", KEY_F)
 	_add_action_if_missing("p1_grenade", KEY_F)
 	_add_action_if_missing("p1_archer_spike", KEY_F)
 	_strip_key_from_action("p1_special", KEY_C)
 	_add_action_if_missing("p1_special", KEY_G)
-	# Mago: levitar = p1_mage_float (C) / p2_mage_float (Y); orbe = segurar G e soltar.
+	# Mago: levitar = p1_mage_float (C) / p2_mage_float (C no teclado+mouse); orbe = segurar G e soltar.
 	_add_action_if_missing("p1_mage_float", KEY_C)
 	_add_action_if_missing("p1_shield", KEY_Q)
 	_ensure_dash_action("p1_dash", true)
-	_add_action_if_missing("ui_game_pause", KEY_ENTER)
-	_ensure_p2_default_keyboard()
+	_ensure_ui_game_pause_input()
 
-## P2 no mesmo teclado (vs local): setas + L tiro; não remover teclas.
-func _ensure_p2_default_keyboard() -> void:
-	_add_action_if_missing("p2_left", KEY_LEFT)
-	_add_action_if_missing("p2_right", KEY_RIGHT)
-	_add_action_if_missing("p2_jump", KEY_UP)
-	_add_action_if_missing("p2_hover_up", KEY_I)
-	_add_action_if_missing("p2_hover_down", KEY_K)
+	_ensure_p2_action_shells_without_keys()
+	_ensure_aim_action_quartet("p1")
+	_ensure_aim_action_quartet("p2")
+	_strip_keyboard_events_from_actions(_player_action_names("p2"))
+	_strip_mouse_button_from_action("p2_shoot", MOUSE_BUTTON_LEFT)
+	if RunConfig.p2_input_scheme == RunConfig.InputScheme.KEYBOARD_MOUSE:
+		_ensure_p2_keyboard_mouse_shared_layout()
+
+	_strip_joypad_events_from_actions(_player_action_names("p1"))
+	_strip_joypad_events_from_actions(_player_action_names("p2"))
+	if RunConfig.p1_input_scheme == RunConfig.InputScheme.GAMEPAD:
+		_strip_keyboard_events_from_actions(_player_action_names("p1"))
+		_strip_mouse_button_from_action("p1_shoot", MOUSE_BUTTON_LEFT)
+		_add_gamepad_mappings_for_player("p1", RunConfig.p1_joy_device)
+	if RunConfig.p2_input_scheme == RunConfig.InputScheme.GAMEPAD:
+		_add_gamepad_mappings_for_player("p2", RunConfig.p2_joy_device)
+
+	_strip_mouse_button_from_action("p1_shoot", MOUSE_BUTTON_LEFT)
+	_strip_mouse_button_from_action("p2_shoot", MOUSE_BUTTON_LEFT)
+	if RunConfig.p1_input_scheme == RunConfig.InputScheme.KEYBOARD_MOUSE:
+		_ensure_action_has_mouse_button("p1_shoot", MOUSE_BUTTON_LEFT)
+	if RunConfig.p2_input_scheme == RunConfig.InputScheme.KEYBOARD_MOUSE:
+		_ensure_action_has_mouse_button("p2_shoot", MOUSE_BUTTON_LEFT)
+
+
+func _ensure_p2_action_shells_without_keys() -> void:
+	for n: String in [
+		"p2_left",
+		"p2_right",
+		"p2_jump",
+		"p2_hover_up",
+		"p2_hover_down",
+		"p2_shoot",
+		"p2_grenade",
+		"p2_archer_spike",
+		"p2_special",
+		"p2_mage_float",
+		"p2_shield",
+		"p2_dash",
+	]:
+		if not InputMap.has_action(n):
+			InputMap.add_action(n)
+
+
+## P2 em teclado+mouse usa o mesmo mapa WASD + mouse que o P1 (exclusivo: o outro jogador fica em controle).
+func _ensure_p2_keyboard_mouse_shared_layout() -> void:
+	_add_action_if_missing("p2_left", KEY_A)
+	_add_action_if_missing("p2_right", KEY_D)
+	_add_action_if_missing("p2_jump", KEY_SPACE)
+	_add_action_if_missing("p2_hover_up", KEY_W)
+	_add_action_if_missing("p2_hover_down", KEY_S)
 	if not InputMap.has_action("p2_shoot"):
 		InputMap.add_action("p2_shoot")
-	_ensure_action_has_key("p2_shoot", KEY_L)
-	_add_action_if_missing("p2_grenade", KEY_J)
-	_add_action_if_missing("p2_archer_spike", KEY_U)
-	_add_action_if_missing("p2_special", KEY_O)
-	_add_action_if_missing("p2_shield", KEY_SLASH)
-	_add_action_if_missing("p2_mage_float", KEY_Y)
-	_ensure_dash_action("p2_dash", false)
+	_strip_key_from_action("p2_shoot", KEY_F)
+	_strip_key_from_action("p2_shoot", KEY_L)
+	_add_action_if_missing("p2_grenade", KEY_F)
+	_add_action_if_missing("p2_archer_spike", KEY_F)
+	_strip_key_from_action("p2_special", KEY_C)
+	_add_action_if_missing("p2_special", KEY_G)
+	_add_action_if_missing("p2_mage_float", KEY_C)
+	_add_action_if_missing("p2_shield", KEY_Q)
+	_ensure_dash_action("p2_dash", true)
+
+
+func _player_action_names(prefix: String) -> Array:
+	var p := prefix + "_"
+	return [
+		p + "left",
+		p + "right",
+		p + "jump",
+		p + "hover_up",
+		p + "hover_down",
+		p + "shoot",
+		p + "grenade",
+		p + "archer_spike",
+		p + "special",
+		p + "mage_float",
+		p + "shield",
+		p + "dash",
+		p + "aim_left",
+		p + "aim_right",
+		p + "aim_up",
+		p + "aim_down",
+	]
+
+
+func _ensure_aim_action_quartet(prefix: String) -> void:
+	var dz := 0.35
+	for s in ["aim_left", "aim_right", "aim_up", "aim_down"]:
+		var an: StringName = StringName("%s_%s" % [prefix, s])
+		if not InputMap.has_action(an):
+			InputMap.add_action(an, dz)
+
+
+func _strip_joypad_events_from_actions(action_names: Array) -> void:
+	for an in action_names:
+		if not InputMap.has_action(an):
+			continue
+		var to_remove: Array = []
+		for ev in InputMap.action_get_events(an):
+			if ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
+				to_remove.append(ev)
+		for ev in to_remove:
+			InputMap.action_erase_event(an, ev)
+
+
+func _joy_btn(dev: int, button: JoyButton) -> InputEventJoypadButton:
+	var j := InputEventJoypadButton.new()
+	j.device = dev
+	j.button_index = button
+	return j
+
+
+func _joy_motion(dev: int, axis: JoyAxis, axis_value: float) -> InputEventJoypadMotion:
+	var m := InputEventJoypadMotion.new()
+	m.device = dev
+	m.axis = axis
+	m.axis_value = axis_value
+	return m
+
+
+func _add_gamepad_mappings_for_player(prefix: String, device: int) -> void:
+	var p := prefix + "_"
+	# Movimento: stick esquerdo + D-pad horizontal (doc: get_axis em left/right).
+	InputMap.action_add_event(p + "left", _joy_motion(device, JOY_AXIS_LEFT_X, -1.0))
+	InputMap.action_add_event(p + "left", _joy_btn(device, JOY_BUTTON_DPAD_LEFT))
+	InputMap.action_add_event(p + "right", _joy_motion(device, JOY_AXIS_LEFT_X, 1.0))
+	InputMap.action_add_event(p + "right", _joy_btn(device, JOY_BUTTON_DPAD_RIGHT))
+	# Hover na flutuação: gatilhos (evita D-pad vertical em conflito com menus / movimento).
+	InputMap.action_add_event(p + "hover_up", _joy_motion(device, JOY_AXIS_TRIGGER_RIGHT, 1.0))
+	InputMap.action_add_event(p + "hover_down", _joy_motion(device, JOY_AXIS_TRIGGER_LEFT, 1.0))
+	# Mira: stick direito → get_vector nas ações aim_*.
+	InputMap.action_add_event(p + "aim_left", _joy_motion(device, JOY_AXIS_RIGHT_X, -1.0))
+	InputMap.action_add_event(p + "aim_right", _joy_motion(device, JOY_AXIS_RIGHT_X, 1.0))
+	InputMap.action_add_event(p + "aim_up", _joy_motion(device, JOY_AXIS_RIGHT_Y, -1.0))
+	InputMap.action_add_event(p + "aim_down", _joy_motion(device, JOY_AXIS_RIGHT_Y, 1.0))
+	# Xbox-like: tiro RB, pulo A, dash B, especial Y, escudo LB, granada X, mago levitar R3, espinho L3.
+	InputMap.action_add_event(p + "shoot", _joy_btn(device, JOY_BUTTON_RIGHT_SHOULDER))
+	InputMap.action_add_event(p + "jump", _joy_btn(device, JOY_BUTTON_A))
+	InputMap.action_add_event(p + "dash", _joy_btn(device, JOY_BUTTON_B))
+	InputMap.action_add_event(p + "special", _joy_btn(device, JOY_BUTTON_Y))
+	InputMap.action_add_event(p + "shield", _joy_btn(device, JOY_BUTTON_LEFT_SHOULDER))
+	InputMap.action_add_event(p + "grenade", _joy_btn(device, JOY_BUTTON_X))
+	InputMap.action_add_event(p + "mage_float", _joy_btn(device, JOY_BUTTON_RIGHT_STICK))
+	InputMap.action_add_event(p + "archer_spike", _joy_btn(device, JOY_BUTTON_LEFT_STICK))
 
 
 func _ensure_dash_action(action_name: StringName, left_shift: bool) -> void:
@@ -253,6 +614,30 @@ func _strip_key_from_action(action_name: StringName, keycode: Key) -> void:
 	for ev in to_remove:
 		InputMap.action_erase_event(action_name, ev)
 
+
+func _strip_keyboard_events_from_actions(action_names: Array) -> void:
+	for an in action_names:
+		if not InputMap.has_action(an):
+			continue
+		var to_remove: Array = []
+		for ev in InputMap.action_get_events(an):
+			if ev is InputEventKey:
+				to_remove.append(ev)
+		for ev in to_remove:
+			InputMap.action_erase_event(an, ev)
+
+
+func _strip_mouse_button_from_action(action_name: StringName, button_index: int) -> void:
+	if not InputMap.has_action(action_name):
+		return
+	var to_remove: Array = []
+	for ev in InputMap.action_get_events(action_name):
+		if ev is InputEventMouseButton and int((ev as InputEventMouseButton).button_index) == button_index:
+			to_remove.append(ev)
+	for ev in to_remove:
+		InputMap.action_erase_event(action_name, ev)
+
+
 func _add_action_if_missing(action_name: StringName, keycode: int) -> void:
 	if InputMap.has_action(action_name):
 		_ensure_action_has_key(action_name, keycode)
@@ -270,6 +655,20 @@ func _ensure_action_has_key(action_name: StringName, keycode: int) -> void:
 	var ev := InputEventKey.new()
 	ev.keycode = keycode as Key
 	InputMap.action_add_event(action_name, ev)
+
+
+func _ensure_ui_game_pause_input() -> void:
+	_add_action_if_missing("ui_game_pause", KEY_ENTER)
+	if not InputMap.has_action("ui_game_pause"):
+		return
+	for e in InputMap.action_get_events("ui_game_pause"):
+		if e is InputEventJoypadButton and (e as InputEventJoypadButton).button_index == JOY_BUTTON_START:
+			return
+	var jev := InputEventJoypadButton.new()
+	jev.device = -1
+	jev.button_index = JOY_BUTTON_START
+	InputMap.action_add_event("ui_game_pause", jev)
+
 
 func _ensure_action_has_mouse_button(action_name: StringName, button_index: int) -> void:
 	if not InputMap.has_action(action_name):
@@ -446,7 +845,7 @@ func _spawn_one_arrow(
 	var g := gravity_override
 	var b := bounces_override
 	if g == INF:
-		g = 0.0 if (owner_player.is_pistoleiro() or owner_player.is_esqueleto()) else arrow.gravity_accel
+		g = 0.0 if (owner_player.is_pistoleiro() or (owner_player is EsqueletoPlayer)) else arrow.gravity_accel
 	if b < 0:
 		b = 1 if owner_player.is_pistoleiro() else 0
 
@@ -546,12 +945,15 @@ func _on_arrow_hit_player(_victim: Player, _damage: int) -> void:
 func _on_left_hp_changed(hp: int) -> void:
 	p1_hp_label.text = "P1 HP: %d" % hp
 	p1_hp_bar.value = hp
+	_check_vs_ko_after_hp_change()
 
 func _on_right_hp_changed(hp: int) -> void:
 	p2_hp_label.text = "P2 HP: %d" % hp
 	p2_hp_bar.value = hp
+	_check_vs_ko_after_hp_change()
 
 func _on_left_special_buff_changed(active: bool, uses_left: int, _time_left: float) -> void:
+	var s1 := RunConfig.get_shoot_hint_token_for_player(1)
 	if left_player.is_pistoleiro():
 		p1_special_label.visible = active
 		if active:
@@ -564,17 +966,18 @@ func _on_left_special_buff_changed(active: bool, uses_left: int, _time_left: flo
 			if uses_left >= 2:
 				p1_special_label.text = "P1: mire e solte o tiro especial"
 			else:
-				p1_special_label.text = "P1: clique atirar de novo p/ 5 flechas"
+				p1_special_label.text = "P1: %s atirar de novo p/ 5 flechas" % s1
 		else:
 			p1_special_label.text = ""
-	elif left_player.is_esqueleto():
+	elif left_player is EsqueletoPlayer:
 		p1_special_label.visible = active
-		p1_special_label.text = "P1: próximo tiro (rato) = 3 flechas" if active else ""
+		p1_special_label.text = ("P1: próximo tiro (%s) = 3 flechas" % s1) if active else ""
 	else:
 		p1_special_label.visible = false
 		p1_special_label.text = ""
 
 func _on_right_special_buff_changed(active: bool, uses_left: int, _time_left: float) -> void:
+	var s2 := RunConfig.get_shoot_hint_token_for_player(2)
 	if right_player.is_pistoleiro():
 		p2_special_label.visible = active
 		if active:
@@ -587,12 +990,12 @@ func _on_right_special_buff_changed(active: bool, uses_left: int, _time_left: fl
 			if uses_left >= 2:
 				p2_special_label.text = "P2: mire e solte o tiro especial"
 			else:
-				p2_special_label.text = "P2: clique atirar de novo p/ 5 flechas"
+				p2_special_label.text = "P2: %s atirar de novo p/ 5 flechas" % s2
 		else:
 			p2_special_label.text = ""
-	elif right_player.is_esqueleto():
+	elif right_player is EsqueletoPlayer:
 		p2_special_label.visible = active
-		p2_special_label.text = "P2: próximo tiro (rato) = 3 flechas" if active else ""
+		p2_special_label.text = ("P2: próximo tiro (%s) = 3 flechas" % s2) if active else ""
 	else:
 		p2_special_label.visible = false
 		p2_special_label.text = ""
@@ -603,9 +1006,10 @@ func _on_left_archer_spike_hud(remaining: int, volley_armed: bool) -> void:
 		p1_archer_spike_label.visible = false
 		p1_archer_spike_label.text = ""
 		return
+	var s1 := RunConfig.get_shoot_hint_token_for_player(1)
 	p1_archer_spike_label.visible = remaining > 0 or volley_armed
 	if volley_armed:
-		p1_archer_spike_label.text = "P1 ESPINHOS: solte o tiro → 5 no chão (leque)"
+		p1_archer_spike_label.text = "P1 ESPINHOS: solte (%s) → 5 no chão (leque)" % s1
 	elif remaining > 0:
 		p1_archer_spike_label.text = "P1 ESPINHOS: %d tiro(s) buffado(s)" % remaining
 	else:
@@ -617,9 +1021,10 @@ func _on_right_archer_spike_hud(remaining: int, volley_armed: bool) -> void:
 		p2_archer_spike_label.visible = false
 		p2_archer_spike_label.text = ""
 		return
+	var s2 := RunConfig.get_shoot_hint_token_for_player(2)
 	p2_archer_spike_label.visible = remaining > 0 or volley_armed
 	if volley_armed:
-		p2_archer_spike_label.text = "P2 ESPINHOS: solte o tiro → 5 no chão (leque)"
+		p2_archer_spike_label.text = "P2 ESPINHOS: solte (%s) → 5 no chão (leque)" % s2
 	elif remaining > 0:
 		p2_archer_spike_label.text = "P2 ESPINHOS: %d tiro(s) buffado(s)" % remaining
 	else:

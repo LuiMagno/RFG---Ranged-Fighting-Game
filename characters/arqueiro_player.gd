@@ -31,15 +31,6 @@ func _shield_handle_arrow(arrow: Arrow) -> void:
 	health_changed.emit(hp)
 
 
-func _get_dash_stats() -> Dictionary:
-	return {
-		"speed": 980.0,
-		"duration": 0.1,
-		"cooldown": 0.8,
-		"gravity_scale": 0.32,
-	}
-
-
 func _extra_timer_tick(delta: float) -> void:
 	_archer_spike_buff_cd_left = maxf(0.0, _archer_spike_buff_cd_left - delta)
 
@@ -148,6 +139,14 @@ func _archer_spike_buff_just_pressed() -> bool:
 
 func _sync_archer_spike_hud() -> void:
 	archer_spike_hud_changed.emit(_archer_spike_shots_left, _archer_spike_g_volley_armed)
+
+
+func _extra_reset_for_vs_round() -> void:
+	_archer_phase = 0
+	_archer_spike_buff_cd_left = 0.0
+	_archer_spike_shots_left = 0
+	_archer_spike_g_volley_armed = false
+	archer_spike_hud_changed.emit(0, false)
 
 
 func _ready() -> void:

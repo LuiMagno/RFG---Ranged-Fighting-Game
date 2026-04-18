@@ -1,6 +1,12 @@
 extends Player
 class_name MagoPlayer
 
+## Se existir, `BodySprite` usa estes frames; senão mantém o `Polygon2D` do corpo.
+## Coloque PNGs no editor Godot neste recurso (animações sugeridas: idle, run, jump, fall).
+const MAGO_SPRITE_FRAMES_PATH := "res://art/mago/mago_sprite_frames.tres"
+## Ajuste fino para alinhar os pés ao retângulo de colisão (~40×90).
+const BODY_SPRITE_OFFSET := Vector2(0, 6)
+
 @export var missile_min_speed: float = 360.0
 @export var missile_max_speed: float = 520.0
 @export var missile_charge_time: float = 0.85
@@ -23,6 +29,19 @@ var _orb_press_armed: bool = false
 
 @onready var _orb_charge_vis: Polygon2D = muzzle.get_node_or_null("OrbChargeVisual") as Polygon2D
 
+var _body_sprite: AnimatedSprite2D
+var _orig_sprite_modulate: Color = Color.WHITE
+
+
+func _ready() -> void:
+	super._ready()
+	_setup_mago_body_sprite()
+
+
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	_sync_mago_body_sprite()
+
 
 func set_ice_active(active: bool) -> void:
 	_ice_active = active
@@ -38,15 +57,6 @@ func _extra_timer_tick(delta: float) -> void:
 
 func _preview_gravity_for_shot() -> float:
 	return 0.0
-
-
-func _get_dash_stats() -> Dictionary:
-	return {
-		"speed": 760.0,
-		"duration": 0.16,
-		"cooldown": 1.0,
-		"gravity_scale": 0.42,
-	}
 
 
 func _is_orb_charge_active() -> bool:
@@ -158,3 +168,67 @@ func _mage_float_just_pressed() -> bool:
 	if player_id == 1:
 		return Input.is_action_just_pressed("p1_mage_float")
 	return Input.is_action_just_pressed("p2_mage_float")
+
+
+func _extra_reset_for_vs_round() -> void:
+	_ice_cd_left = 0.0
+	_ice_active = false
+	_float_cd_left = 0.0
+	_orb_skill_hold = 0.0
+	_orb_press_armed = false
+	_hide_orb_visual()
+
+
+func _setup_mago_body_sprite() -> void:
+	_body_sprite = get_node_or_null("BodySprite") as AnimatedSprite2D
+	if _body_sprite == null:
+		return
+	if not ResourceLoader.exists(MAGO_SPRITE_FRAMES_PATH):
+		_body_sprite.visible = false
+		return
+	var frames := load(MAGO_SPRITE_FRAMES_PATH) as SpriteFrames
+	if frames == null or frames.get_animation_names().is_empty():
+		_body_sprite.visible = false
+		return
+	_body_sprite.sprite_frames = frames
+	_body_sprite.visible = true
+	_body_sprite.offset = BODY_SPRITE_OFFSET
+	_body_sprite.flip_h = player_id == 2
+	_orig_sprite_modulate = _body_sprite.modulate
+	if _body_visual != null:
+		_body_visual.visible = false
+	if _bow_visual != null:
+		_bow_visual.visible = false
+	if frames.has_animation("idle"):
+		_body_sprite.play("idle")
+	else:
+		var names := frames.get_animation_names()
+		if not names.is_empty():
+			_body_sprite.play(names[0])
+
+
+func _mago_body_anim_from_state() -> String:
+	if not is_on_floor():
+		if velocity.y < -24.0:
+			return "jump"
+		return "fall"
+	if absf(velocity.x) > 18.0:
+		return "run"
+	return "idle"
+
+
+func _sync_mago_body_sprite() -> void:
+	if _body_sprite == null or not _body_sprite.visible or _body_sprite.sprite_frames == null:
+		return
+	var frames := _body_sprite.sprite_frames
+	var want := _mago_body_anim_from_state()
+	if not frames.has_animation(want):
+		want = "idle" if frames.has_animation("idle") else frames.get_animation_names()[0]
+	if _body_sprite.animation != want:
+		_body_sprite.play(want)
+	if _frozen_left > 0.0:
+		_body_sprite.modulate = Color(0.75, 0.9, 1.0, 1.0)
+	elif _is_sprint_speed_boost_active():
+		_body_sprite.modulate = _orig_sprite_modulate * sprint_visual_body_mult
+	else:
+		_body_sprite.modulate = _orig_sprite_modulate

@@ -1,9 +1,9 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://d18bnsukltcln"]
 
-[ext_resource type="Script" path="res://ui/menu.gd" id="1_m0nuh"]
+[ext_resource type="Script" uid="uid://c5jwmenu0arco" path="res://ui/menu.gd" id="1_m0nuh"]
 
-[node name="Menu" type="Control"]
-layout_mode = 1
+[node name="Menu" type="Control" unique_id=2018104978]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -11,33 +11,39 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_m0nuh")
 
-[node name="Bg" type="ColorRect" parent="."]
+[node name="Bg" type="ColorRect" parent="." unique_id=419254722]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 color = Color(0.05, 0.06, 0.09, 1)
 
-[node name="Vignette" type="ColorRect" parent="."]
+[node name="Vignette" type="ColorRect" parent="." unique_id=486867449]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0.25)
 
-[node name="Center" type="CenterContainer" parent="."]
+[node name="Center" type="CenterContainer" parent="." unique_id=1621615881]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="MainPanel" type="Panel" parent="Center"]
-custom_minimum_size = Vector2(560, 520)
+[node name="MainPanel" type="Panel" parent="Center" unique_id=254045201]
+custom_minimum_size = Vector2(520, 380)
 layout_mode = 2
 
-[node name="VBox" type="VBoxContainer" parent="Center/MainPanel"]
+[node name="VBox" type="VBoxContainer" parent="Center/MainPanel" unique_id=259024581]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -46,94 +52,49 @@ offset_left = 22.0
 offset_top = 22.0
 offset_right = -22.0
 offset_bottom = -22.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_constants/separation = 14
 
-[node name="Title" type="Label" parent="Center/MainPanel/VBox"]
+[node name="Title" type="Label" parent="Center/MainPanel/VBox" unique_id=271391576]
 layout_mode = 2
-text = "ARCO"
-horizontal_alignment = 1
-theme_override_font_sizes/font_size = 36
 theme_override_colors/font_color = Color(0.88, 0.93, 1, 1)
-
-[node name="Subtitle" type="Label" parent="Center/MainPanel/VBox"]
-layout_mode = 2
-text = "Duelo de arqueiros"
+theme_override_font_sizes/font_size = 28
+text = "RFG - Ranged Fighting Game"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 15
+
+[node name="Subtitle" type="Label" parent="Center/MainPanel/VBox" unique_id=747278867]
+layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.62, 0.75, 1)
+theme_override_font_sizes/font_size = 15
+text = "Escolha o modo de jogo"
+horizontal_alignment = 1
 
-[node name="SepTop" type="HSeparator" parent="Center/MainPanel/VBox"]
+[node name="SepTop" type="HSeparator" parent="Center/MainPanel/VBox" unique_id=665746445]
 layout_mode = 2
 
-[node name="SectionClasses" type="Label" parent="Center/MainPanel/VBox"]
-layout_mode = 2
-text = "Classes"
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
-
-[node name="ClassP1Row" type="HBoxContainer" parent="Center/MainPanel/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="ClassP1Label" type="Label" parent="Center/MainPanel/VBox/ClassP1Row"]
-custom_minimum_size = Vector2(150, 0)
-layout_mode = 2
-text = "Jogador 1 (esq.)"
-vertical_alignment = 1
-
-[node name="OptP1Class" type="OptionButton" parent="Center/MainPanel/VBox/ClassP1Row"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="ClassP2Row" type="HBoxContainer" parent="Center/MainPanel/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="ClassP2Label" type="Label" parent="Center/MainPanel/VBox/ClassP2Row"]
-custom_minimum_size = Vector2(150, 0)
-layout_mode = 2
-text = "Jogador 2 (dir.)"
-vertical_alignment = 1
-
-[node name="OptP2Class" type="OptionButton" parent="Center/MainPanel/VBox/ClassP2Row"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="SepMid" type="HSeparator" parent="Center/MainPanel/VBox"]
-layout_mode = 2
-
-[node name="BtnVs" type="Button" parent="Center/MainPanel/VBox"]
+[node name="BtnVs" type="Button" parent="Center/MainPanel/VBox" unique_id=642913627]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 text = "Vs Player"
 
-[node name="BtnTraining" type="Button" parent="Center/MainPanel/VBox"]
+[node name="BtnTraining" type="Button" parent="Center/MainPanel/VBox" unique_id=66308518]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 text = "Treinamento"
 
-[node name="TrainingBox" type="VBoxContainer" parent="Center/MainPanel/VBox"]
+[node name="BtnQuit" type="Button" parent="Center/MainPanel/VBox" unique_id=398682128]
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
-theme_override_constants/separation = 8
+text = "Sair do jogo"
 
-[node name="TrainingLabel" type="Label" parent="Center/MainPanel/VBox/TrainingBox"]
-layout_mode = 2
-text = "Opções do treino"
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
-
-[node name="ChkDummyShoot" type="CheckBox" parent="Center/MainPanel/VBox/TrainingBox"]
-layout_mode = 2
-button_pressed = true
-text = "Boneco atira a cada 3 segundos"
-
-[node name="SepBottom" type="HSeparator" parent="Center/MainPanel/VBox"]
+[node name="SepBottom" type="HSeparator" parent="Center/MainPanel/VBox" unique_id=1540257255]
 layout_mode = 2
 
-[node name="Hint" type="Label" parent="Center/MainPanel/VBox"]
+[node name="Hint" type="Label" parent="Center/MainPanel/VBox" unique_id=591604232]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_font_sizes/font_size = 11
 theme_override_colors/font_color = Color(0.5, 0.55, 0.62, 1)
-text = "P1 tiro: rato  •  P2 tiro: L  •  F: skills  •  Mago: C levitar, G orbe  •  Enter no Vs: pausa"
+theme_override_font_sizes/font_size = 11
+text = "Dica de controles carregada ao abrir o menu."
 autowrap_mode = 3

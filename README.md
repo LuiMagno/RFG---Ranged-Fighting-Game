@@ -9,14 +9,17 @@ Projeto Godot 2D simples e expansível: dois arqueiros nas laterais atiram flech
 3. Selecione a pasta deste repositório (onde está o arquivo `project.godot`).
 4. Abra o projeto e aperte **F5** (Run).
 
-## Controles
+## Controles (padrão teclado e mouse)
 
-- **Player 1 (esquerda)**:
-  - Mover: **A / D**
-  - Atirar: **F**
-- **Player 2 (direita)**:
-  - Mover: **Setas Esquerda / Direita**
-  - Atirar: **L**
+- **Jogador 1 (esquerda)**:
+  - Mover: **A** / **D**
+  - Atirar: **botão esquerdo do mouse** (no duelo; nos menus o jogo remove esse mapeamento para você poder clicar nos botões)
+  - Outras ações (granada, especial, escudo, dash etc.): ver `levels/duel/game.gd` (`_ensure_input_map`) e o HUD
+- **Jogador 2 (direita)**:
+  - Por padrão no **Vs**: **controle** (segundo jogador no mesmo teclado com layout antigo de setas não existe mais).
+  - Se escolher **teclado e mouse** no menu do Vs, usa o **mesmo** layout WASD + mouse que o jogador 1 — **só um** dos dois pode estar em teclado+mouse; o outro passa automaticamente para controle.
+
+No **Vs** ou no **Treino**, dá para escolher **teclado e mouse** ou **controle** por jogador (e o índice do controle, se tiver mais de um ligado). Nos menus, use a **cruz direcional** ou o **analógico esquerdo**, **A** (ou Enter) para confirmar e **B** para voltar.
 
 ## Estrutura
 

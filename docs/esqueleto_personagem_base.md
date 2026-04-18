@@ -1,25 +1,29 @@
 # Esqueleto — personagem base (referência de design)
 
-**Documentos relacionados:** fichas por personagem em [personagens/](personagens/) · comparativo **vs.** este baseline em [comparativo_personagens_vs_esqueleto.md](comparativo_personagens_vs_esqueleto.md).
+**Documentos relacionados:** arena, movimento, dash e física comuns em [sistemas_core_arena_e_movimento.md](sistemas_core_arena_e_movimento.md) · fichas por personagem em [personagens/](personagens/) · comparativo **vs.** este baseline em [comparativo_personagens_vs_esqueleto.md](comparativo_personagens_vs_esqueleto.md).
 
 Este documento consolida os valores do **Esqueleto** (`EsqueletoPlayer` / `characters/esqueleto_player.gd`) e tudo que ele **herda** de `Player` (`characters/player.gd`), além de regras de spawn em `Game` (`levels/duel/game.gd`). O esqueleto usa a mesma cena física/visual que os outros duelistas em `levels/duel/main.tscn` (o script é trocado em runtime via `RunConfig`).
 
 ## Política de design (baseline de personagens)
 
-Os números e comportamentos do **Esqueleto** definem o **padrão de referência** do projeto para duelo: velocidades de tiro, recoil, dash, movimento, pulo, corrida, dimensão do corpo e relação com o `Game` (spawn de projéteis, gravidade no voo, etc.). Ao equilibrar ou criar conteúdo novo, compara-se primeiro com esta folha antes de afastar valores “sem motivo”.
+Os números e comportamentos do **Esqueleto** definem o **padrão de referência** do projeto para duelo: velocidades de tiro, recoil, dash (duplo toque frente/trás — **comum a todos** em `Player`), movimento, pulo, sprint (manter só “frente” durante `sprint_forward_hold_seconds`), wall jump na base, dimensão do corpo e relação com o `Game` (spawn de projéteis, gravidade no voo, etc.). Ao equilibrar ou criar conteúdo novo, compara-se primeiro com esta folha antes de afastar valores “sem motivo”.
 
 **Regra de trabalho:** daqui em diante, **todo personagem novo parte conceitual e numericamente do Esqueleto** — ou seja, copia-se o perfil do esqueleto (ou o script `esqueleto_player.gd` como ponto de partida) e **só depois** se alteram stats, skills e exceções de spawn à medida que o design do arquétipo exige. Personagens já existentes (pistoleiro, arqueiro, mago) continuam válidos, mas **evoluções e novos lutadores** devem documentar explicitamente o que mudou em relação a este baseline, para manter coerência de pacing e leitura de jogo.
+
+**Família Esqueleto no código:** qualquer nó com script que **é** `EsqueletoPlayer` (inclui **Ongma Epilef**, `extends EsqueletoPlayer`) entra nas mesmas regras de `Game` que o esqueleto para flecha reta e HUD do triplo — ver `owner_player is EsqueletoPlayer` em `levels/duel/game.gd`. Ficha do laboratório: [personagens/ongma_epilef.md](personagens/ongma_epilef.md).
 
 ---
 
 **Controles (duelo, após `_ensure_input_map` em `game.gd`):**
 
-| Ação | Player 1 | Player 2 |
-|------|-----------|-----------|
-| Tiro principal (carregar + soltar) | Botão esquerdo do rato (`p1_shoot`) | **L** (`p2_shoot`) |
-| Skill “raio” (carregar + soltar) | **F** (`p1_grenade`) | **J** (`p2_grenade`) |
-| Skill “triplo” (arma o próximo disparo) | **G** (`p1_special`) | **O** (`p2_special`) |
-| Dash | **Shift** esquerdo | **Shift** direito |
+No Vs, **só um** jogador pode usar **teclado+mouse**; o outro usa **controle**. Quem estiver em teclado+mouse usa o mesmo layout **WASD + mouse** (ações `p1_*` ou `p2_*` conforme o lado, mas mesmas teclas físicas).
+
+| Ação | Teclado+mouse (`p1_*` ou `p2_*`) | Controle (RB / X / Y etc. em `p1_*` ou `p2_*`) |
+|------|-----------------------------------|-----------------------------------------------|
+| Tiro principal (carregar + soltar) | Botão esquerdo do mouse (`*_shoot`) | **RB** |
+| Skill “raio” (carregar + soltar) | **F** (`*_grenade`) | **X** |
+| Skill “triplo” (arma o próximo disparo) | **G** (`*_special`) | **Y** |
+| **Dash (todos)** | Duplo toque **D**→**D** (frente); duplo **A**→**A** (trás), janela `sprint_double_tap_window`. A tecla `*_dash` **não** inicia dash. | Duplo toque frente/trás no stick (`player.gd`). |
 
 ---
 
@@ -33,7 +37,7 @@ O tiro usa a cena `projectiles/arrow/arrow.tscn` (classe `Arrow`). Para o esquel
 | Velocidade máxima (carga completa) | **900** px/s | `Player.max_launch_speed` |
 | Tempo máximo de carga | **1,0** s | `Player.max_charge_time` |
 | Velocidade efetiva | `lerp(min_launch_speed, max_launch_speed, t)` com `t = charge_time / max_charge_time` | `EsqueletoPlayer._process_combat` |
-| Gravidade no voo | **0** | `Game._spawn_one_arrow`: pistoleiro **ou** esqueleto → `g = 0` |
+| Gravidade no voo | **0** | `Game._spawn_one_arrow`: pistoleiro **ou** `owner_player is EsqueletoPlayer` (Esqueleto, Ongma Epilef, …) → `g = 0` |
 | Ricochetes padrão | **0** | `Game._spawn_one_arrow`: não-pistoleiro → `bounces = 0` |
 | Dano padrão (sem override) | **20** | `Arrow.damage` (`arrow.gd`) |
 | Knockback ao acertar | **520** horizontal, **220** para cima | `Arrow.knockback_x`, `knockback_up` |
@@ -109,22 +113,24 @@ Na prática é um disparo único via `shots_requested` com flags de dano/tamanho
 
 ## 5. Dash
 
-O esqueleto **sobrescreve** `_get_dash_stats()` (a base usa outros números).
+**Activação** do dash (duplo toque frente/trás), **números do dash** (`_get_dash_stats()` na base), **pulo durante o dash** e **wall jump** estão em `Player`.
 
-| Parâmetro | Esqueleto | `Player` (default) |
-|-----------|------------|---------------------|
-| Velocidade | **620** px/s | 700 |
-| Duração | **0,20** s | 0,18 |
-| Cooldown após terminar | **0,92** s | 0,9 |
-| Multiplicador de gravidade durante o dash | **0,46** | 0,42 |
+| Parâmetro | Valor (todos os duelistas) |
+|-----------|----------------------------|
+| Velocidade | **620** px/s |
+| Duração | **0,20** s |
+| Cooldown após terminar | **0,1** s |
+| `gravity_scale` durante o dash | **0** (sem aceleração de gravidade; no ar o `Player` também corta queda residual `vy > 0` enquanto o dash está activo) |
 
-Durante o dash, `velocity.x` fica fixo no sentido do dash; a gravidade vertical é multiplicada por `gravity_scale` acima.
+**No ar:** com `gravity_scale` **0**, durante o dash não há aceleração gravitacional; ao terminar o dash, a queda volta ao normal.
+
+**Pulo durante o dash:** `Player._apply_jump_during_dash()` — exports `dash_jump_vertical_mul` (**0,5**), `dash_jump_horizontal_speed` (**520**).
 
 ---
 
 ## 6. Pulo e pulo duplo
 
-Herdado de `Player` (sem override no esqueleto).
+Herdado de `Player` para o pulo **fora** do dash e wall jump.
 
 | Parâmetro | Valor |
 |-----------|--------|
@@ -133,21 +139,24 @@ Herdado de `Player` (sem override no esqueleto).
 | `gravity_accel` | **1800** px/s² |
 | Reset de pulos | Ao tocar o chão (`is_on_floor()`), `_jumps_left = max_jumps` |
 
+Exports em `Player` para pulo no dash: `dash_jump_vertical_mul`, `dash_jump_horizontal_speed` (secção 5).
+
 ---
 
-## 7. Corrida (sprint por duplo toque “para frente”)
+## 7. Corrida (sprint) e duplo toque
 
-Herdado de `Player`.
+- **Dash:** duplo toque frente ou trás dentro de `sprint_double_tap_window` (`Player._update_double_tap_forward_movement`).
+- **Corrida:** manter **só** “para frente” durante `sprint_forward_hold_seconds` (`Player._update_sprint_from_forward_hold`); `start_dash_with_direction` chama `_interrupt_sprint()`.
 
-| Parâmetro | Valor |
-|-----------|--------|
+| Parâmetro | Valor (`Player`) |
+|-----------|------------------|
 | `move_speed` (base) | **260** px/s |
-| `sprint_double_tap_window` | **0,28** s |
-| `sprint_speed_multiplier` | **1,42** → velocidade horizontal **~369** px/s com sprint ativo |
-| Condição | Duplo toque na tecla **para frente** (em direção ao adversário); sprint mantém-se só enquanto **só** a tecla “frente” está pressionada (sem contrário) |
-| Visual | `sprint_visual_body_mult`, `sprint_visual_bow_mult` (multiplicam `modulate`) |
+| `sprint_double_tap_window` | **0,50** s (janela do dash duplo) |
+| `sprint_forward_hold_seconds` | **0,12** s (corrida por manter frente) |
+| `sprint_speed_multiplier` | **1,42** → até **~369** px/s com sprint |
+| Condição sprint | Só tecla “frente” sem a contrária; visual com `sprint_visual_*` |
 
-O dash **interrompe** a corrida (`_interrupt_sprint()`).
+No **respawn Vs**, `EsqueletoPlayer._extra_reset_for_vs_round()` repõe `_last_forward_tap_time_s` e `_last_back_tap_time_s` para evitar dash acidental logo ao entrar no round.
 
 ---
 
@@ -170,9 +179,10 @@ Camadas (duelo): jogadores `collision_mask = 3`; flechas em `arrow.tscn` com `co
 
 ## 9. Referência rápida de arquivos
 
-- `characters/esqueleto_player.gd` — lógica exclusiva (dash, triplo, raio, cooldown mínimo de tiro).
-- `characters/player.gd` — movimento, mira, recoil, pulo, sprint, dash genérico.
-- `levels/duel/game.gd` — `g = 0` e `bounces` para esqueleto; spawn de `Arrow`.
+- `characters/esqueleto_player.gd` — triplo, raio, cooldown mínimo de tiro, reset de toques no Vs.
+- `characters/ongma_epilef_player.gd` — laboratório; `extends EsqueletoPlayer`.
+- `characters/player.gd` — movimento, mira, recoil, pulo, sprint, dash (duplo toque), `_get_dash_stats()`, wall jump, `start_dash_with_direction`, pulo no dash, gravidade/clamp no dash.
+- `levels/duel/game.gd` — flecha com `g = 0` se pistoleiro **ou** `owner_player is EsqueletoPlayer`; HUD do triplo para `left_player/right_player is EsqueletoPlayer`; spawn de `Arrow`.
 - `projectiles/arrow/arrow.gd` + `arrow.tscn` — física/dano/tamanho base do projétil.
 - `levels/duel/main.tscn` — dimensões do corpo, colisor, muzzle, UI de carga/trajetória.
 

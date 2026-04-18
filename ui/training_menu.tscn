@@ -1,0 +1,147 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/training_menu.gd" id="1_trn"]
+
+[node name="TrainingMenu" type="Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_trn")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.05, 0.06, 0.09, 1)
+
+[node name="Vignette" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0.25)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MainPanel" type="Panel" parent="Center"]
+custom_minimum_size = Vector2(520, 480)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center/MainPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 22.0
+offset_top = 22.0
+offset_right = -22.0
+offset_bottom = -22.0
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+text = "Treinamento"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 30
+theme_override_colors/font_color = Color(0.88, 0.93, 1, 1)
+
+[node name="Subtitle" type="Label" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+text = "Personagem e opções do boneco (lado direito)"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.55, 0.62, 0.75, 1)
+
+[node name="SepTop" type="HSeparator" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+
+[node name="SectionClass" type="Label" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+text = "Seu personagem"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+
+[node name="ClassP1Row" type="HBoxContainer" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ClassP1Label" type="Label" parent="Center/MainPanel/VBox/ClassP1Row"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Jogador 1 (esq.)"
+vertical_alignment = 1
+
+[node name="OptP1Class" type="OptionButton" parent="Center/MainPanel/VBox/ClassP1Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SectionInputP1" type="Label" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+text = "Controles (P1)"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+
+[node name="InputP1Row" type="HBoxContainer" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="InputP1Label" type="Label" parent="Center/MainPanel/VBox/InputP1Row"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "P1 — Entrada"
+vertical_alignment = 1
+
+[node name="OptP1Scheme" type="OptionButton" parent="Center/MainPanel/VBox/InputP1Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="OptP1Device" type="OptionButton" parent="Center/MainPanel/VBox/InputP1Row"]
+custom_minimum_size = Vector2(170, 0)
+layout_mode = 2
+
+[node name="SepClasses" type="HSeparator" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+
+[node name="TrainingBox" type="VBoxContainer" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="TrainingLabel" type="Label" parent="Center/MainPanel/VBox/TrainingBox"]
+layout_mode = 2
+text = "Opções do treino"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+
+[node name="ChkDummyShoot" type="CheckBox" parent="Center/MainPanel/VBox/TrainingBox"]
+layout_mode = 2
+button_pressed = true
+text = "Boneco atira a cada 3 segundos"
+
+[node name="SepMid" type="HSeparator" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+
+[node name="ButtonRow" type="HBoxContainer" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="BtnBack" type="Button" parent="Center/MainPanel/VBox/ButtonRow"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Voltar"
+
+[node name="BtnStart" type="Button" parent="Center/MainPanel/VBox/ButtonRow"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Começar"

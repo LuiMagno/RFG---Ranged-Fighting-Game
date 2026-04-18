@@ -1,5 +1,7 @@
 # Personagens — documentação
 
+Sistemas comuns do duelo (arena, dash, pulo, colisões, fluxo por frame): **[sistemas_core_arena_e_movimento.md](../sistemas_core_arena_e_movimento.md)**.
+
 Cada lutador tem uma **ficha** com a mesma estrutura conceitual do documento base do Esqueleto.
 
 | Personagem | Ficha |
@@ -8,5 +10,6 @@ Cada lutador tem uma **ficha** com a mesma estrutura conceitual do documento bas
 | Pistoleiro | [pistoleiro.md](pistoleiro.md) |
 | Arqueiro | [arqueiro.md](arqueiro.md) |
 | Mago | [mago.md](mago.md) |
+| Ongma Epilef (teste) | [ongma_epilef.md](ongma_epilef.md) |
 
 **Comparativo numérico** (todos vs. Esqueleto): [comparativo_personagens_vs_esqueleto.md](../comparativo_personagens_vs_esqueleto.md)

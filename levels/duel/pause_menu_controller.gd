@@ -21,6 +21,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not event.is_action_pressed("ui_game_pause"):
 		return
+	var main := get_parent()
+	if main is Game and (main as Game).blocks_vs_pause_menu():
+		get_viewport().set_input_as_handled()
+		return
 	get_viewport().set_input_as_handled()
 	_toggle_pause()
 
@@ -49,7 +53,7 @@ func _on_resume_pressed() -> void:
 
 func _on_menu_pressed() -> void:
 	get_tree().paused = false
-	RunConfig.clear_p1_shoot_mouse_binding()
+	RunConfig.clear_shoot_mouse_bindings_for_menu()
 	get_tree().change_scene_to_file("res://ui/menu.tscn")
 
 

@@ -3,7 +3,7 @@ class_name EsqueletoPlayer
 
 ## Personagem base: tiro carregado (velocidade ∝ carga), trajetória reta (sem gravidade) como o pistoleiro.
 ## Tiro base: mínimo 1 s entre disparos (cooldown após soltar o carregamento).
-## Dash, salto duplo. G: arma o próximo disparo do rato como 3 tiros (uma vez, cooldown).
+## Dash, salto duplo. G: arma o próximo disparo do mouse como 3 tiros (uma vez, cooldown).
 ## F/J: segura para carregar um projétil grande em linha reta (tamanho e impulso ∝ carga).
 
 const MIN_SHOOT_COOLDOWN_S := 1.0
@@ -33,15 +33,6 @@ func is_esqueleto() -> bool:
 func _ready() -> void:
 	shoot_cooldown = maxf(MIN_SHOOT_COOLDOWN_S, shoot_cooldown)
 	super._ready()
-
-
-func _get_dash_stats() -> Dictionary:
-	return {
-		"speed": 620.0,
-		"duration": 0.2,
-		"cooldown": 0.92,
-		"gravity_scale": 0.46,
-	}
 
 
 func _extra_timer_tick(delta: float) -> void:
@@ -182,3 +173,13 @@ func _process_combat(delta: float) -> void:
 		if _is_charging and not _beam_charging:
 			_is_charging = false
 			_hide_charge_trajectory_ui()
+
+
+func _extra_reset_for_vs_round() -> void:
+	_triple_cd_left = 0.0
+	_triple_armed = false
+	_beam_cd_left = 0.0
+	_beam_charging = false
+	_beam_charge_time = 0.0
+	_last_forward_tap_time_s = -100.0
+	_last_back_tap_time_s = -100.0

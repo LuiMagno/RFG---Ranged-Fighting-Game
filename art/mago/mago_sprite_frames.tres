@@ -1,0 +1,14 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://crop6wm5qxjq2"]
+
+[ext_resource type="Texture2D" uid="uid://cket3bpmm1mcx" path="res://art/mago/Fire Wizard/Idle.png" id="1_i78ot"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_i78ot")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 9.0
+}]
