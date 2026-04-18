@@ -70,6 +70,8 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 ## Controle: tempo de suavização (1ª ordem, segundos); menor = mais “seco”, maior = mais fluido.
 @export_range(0.03, 0.35, 0.01) var gamepad_aim_smooth_time: float = 0.10
 
+@export var wall_slide_speed: float = 150.0
+
 @export var recoil_normal: float = 170.0
 @export var recoil_special: float = 290.0
 @export var recoil_special_big: float = 480.0
@@ -84,6 +86,8 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 @onready var shield_visual: Polygon2D = get_node_or_null("ShieldVisual") as Polygon2D
 @onready var _body_visual: CanvasItem = get_node_or_null("Body") as CanvasItem
 @onready var _bow_visual: CanvasItem = bow as CanvasItem
+
+
 
 var hp: int
 var _cooldown_left := 0.0
@@ -313,6 +317,10 @@ func _physics_process(delta: float) -> void:
 	_dash_cd_left = maxf(0.0, _dash_cd_left - delta)
 	_extra_timer_tick(delta)
 
+	if input_enabled and Input.is_key_pressed(KEY_CTRL):
+		if not is_on_floor():
+			_start_ground_pound_dash()
+		
 	if _frozen_left <= 0.0:
 		_update_double_tap_forward_movement()
 		_update_sprint_from_forward_hold(delta)
@@ -373,6 +381,7 @@ func _physics_process(delta: float) -> void:
 
 	velocity += _recoil_vel
 	_recoil_vel = _recoil_vel.move_toward(Vector2.ZERO, recoil_decay * delta)
+	
 
 	if not is_on_floor():
 		if not hovering:
@@ -384,7 +393,17 @@ func _physics_process(delta: float) -> void:
 	else:
 		if velocity.y > 0.0:
 			velocity.y = 0.0
-
+	
+	#função de wallslide.
+	if not is_on_floor() and is_on_wall():
+		# Verifica se o jogador está tentando se mover contra a parede
+		var move_dir = _get_move_axis() if input_enabled else 0.0
+		var wall_normal = get_wall_normal()
+		
+		# Se estiver caindo e empurrando o direcional contra a parede
+		if velocity.y > 0 and move_dir != 0 and sign(move_dir) != sign(wall_normal.x):
+			velocity.y = min(velocity.y, wall_slide_speed)
+		
 	if is_on_floor():
 		_jumps_left = max_jumps
 
@@ -402,6 +421,7 @@ func _physics_process(delta: float) -> void:
 		var gs := float(_get_dash_stats().get("gravity_scale", 0.42))
 		if gs <= 0.0001:
 			velocity.y = minf(velocity.y, 0.0)
+	
 
 	_refresh_sprint_body_modulate()
 	move_and_slide()
@@ -411,6 +431,15 @@ func _physics_process(delta: float) -> void:
 	_process_combat(delta)
 	_apply_wall_jump_visual_flash(delta)
 
+#função de dash para baixo.
+func _start_ground_pound_dash() -> void:
+		
+		
+	_hover_float_left = 0.0
+	_interrupt_sprint()
+		
+	velocity.x = 0
+	velocity.y = 2000.0 
 
 func start_hover_float(seconds: float) -> void:
 	if seconds <= 0.0:
