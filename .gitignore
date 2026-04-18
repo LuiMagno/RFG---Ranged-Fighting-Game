@@ -9,3 +9,12 @@ Thumbs.db
 
 # Godot documentation wiki clone (local reference only)
 docs/godot-docs/
+
+# Export / builds locais (não versionar binários nem pacotes)
+*.exe
+*.pck
+*.zip
+/build/
+
+# Nota: `export_presets.cfg` fica versionado para a equipa partilhar presets de export.
+# Nota: `art/` contém assets-fonte (sprites, .tres) — deve ser commitado, não ignorado.
