@@ -730,19 +730,11 @@ func _update_double_tap_forward_movement() -> void:
 			_last_back_tap_time_s = -100.0
 	# --- DASH PARA BAIXO (Ground Pound) ---
 	if _down_action_just_pressed():
-		#var now_s := Time.get_ticks_msec() * 0.001
-		#var dtd := now_s - _last_down_tap_time_s
-		#_last_down_tap_time_s = now_s
-		#if dtd > 0.0 and dtd <= sprint_double_tap_window:
-			#_start_ground_pound_dash()
-			#_last_down_tap_time_s = -100.0
 		if not is_on_floor():
 			_start_ground_pound_dash()
 
 #dash para baixo.
 func _down_action_just_pressed() -> bool:
-	#var action = "p1_hover_down" if player_id == 1 else "p2_hover_down"
-	#return Input.is_action_just_pressed(action)
 	if player_id == 1:
 		return Input.is_action_just_pressed("p1_down")
 	return Input.is_action_just_pressed("p2_down")	
