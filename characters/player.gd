@@ -114,6 +114,9 @@ var _hover_float_left: float = 0.0
 var _sprint_active: bool = false
 var _last_forward_tap_time_s: float = -100.0
 var _last_back_tap_time_s: float = -100.0
+## Valores no fim do frame anterior — invalidar duplo toque com input vertical (teclado: W/S + triggers; comando: `move_up`/`move_down` = stick Y + D-pad).
+var _prev_vertical_hover_axis: float = 0.0
+var _prev_gamepad_move_vertical: float = 0.0
 var _forward_only_hold_s: float = 0.0
 var _wall_jump_used_this_airborne: bool = false
 var _wall_jump_flash_left: float = 0.0
@@ -168,6 +171,11 @@ func _is_grenade_charging_active() -> bool:
 	return false
 
 
+## Se true, `_can_start_dash` bloqueia enquanto `_is_grenade_charging_active()` (ex.: feixe do Esqueleto). Esqueleto pode devolver false para permitir dash durante o carregamento.
+func _dash_blocked_by_grenade_skill() -> bool:
+	return true
+
+
 func _get_dash_stats() -> Dictionary:
 	# Igual ao Esqueleto / Ongma Epilef para todos os duelistas (velocidade, duração, distância e CD).
 	return {
@@ -185,7 +193,7 @@ func _can_start_dash() -> bool:
 		return false
 	if _is_charging:
 		return false
-	if _is_grenade_charging_active():
+	if _dash_blocked_by_grenade_skill() and _is_grenade_charging_active():
 		return false
 	return true
 
@@ -351,6 +359,8 @@ func _physics_process(delta: float) -> void:
 	if frozen:
 		velocity = Vector2.ZERO
 		global_position = _frozen_anchor_pos
+		_prev_vertical_hover_axis = _get_vertical_hover_axis()
+		_prev_gamepad_move_vertical = _get_gamepad_move_vertical_axis()
 		return
 
 	var hovering := _hover_float_left > 0.0
@@ -430,6 +440,8 @@ func _physics_process(delta: float) -> void:
 		_wall_jump_used_this_airborne = false
 	_process_combat(delta)
 	_apply_wall_jump_visual_flash(delta)
+	_prev_vertical_hover_axis = _get_vertical_hover_axis()
+	_prev_gamepad_move_vertical = _get_gamepad_move_vertical_axis()
 
 #função de dash para baixo.
 func _start_ground_pound_dash() -> void:
@@ -712,8 +724,14 @@ func _update_sprint_from_forward_hold(delta: float) -> void:
 func _update_double_tap_forward_movement() -> void:
 	if not input_enabled:
 		return
+	var now_s := Time.get_ticks_msec() * 0.001
+	# Input vertical sustentado (teclado: W/S + gatilhos; comando: idem + stick esquerdo Y) anula a janela do duplo toque.
+	if _forward_double_tap_window_open(now_s) and _double_tap_vertical_input_active():
+		_last_forward_tap_time_s = -100.0
+	if _backward_double_tap_window_open(now_s) and _double_tap_vertical_input_active():
+		_last_back_tap_time_s = -100.0
+	_invalidate_double_tap_chains_on_contaminant(now_s)
 	if _forward_action_just_pressed():
-		var now_s := Time.get_ticks_msec() * 0.001
 		var dt := now_s - _last_forward_tap_time_s
 		_last_forward_tap_time_s = now_s
 		if dt > 0.0 and dt <= sprint_double_tap_window:
@@ -721,13 +739,93 @@ func _update_double_tap_forward_movement() -> void:
 			start_dash_with_direction(fwd)
 			_last_forward_tap_time_s = -100.0
 	if _backward_action_just_pressed():
-		var now_b := Time.get_ticks_msec() * 0.001
-		var dtb := now_b - _last_back_tap_time_s
-		_last_back_tap_time_s = now_b
+		var dtb := now_s - _last_back_tap_time_s
+		_last_back_tap_time_s = now_s
 		if dtb > 0.0 and dtb <= sprint_double_tap_window:
 			var back := -1.0 if player_id == 1 else 1.0
 			start_dash_with_direction(back)
 			_last_back_tap_time_s = -100.0
+	# Mesmo frame: primeiro toque horizontal + W/S invalida o par (contaminação após atualizar tempos).
+	_invalidate_double_tap_chains_on_contaminant(now_s)
+
+
+func _forward_double_tap_window_open(now_s: float) -> bool:
+	return _last_forward_tap_time_s > -1.0 and (now_s - _last_forward_tap_time_s) <= sprint_double_tap_window
+
+
+func _backward_double_tap_window_open(now_s: float) -> bool:
+	return _last_back_tap_time_s > -1.0 and (now_s - _last_back_tap_time_s) <= sprint_double_tap_window
+
+
+func _invalidate_double_tap_chains_on_contaminant(now_s: float) -> void:
+	if _forward_double_tap_window_open(now_s):
+		if _backward_action_just_pressed() or _vertical_locomotion_contaminates_double_tap():
+			_last_forward_tap_time_s = -100.0
+	if _backward_double_tap_window_open(now_s):
+		if _forward_action_just_pressed() or _vertical_locomotion_contaminates_double_tap():
+			_last_back_tap_time_s = -100.0
+
+
+func _get_vertical_hover_axis() -> float:
+	if player_id == 1:
+		return Input.get_axis("p1_hover_down", "p1_hover_up")
+	return Input.get_axis("p2_hover_down", "p2_hover_up")
+
+
+## Mesmo pipeline que o InputMap do comando (device + deadzone); inclui stick Y e D-pad ↑/↓.
+func _get_gamepad_move_vertical_axis() -> float:
+	if player_id == 1:
+		return Input.get_axis("p1_move_down", "p1_move_up")
+	return Input.get_axis("p2_move_down", "p2_move_up")
+
+
+## Teclado + comando: qualquer vertical “ligado” entre os dois toques horizontais cancela o par.
+func _double_tap_vertical_input_active() -> bool:
+	if absf(_get_vertical_hover_axis()) > 0.01:
+		return true
+	if RunConfig.is_player_using_gamepad(player_id) and absf(_get_gamepad_move_vertical_axis()) > 0.01:
+		return true
+	return false
+
+
+## Entre dois toques horizontais: oposto, ou transição neutro→ativo no eixo de hover ou em move_up/move_down (comando).
+func _vertical_locomotion_contaminates_double_tap() -> bool:
+	if _hover_up_just_pressed() or _hover_down_just_pressed():
+		return true
+	var h := _get_vertical_hover_axis()
+	if absf(_prev_vertical_hover_axis) < 0.01 and absf(h) > 0.01:
+		return true
+	if RunConfig.is_player_using_gamepad(player_id):
+		if _gamepad_move_up_just_pressed() or _gamepad_move_down_just_pressed():
+			return true
+		var mv := _get_gamepad_move_vertical_axis()
+		if absf(_prev_gamepad_move_vertical) < 0.01 and absf(mv) > 0.01:
+			return true
+	return false
+
+
+func _gamepad_move_up_just_pressed() -> bool:
+	if player_id == 1:
+		return Input.is_action_just_pressed("p1_move_up")
+	return Input.is_action_just_pressed("p2_move_up")
+
+
+func _gamepad_move_down_just_pressed() -> bool:
+	if player_id == 1:
+		return Input.is_action_just_pressed("p1_move_down")
+	return Input.is_action_just_pressed("p2_move_down")
+
+
+func _hover_up_just_pressed() -> bool:
+	if player_id == 1:
+		return Input.is_action_just_pressed("p1_hover_up")
+	return Input.is_action_just_pressed("p2_hover_up")
+
+
+func _hover_down_just_pressed() -> bool:
+	if player_id == 1:
+		return Input.is_action_just_pressed("p1_hover_down")
+	return Input.is_action_just_pressed("p2_hover_down")
 
 
 func _backward_action_just_pressed() -> bool:
@@ -856,6 +954,8 @@ func prepare_for_vs_round_respawn(local_spawn: Vector2) -> void:
 	_forward_only_hold_s = 0.0
 	_last_forward_tap_time_s = -100.0
 	_last_back_tap_time_s = -100.0
+	_prev_vertical_hover_axis = 0.0
+	_prev_gamepad_move_vertical = 0.0
 	_set_frozen_visual(false)
 	_hide_charge_trajectory_ui()
 	if shield_visual != null:
