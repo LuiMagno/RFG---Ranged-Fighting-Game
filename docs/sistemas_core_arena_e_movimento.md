@@ -86,7 +86,7 @@ Regras importantes:
 - O início do dash passa por **`start_dash_with_direction(dir_sign)`**, que respeita `_can_start_dash()` (cooldown, carregar tiro, etc.).
 - Durante o dash, **`velocity.x`** mantém-se fixo no sentido do dash; o cooldown de dash só começa quando `duration` expira.
 - **Não** se pode iniciar dash se `input_enabled` for falso, se o cooldown ainda não acabou, ou se estiver a carregar tiro (`_is_charging`). O bloqueio por “skill de granada” (`_is_grenade_charging_active()`, ex. feixe do Esqueleto) só aplica se `_dash_blocked_by_grenade_skill()` for `true` na subclasse (no Esqueleto é `false`, para permitir dash durante o feixe).
-- **Pulo durante o dash:** com pulos restantes, `_apply_jump_during_dash()` cancela o dash, aplica `velocity.y` com `dash_jump_vertical_mul` e reforço horizontal com `dash_jump_horizontal_speed` (exports em `Player`).
+- **Pulo durante o dash:** `_apply_jump_during_dash()` usa **`velocity = (v_dash + v_jump) × dash_jump_impulse_mul`** — por defeito **pouco Y** (`dash_jump_vertical_mul` baixo), **X reforçado** (`dash_jump_horizontal_scale`) e impulso global (`dash_jump_impulse_mul`) para sensação de **arco diagonal** forte (exports em `Player`).
 - **Gravidade:** só se aplica `velocity.y += gravity_accel * gmul * delta` se `gmul > 0.0001` (evita somar gravidade com multiplicador ~0).
 - Se `gravity_scale <= 0` durante dash **no ar**, após o bloco de pulo o código faz `velocity.y = minf(velocity.y, 0.0)` — remove componente de **queda** durante o dash, mantendo subida (`vy < 0`).
 - Subclasses **não** sobrescrevem `_get_dash_stats()` — um único perfil de dash na base.
