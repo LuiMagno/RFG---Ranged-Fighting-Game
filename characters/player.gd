@@ -199,8 +199,19 @@ func start_dash_with_direction(dir_sign: float) -> void:
 	_interrupt_sprint()
 	_dash_dir_sign = signf(dir_sign) if absf(dir_sign) > 0.001 else _dash_direction_sign()
 	var st0: Dictionary = _get_dash_stats()
-	_dash_time_left = float(st0.get("duration", 0.18))
-	velocity.x = _dash_dir_sign * float(st0.get("speed", 700.0))
+	var forward_dir := 1.0 if player_id == 1 else -1.0
+	var final_speed = float(st0.get("speed", 700.0))
+	var final_duration = float(st0.get("duration", 0.18))
+	
+	#Verifica se dash foi para tras e define a força
+	if _dash_dir_sign != forward_dir:
+		final_speed *= 0.3
+		final_duration *= 0.4
+	
+	#_dash_time_left = float(st0.get("duration", 0.18))
+	_dash_time_left = final_duration
+	velocity.x = _dash_dir_sign * final_speed
+	#velocity.x = _dash_dir_sign * float(st0.get("speed", 700.0))
 
 
 func _apply_jump_during_dash() -> void:
