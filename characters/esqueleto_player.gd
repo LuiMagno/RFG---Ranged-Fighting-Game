@@ -44,8 +44,8 @@ func _is_grenade_charging_active() -> bool:
 	return _beam_charging
 
 
-func _allow_jump_while_concentrating() -> bool:
-	return not _beam_charging
+func _dash_blocked_by_grenade_skill() -> bool:
+	return false
 
 
 func _special_uses_left() -> int:

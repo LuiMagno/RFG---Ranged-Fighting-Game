@@ -124,7 +124,7 @@ Na prática é um disparo único via `shots_requested` com flags de dano/tamanho
 
 **No ar:** com `gravity_scale` **0**, durante o dash não há aceleração gravitacional; ao terminar o dash, a queda volta ao normal.
 
-**Pulo durante o dash:** `Player._apply_jump_during_dash()` — exports `dash_jump_vertical_mul` (**0,5**), `dash_jump_horizontal_speed` (**520**).
+**Pulo durante o dash:** `Player._apply_jump_during_dash()` — **`velocity = (v_dash + v_jump) × dash_jump_impulse_mul`**: por defeito **Y reduzido**, **X elevado** e impulso global moderado — sensação de **arco diagonal** (vs. pulo normal + `move_speed`).
 
 ---
 
@@ -139,7 +139,7 @@ Herdado de `Player` para o pulo **fora** do dash e wall jump.
 | `gravity_accel` | **1800** px/s² |
 | Reset de pulos | Ao tocar o chão (`is_on_floor()`), `_jumps_left = max_jumps` |
 
-Exports em `Player` para pulo no dash: `dash_jump_vertical_mul`, `dash_jump_horizontal_speed` (secção 5).
+Exports em `Player` para pulo no dash: `dash_jump_vertical_mul`, `dash_jump_horizontal_scale`, `dash_jump_impulse_mul` (secção 5).
 
 ---
 

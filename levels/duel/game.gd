@@ -258,10 +258,11 @@ func _character_kind(p: Player) -> int:
 
 func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
 	if gamepad:
-		var base_pad := (
-			"Mov analógico esq / D-pad · Mira analógico dir · A pulo · B dash · LB escudo · RB tiro · Y especial"
+		var base_pad_move := (
+			"Mov analógico esq / D-pad · Mira analógico dir · A pulo · LB escudo · RB tiro · Y especial"
 			+ " · Flutuar (no ar): gatilho RT cima / LT baixo"
 		)
+		var base_pad := base_pad_move + " · B dash"
 		match kind:
 			Player.CharacterKind.PISTOLEIRO:
 				return base_pad + " · X granada"
@@ -271,15 +272,14 @@ func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
 				return base_pad + " · X gelo · R3 levitar · Y segure/solta orbe"
 			Player.CharacterKind.ESQUELETO, Player.CharacterKind.ONGMA_EPILEF:
 				return (
-					base_pad
-					+ " · X segure/solta feixe · Y triplo antes do tiro · Dash: duplo toque frente/trás no stick"
+					base_pad_move
+					+ " · X segure/solta feixe · Y triplo antes do tiro · Dash: duplo frente/trás (D-pad/stick); B não inicia dash"
 				)
 			_:
 				return base_pad
 	# Teclado+mouse: mesmo layout para P1 e P2 (no Vs só um usa teclado+mouse por vez).
-	var base_kb := (
-		"Mov A/D · Espaço pulo · Shift esq dash · Q escudo · W/S flutuar (no ar) · Mouse mira e tiro"
-	)
+	var base_kb_move := "Mov A/D · Espaço pulo · Q escudo · W/S flutuar (no ar) · Mouse mira e tiro"
+	var base_kb := base_kb_move + " · Shift esq dash"
 	match kind:
 		Player.CharacterKind.PISTOLEIRO:
 			return base_kb + " · F granada · G especial"
@@ -288,7 +288,10 @@ func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
 		Player.CharacterKind.MAGO:
 			return base_kb + " · F gelo (F de novo detona) · C levitar · G segure e solte orbe"
 		Player.CharacterKind.ESQUELETO, Player.CharacterKind.ONGMA_EPILEF:
-			return base_kb + " · F segure feixe · G triplo (antes de soltar o tiro) · Dash: duplo A ou D"
+			return (
+				base_kb_move
+				+ " · F segure feixe · G triplo (antes de soltar o tiro) · Dash: duplo A ou D (sem outro direcional no meio)"
+			)
 		_:
 			return base_kb
 
@@ -425,6 +428,8 @@ func _ensure_input_map() -> void:
 	# Some environments/projects fail to import InputMap from project.godot on first load.
 	# To keep this prototype runnable, we ensure required actions exist at runtime.
 	RunConfig.ensure_valid_input_scheme_pair()
+	_ensure_move_vertical_actions("p1")
+	_ensure_move_vertical_actions("p2")
 	_add_action_if_missing("p1_left", KEY_A)
 	_add_action_if_missing("p1_right", KEY_D)
 	_add_action_if_missing("p1_jump", KEY_SPACE)
@@ -482,9 +487,20 @@ func _ensure_p2_action_shells_without_keys() -> void:
 		"p2_mage_float",
 		"p2_shield",
 		"p2_dash",
+		"p2_move_up",
+		"p2_move_down",
 	]:
 		if not InputMap.has_action(n):
 			InputMap.add_action(n)
+
+
+## Movimento vertical no comando (stick Y + D-pad ↑/↓): só mapeado em `_add_gamepad_mappings_for_player`; usado no duplo toque em `Player`.
+func _ensure_move_vertical_actions(prefix: String) -> void:
+	var dz := 0.15
+	for s in ["move_up", "move_down"]:
+		var an: StringName = StringName("%s_%s" % [prefix, s])
+		if not InputMap.has_action(an):
+			InputMap.add_action(an, dz)
 
 
 ## P2 em teclado+mouse usa o mesmo mapa WASD + mouse que o P1 (exclusivo: o outro jogador fica em controle).
@@ -526,6 +542,8 @@ func _player_action_names(prefix: String) -> Array:
 		p + "aim_right",
 		p + "aim_up",
 		p + "aim_down",
+		p + "move_up",
+		p + "move_down",
 	]
 
 
@@ -571,6 +589,11 @@ func _add_gamepad_mappings_for_player(prefix: String, device: int) -> void:
 	InputMap.action_add_event(p + "left", _joy_btn(device, JOY_BUTTON_DPAD_LEFT))
 	InputMap.action_add_event(p + "right", _joy_motion(device, JOY_AXIS_LEFT_X, 1.0))
 	InputMap.action_add_event(p + "right", _joy_btn(device, JOY_BUTTON_DPAD_RIGHT))
+	# Vertical de locomoção (duplo toque): stick esquerdo Y + D-pad ↑/↓ (não confundir com hover = gatilhos).
+	InputMap.action_add_event(p + "move_up", _joy_motion(device, JOY_AXIS_LEFT_Y, -1.0))
+	InputMap.action_add_event(p + "move_up", _joy_btn(device, JOY_BUTTON_DPAD_UP))
+	InputMap.action_add_event(p + "move_down", _joy_motion(device, JOY_AXIS_LEFT_Y, 1.0))
+	InputMap.action_add_event(p + "move_down", _joy_btn(device, JOY_BUTTON_DPAD_DOWN))
 	# Hover na flutuação: gatilhos (evita D-pad vertical em conflito com menus / movimento).
 	InputMap.action_add_event(p + "hover_up", _joy_motion(device, JOY_AXIS_TRIGGER_RIGHT, 1.0))
 	InputMap.action_add_event(p + "hover_down", _joy_motion(device, JOY_AXIS_TRIGGER_LEFT, 1.0))

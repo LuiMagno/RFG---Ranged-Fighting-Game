@@ -24,7 +24,7 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 @export var move_speed: float = 260.0
 @export var input_enabled: bool = true
 
-## Janela temporal para duplo toque frente/trás (ativa dash). Corrida: ver `sprint_forward_hold_seconds`.
+## Janela temporal para duplo toque frente/trás (ativa dash). Corrida: `sprint_mechanic_enabled` + `sprint_forward_hold_seconds`.
 @export var sprint_double_tap_window: float = 0.50
 @export_range(1.05, 1.75, 0.01) var sprint_speed_multiplier: float = 1.42
 ## Multiplicador de cor no corpo / arco enquanto a corrida está ativa (sobre `modulate` original).
@@ -32,7 +32,7 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 @export var sprint_visual_bow_mult: Color = Color(1.12, 1.02, 0.78, 1.0)
 
 @export var gravity_accel: float = 1800.0
-@export var jump_speed: float = 650.0
+@export var jump_speed: float = 700.0
 @export_range(1, 5, 1) var max_jumps: int = 2
 @export var hit_stun_time: float = 0.14
 @export var knockback_friction: float = 2400.0
@@ -50,14 +50,19 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 @export var trajectory_points: int = 24
 @export var trajectory_step: float = 0.08
 @export var arena_padding_x: float = 36.0
-## Pulo durante o dash: mais horizontal, menos vertical que o pulo normal.
-@export_range(0.2, 1.0, 0.01) var dash_jump_vertical_mul: float = 0.5
-@export var dash_jump_horizontal_speed: float = 520.0
-## Tempo a manter só “para frente” antes de ativar sprint (substitui corrida por duplo toque).
+## Pulo durante o dash: `(v_dash + v_jump) * dash_jump_impulse_mul` — arco **diagonal forte**, pouca sensação de “só para cima”.
+@export_range(0.70, 1.30, 0.01) var dash_jump_vertical_mul: float = 0.80
+## Peso do dash no eixo X antes da soma; valores mais altos = mais força na diagonal / frente.
+@export_range(0.5, 2.5, 0.01) var dash_jump_horizontal_scale: float = 1.9
+## Reforço global do impulso composto (um bocadinho mais forte sem repor demasiado o Y vs. o X).
+@export_range(1.0, 1.5, 0.01) var dash_jump_impulse_mul: float = 1.3
+## Bónus de velocidade ao manter só “frente” (corrida). **Falso** = desligado por defeito para não testar essa mecânica; dash por duplo toque mantém-se.
+@export var sprint_mechanic_enabled: bool = false
+## Tempo a manter só “para frente” antes de ativar sprint (só se `sprint_mechanic_enabled`).
 @export_range(0.0, 0.5, 0.01) var sprint_forward_hold_seconds: float = 0.12
 ## Wall jump: impulso diagonal na parede (no máximo uma vez por voo até ao solo).
-@export var wall_jump_horizontal_speed: float = 768.0
-@export var wall_jump_vertical_speed: float = 984.0
+@export var wall_jump_horizontal_speed: float = 950.0
+@export var wall_jump_vertical_speed: float = 900.0
 @export_range(0.05, 0.6, 0.01) var wall_jump_visual_duration: float = 0.22
 @export var wall_jump_body_flash: Color = Color(1.38, 0.78, 1.52, 1.0)
 @export_range(4.0, 40.0, 1.0) var wall_detect_distance: float = 40.0
@@ -115,6 +120,9 @@ var _hover_float_left: float = 0.0
 var _sprint_active: bool = false
 var _last_forward_tap_time_s: float = -100.0
 var _last_back_tap_time_s: float = -100.0
+## Valores no fim do frame anterior — invalidar duplo toque com input vertical (teclado: W/S + triggers; comando: `move_up`/`move_down` = stick Y + D-pad).
+var _prev_vertical_hover_axis: float = 0.0
+var _prev_gamepad_move_vertical: float = 0.0
 var _forward_only_hold_s: float = 0.0
 var _wall_jump_used_this_airborne: bool = false
 var _wall_jump_flash_left: float = 0.0
@@ -171,6 +179,11 @@ func _is_grenade_charging_active() -> bool:
 	return false
 
 
+## Se true, `_can_start_dash` bloqueia enquanto `_is_grenade_charging_active()` (ex.: feixe do Esqueleto). Esqueleto pode devolver false para permitir dash durante o carregamento.
+func _dash_blocked_by_grenade_skill() -> bool:
+	return true
+
+
 func _get_dash_stats() -> Dictionary:
 	# Igual ao Esqueleto / Ongma Epilef para todos os duelistas (velocidade, duração, distância e CD).
 	return {
@@ -188,7 +201,7 @@ func _can_start_dash() -> bool:
 		return false
 	if _is_charging:
 		return false
-	if _is_grenade_charging_active():
+	if _dash_blocked_by_grenade_skill() and _is_grenade_charging_active():
 		return false
 	return true
 
@@ -205,9 +218,10 @@ func start_dash_with_direction(dir_sign: float) -> void:
 
 func _apply_jump_during_dash() -> void:
 	_dash_time_left = 0.0
-	velocity.y = -jump_speed * dash_jump_vertical_mul
-	var h := maxf(absf(velocity.x), dash_jump_horizontal_speed)
-	velocity.x = _dash_dir_sign * h
+	var dash_spd := float(_get_dash_stats().get("speed", 620.0))
+	var v_dash := Vector2(_dash_dir_sign * dash_spd * dash_jump_horizontal_scale, 0.0)
+	var v_jump := Vector2(0.0, -jump_speed * dash_jump_vertical_mul)
+	velocity = (v_dash + v_jump) * dash_jump_impulse_mul
 	_jumps_left -= 1
 
 
@@ -324,7 +338,7 @@ func _physics_process(delta: float) -> void:
 	if _frozen_left <= 0.0:
 		_update_double_tap_forward_movement()
 		_update_sprint_from_forward_hold(delta)
-		if _sprint_active and not _is_holding_forward_only():
+		if sprint_mechanic_enabled and _sprint_active and not _is_holding_forward_only():
 			_interrupt_sprint()
 
 	if _control_lock_left > 0.0 and _dash_time_left > 0.0:
@@ -351,6 +365,8 @@ func _physics_process(delta: float) -> void:
 	if frozen:
 		velocity = Vector2.ZERO
 		global_position = _frozen_anchor_pos
+		_prev_vertical_hover_axis = _get_vertical_hover_axis()
+		_prev_gamepad_move_vertical = _get_gamepad_move_vertical_axis()
 		return
 
 	var hovering := _hover_float_left > 0.0
@@ -430,6 +446,8 @@ func _physics_process(delta: float) -> void:
 		_wall_jump_used_this_airborne = false
 	_process_combat(delta)
 	_apply_wall_jump_visual_flash(delta)
+	_prev_vertical_hover_axis = _get_vertical_hover_axis()
+	_prev_gamepad_move_vertical = _get_gamepad_move_vertical_axis()
 
 #função de dash para baixo.
 func _start_ground_pound_dash() -> void:
@@ -675,6 +693,8 @@ func _is_holding_forward_only() -> bool:
 
 
 func _get_sprint_speed_mult() -> float:
+	if not sprint_mechanic_enabled:
+		return 1.0
 	if not _sprint_active:
 		return 1.0
 	if not _is_holding_forward_only():
@@ -683,7 +703,7 @@ func _get_sprint_speed_mult() -> float:
 
 
 func _is_sprint_speed_boost_active() -> bool:
-	return input_enabled and _sprint_active and _is_holding_forward_only()
+	return sprint_mechanic_enabled and input_enabled and _sprint_active and _is_holding_forward_only()
 
 
 func _interrupt_sprint() -> void:
@@ -692,6 +712,9 @@ func _interrupt_sprint() -> void:
 
 
 func _update_sprint_from_forward_hold(delta: float) -> void:
+	if not sprint_mechanic_enabled:
+		_interrupt_sprint()
+		return
 	if sprint_forward_hold_seconds <= 0.0:
 		_forward_only_hold_s = 0.0
 		return
@@ -712,8 +735,14 @@ func _update_sprint_from_forward_hold(delta: float) -> void:
 func _update_double_tap_forward_movement() -> void:
 	if not input_enabled:
 		return
+	var now_s := Time.get_ticks_msec() * 0.001
+	# Input vertical sustentado (teclado: W/S + gatilhos; comando: idem + stick esquerdo Y) anula a janela do duplo toque.
+	if _forward_double_tap_window_open(now_s) and _double_tap_vertical_input_active():
+		_last_forward_tap_time_s = -100.0
+	if _backward_double_tap_window_open(now_s) and _double_tap_vertical_input_active():
+		_last_back_tap_time_s = -100.0
+	_invalidate_double_tap_chains_on_contaminant(now_s)
 	if _forward_action_just_pressed():
-		var now_s := Time.get_ticks_msec() * 0.001
 		var dt := now_s - _last_forward_tap_time_s
 		_last_forward_tap_time_s = now_s
 		if dt > 0.0 and dt <= sprint_double_tap_window:
@@ -721,17 +750,98 @@ func _update_double_tap_forward_movement() -> void:
 			start_dash_with_direction(fwd)
 			_last_forward_tap_time_s = -100.0
 	if _backward_action_just_pressed():
-		var now_b := Time.get_ticks_msec() * 0.001
-		var dtb := now_b - _last_back_tap_time_s
-		_last_back_tap_time_s = now_b
+		var dtb := now_s - _last_back_tap_time_s
+		_last_back_tap_time_s = now_s
 		if dtb > 0.0 and dtb <= sprint_double_tap_window:
 			var back := -1.0 if player_id == 1 else 1.0
 			start_dash_with_direction(back)
 			_last_back_tap_time_s = -100.0
+      
 	# --- DASH PARA BAIXO (Ground Pound) ---
 	if _down_action_just_pressed():
 		if not is_on_floor():
 			_start_ground_pound_dash()
+	# Mesmo frame: primeiro toque horizontal + W/S invalida o par (contaminação após atualizar tempos).
+	_invalidate_double_tap_chains_on_contaminant(now_s)
+
+
+func _forward_double_tap_window_open(now_s: float) -> bool:
+	return _last_forward_tap_time_s > -1.0 and (now_s - _last_forward_tap_time_s) <= sprint_double_tap_window
+
+
+func _backward_double_tap_window_open(now_s: float) -> bool:
+	return _last_back_tap_time_s > -1.0 and (now_s - _last_back_tap_time_s) <= sprint_double_tap_window
+
+
+func _invalidate_double_tap_chains_on_contaminant(now_s: float) -> void:
+	if _forward_double_tap_window_open(now_s):
+		if _backward_action_just_pressed() or _vertical_locomotion_contaminates_double_tap():
+			_last_forward_tap_time_s = -100.0
+	if _backward_double_tap_window_open(now_s):
+		if _forward_action_just_pressed() or _vertical_locomotion_contaminates_double_tap():
+			_last_back_tap_time_s = -100.0
+
+
+func _get_vertical_hover_axis() -> float:
+	if player_id == 1:
+		return Input.get_axis("p1_hover_down", "p1_hover_up")
+	return Input.get_axis("p2_hover_down", "p2_hover_up")
+
+
+## Mesmo pipeline que o InputMap do comando (device + deadzone); inclui stick Y e D-pad ↑/↓.
+func _get_gamepad_move_vertical_axis() -> float:
+	if player_id == 1:
+		return Input.get_axis("p1_move_down", "p1_move_up")
+	return Input.get_axis("p2_move_down", "p2_move_up")
+
+
+## Teclado + comando: qualquer vertical “ligado” entre os dois toques horizontais cancela o par.
+func _double_tap_vertical_input_active() -> bool:
+	if absf(_get_vertical_hover_axis()) > 0.01:
+		return true
+	if RunConfig.is_player_using_gamepad(player_id) and absf(_get_gamepad_move_vertical_axis()) > 0.01:
+		return true
+	return false
+
+
+## Entre dois toques horizontais: oposto, ou transição neutro→ativo no eixo de hover ou em move_up/move_down (comando).
+func _vertical_locomotion_contaminates_double_tap() -> bool:
+	if _hover_up_just_pressed() or _hover_down_just_pressed():
+		return true
+	var h := _get_vertical_hover_axis()
+	if absf(_prev_vertical_hover_axis) < 0.01 and absf(h) > 0.01:
+		return true
+	if RunConfig.is_player_using_gamepad(player_id):
+		if _gamepad_move_up_just_pressed() or _gamepad_move_down_just_pressed():
+			return true
+		var mv := _get_gamepad_move_vertical_axis()
+		if absf(_prev_gamepad_move_vertical) < 0.01 and absf(mv) > 0.01:
+			return true
+	return false
+
+
+func _gamepad_move_up_just_pressed() -> bool:
+	if player_id == 1:
+		return Input.is_action_just_pressed("p1_move_up")
+	return Input.is_action_just_pressed("p2_move_up")
+
+
+func _gamepad_move_down_just_pressed() -> bool:
+	if player_id == 1:
+		return Input.is_action_just_pressed("p1_move_down")
+	return Input.is_action_just_pressed("p2_move_down")
+
+
+func _hover_up_just_pressed() -> bool:
+	if player_id == 1:
+		return Input.is_action_just_pressed("p1_hover_up")
+	return Input.is_action_just_pressed("p2_hover_up")
+
+
+func _hover_down_just_pressed() -> bool:
+	if player_id == 1:
+		return Input.is_action_just_pressed("p1_hover_down")
+	return Input.is_action_just_pressed("p2_hover_down")
 
 #dash para baixo.
 func _down_action_just_pressed() -> bool:
@@ -865,6 +975,8 @@ func prepare_for_vs_round_respawn(local_spawn: Vector2) -> void:
 	_forward_only_hold_s = 0.0
 	_last_forward_tap_time_s = -100.0
 	_last_back_tap_time_s = -100.0
+	_prev_vertical_hover_axis = 0.0
+	_prev_gamepad_move_vertical = 0.0
 	_set_frozen_visual(false)
 	_hide_charge_trajectory_ui()
 	if shield_visual != null:
