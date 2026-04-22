@@ -26,7 +26,14 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 
 ## Janela temporal para duplo toque frente/trás (ativa dash). Corrida: `sprint_mechanic_enabled` + `sprint_forward_hold_seconds`.
 @export var sprint_double_tap_window: float = 0.50
-@export_range(1.05, 1.75, 0.01) var sprint_speed_multiplier: float = 1.42
+## Intervalo mínimo entre inícios de dash (evita encadear dash→pulo→dash e “flutuar”).
+@export_range(0.0, 0.25, 0.01) var dash_min_gap_seconds: float = 0.06
+## Se true: só permite **1 dash no ar** por sequência aérea (reset ao tocar o chão).
+@export var limit_air_dash_to_one: bool = true
+## Corrida pós-dash: quando o dash termina, manter “pra frente” dentro desta janela ativa sprint.
+@export var post_dash_sprint_enabled: bool = true
+@export_range(0.0, 0.5, 0.01) var post_dash_sprint_window_seconds: float = 0.18
+@export_range(1.05, 1.75, 0.01) var sprint_speed_multiplier: float = 1.55
 ## Multiplicador de cor no corpo / arco enquanto a corrida está ativa (sobre `modulate` original).
 @export var sprint_visual_body_mult: Color = Color(1.2, 1.05, 0.72, 1.0)
 @export var sprint_visual_bow_mult: Color = Color(1.12, 1.02, 0.78, 1.0)
@@ -77,6 +84,14 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 
 @export var wall_slide_speed: float = 150.0
 
+## Indicador visual quando está a correr (sprint ativo).
+@export var sprint_indicator_enabled: bool = true
+@export var sprint_indicator_color: Color = Color(0.55, 0.95, 1.45, 0.55)
+@export_range(10.0, 80.0, 1.0) var sprint_indicator_radius_px: float = 32.0
+@export_range(0.0, 60.0, 1.0) var sprint_indicator_y_offset_px: float = 22.0
+@export_range(0.0, 12.0, 0.1) var sprint_indicator_pulse_hz: float = 3.5
+@export_range(0.0, 0.8, 0.01) var sprint_indicator_pulse_amp: float = 0.18
+
 @export var recoil_normal: float = 170.0
 @export var recoil_special: float = 290.0
 @export var recoil_special_big: float = 480.0
@@ -116,6 +131,7 @@ var _frozen_anchor_pos: Vector2 = Vector2.ZERO
 var _frozen_prev: bool = false
 var _orig_body_modulate: Color = Color.WHITE
 var _orig_bow_modulate: Color = Color.WHITE
+var _sprint_indicator: Polygon2D = null
 var _hover_float_left: float = 0.0
 var _sprint_active: bool = false
 var _last_forward_tap_time_s: float = -100.0
@@ -125,6 +141,8 @@ var _prev_vertical_hover_axis: float = 0.0
 var _prev_gamepad_move_vertical: float = 0.0
 var _forward_only_hold_s: float = 0.0
 var _wall_jump_used_this_airborne: bool = false
+var _air_dash_used_this_airborne: bool = false
+var _post_dash_sprint_window_left: float = 0.0
 var _wall_jump_flash_left: float = 0.0
 var _wall_jump_move_grace_left: float = 0.0
 var _wall_jump_free_axis_sign: float = 0.0
@@ -199,6 +217,8 @@ func _can_start_dash() -> bool:
 		return false
 	if _dash_cd_left > 0.0:
 		return false
+	if limit_air_dash_to_one and (not is_on_floor()) and _air_dash_used_this_airborne:
+		return false
 	if _is_charging:
 		return false
 	if _dash_blocked_by_grenade_skill() and _is_grenade_charging_active():
@@ -214,10 +234,15 @@ func start_dash_with_direction(dir_sign: float) -> void:
 	var st0: Dictionary = _get_dash_stats()
 	_dash_time_left = float(st0.get("duration", 0.18))
 	velocity.x = _dash_dir_sign * float(st0.get("speed", 700.0))
+	_dash_cd_left = maxf(_dash_cd_left, dash_min_gap_seconds)
+	if limit_air_dash_to_one and not is_on_floor():
+		_air_dash_used_this_airborne = true
 
 
 func _apply_jump_during_dash() -> void:
 	_dash_time_left = 0.0
+	var cd := float(_get_dash_stats().get("cooldown", 0.1))
+	_dash_cd_left = maxf(_dash_cd_left, maxf(cd, dash_min_gap_seconds))
 	var dash_spd := float(_get_dash_stats().get("speed", 620.0))
 	var v_dash := Vector2(_dash_dir_sign * dash_spd * dash_jump_horizontal_scale, 0.0)
 	var v_jump := Vector2(0.0, -jump_speed * dash_jump_vertical_mul)
@@ -320,6 +345,7 @@ func _ready() -> void:
 	if _bow_visual != null:
 		_orig_bow_modulate = _bow_visual.modulate
 	_frozen_prev = false
+	_ensure_sprint_indicator()
 	_reset_aim_direction_to_forward()
 	_sync_launch_angle_from_aim_direction()
 
@@ -332,17 +358,20 @@ func _physics_process(delta: float) -> void:
 	_frozen_left = maxf(0.0, _frozen_left - delta)
 	_special_buff_left = maxf(0.0, _special_buff_left - delta)
 	_dash_cd_left = maxf(0.0, _dash_cd_left - delta)
+	_post_dash_sprint_window_left = maxf(0.0, _post_dash_sprint_window_left - delta)
 	_extra_timer_tick(delta)
 
 		
 	if _frozen_left <= 0.0:
 		_update_double_tap_forward_movement()
 		_update_sprint_from_forward_hold(delta)
+		_update_post_dash_sprint()
 		if sprint_mechanic_enabled and _sprint_active and not _is_holding_forward_only():
 			_interrupt_sprint()
 
 	if _control_lock_left > 0.0 and _dash_time_left > 0.0:
 		_dash_time_left = 0.0
+		_dash_cd_left = maxf(_dash_cd_left, maxf(float(_get_dash_stats().get("cooldown", 0.1)), dash_min_gap_seconds))
 
 	var is_active := _special_buff_left > 0.0
 	if not is_active:
@@ -353,6 +382,7 @@ func _physics_process(delta: float) -> void:
 
 	_update_aim(delta)
 	_update_shield(delta)
+	_update_sprint_indicator()
 
 	var frozen := _frozen_left > 0.0
 	if frozen != _frozen_prev:
@@ -379,6 +409,9 @@ func _physics_process(delta: float) -> void:
 		velocity.x = _dash_dir_sign * float(st_d.get("speed", 700.0))
 		if _dash_time_left <= 0.0:
 			_dash_cd_left = float(st_d.get("cooldown", 0.3))
+			var forward_dash_sign := 1.0 if player_id == 1 else -1.0
+			if post_dash_sprint_enabled and post_dash_sprint_window_seconds > 0.0 and _dash_dir_sign == forward_dash_sign:
+				_post_dash_sprint_window_left = maxf(_post_dash_sprint_window_left, post_dash_sprint_window_seconds)
 	elif _control_lock_left <= 0.0:
 		if hovering:
 			# hy>0 = intenção “para cima” na tela; em 2D velocity.y positivo é para baixo.
@@ -422,6 +455,7 @@ func _physics_process(delta: float) -> void:
 		
 	if is_on_floor():
 		_jumps_left = max_jumps
+		_air_dash_used_this_airborne = false
 
 	if (not hovering) and _jump_just_pressed() and _allow_jump_while_concentrating():
 		var special := _try_special_air_jump()
@@ -508,6 +542,43 @@ func _refresh_sprint_body_modulate() -> void:
 		_body_visual.modulate = _orig_body_modulate * sprint_visual_body_mult
 	else:
 		_body_visual.modulate = _orig_body_modulate
+
+
+func _ensure_sprint_indicator() -> void:
+	if not sprint_indicator_enabled:
+		return
+	if _sprint_indicator != null:
+		return
+	_sprint_indicator = Polygon2D.new()
+	_sprint_indicator.name = "SprintIndicator"
+	_sprint_indicator.z_index = -2
+	_sprint_indicator.z_as_relative = true
+	_sprint_indicator.color = sprint_indicator_color
+	add_child(_sprint_indicator)
+	var pts: PackedVector2Array = PackedVector2Array()
+	var segs := 18
+	for i in range(segs):
+		var a := TAU * float(i) / float(segs)
+		pts.append(Vector2(cos(a), sin(a)) * sprint_indicator_radius_px)
+	_sprint_indicator.polygon = pts
+	_sprint_indicator.visible = false
+
+
+func _update_sprint_indicator() -> void:
+	if _sprint_indicator == null:
+		return
+	var on := _is_sprint_speed_boost_active()
+	_sprint_indicator.visible = on
+	if not on:
+		return
+	_sprint_indicator.position = Vector2(0.0, sprint_indicator_y_offset_px)
+	_sprint_indicator.color = sprint_indicator_color
+	var hz := maxf(sprint_indicator_pulse_hz, 0.0)
+	var amp := clampf(sprint_indicator_pulse_amp, 0.0, 0.8)
+	var pulse := 1.0
+	if hz > 0.0001 and amp > 0.0001:
+		pulse = 1.0 + sin(Time.get_ticks_msec() * 0.001 * TAU * hz) * amp
+	_sprint_indicator.scale = Vector2(pulse, pulse)
 
 
 func _allow_jump_while_concentrating() -> bool:
@@ -693,7 +764,7 @@ func _is_holding_forward_only() -> bool:
 
 
 func _get_sprint_speed_mult() -> float:
-	if not sprint_mechanic_enabled:
+	if not (sprint_mechanic_enabled or post_dash_sprint_enabled):
 		return 1.0
 	if not _sprint_active:
 		return 1.0
@@ -703,17 +774,32 @@ func _get_sprint_speed_mult() -> float:
 
 
 func _is_sprint_speed_boost_active() -> bool:
-	return sprint_mechanic_enabled and input_enabled and _sprint_active and _is_holding_forward_only()
+	return (sprint_mechanic_enabled or post_dash_sprint_enabled) and input_enabled and _sprint_active and _is_holding_forward_only()
 
 
 func _interrupt_sprint() -> void:
 	_sprint_active = false
 	_forward_only_hold_s = 0.0
+	_post_dash_sprint_window_left = 0.0
+
+
+func _update_post_dash_sprint() -> void:
+	if not post_dash_sprint_enabled:
+		return
+	if not input_enabled:
+		return
+	if _dash_time_left > 0.0 or _hover_float_left > 0.0 or _control_lock_left > 0.0:
+		return
+	if _post_dash_sprint_window_left <= 0.0:
+		return
+	if _is_holding_forward_only():
+		_sprint_active = true
 
 
 func _update_sprint_from_forward_hold(delta: float) -> void:
 	if not sprint_mechanic_enabled:
-		_interrupt_sprint()
+		# Não interferir com a corrida pós-dash (`post_dash_sprint_enabled`).
+		_forward_only_hold_s = 0.0
 		return
 	if sprint_forward_hold_seconds <= 0.0:
 		_forward_only_hold_s = 0.0
@@ -756,7 +842,7 @@ func _update_double_tap_forward_movement() -> void:
 			var back := -1.0 if player_id == 1 else 1.0
 			start_dash_with_direction(back)
 			_last_back_tap_time_s = -100.0
-      
+	  
 	# --- DASH PARA BAIXO (Ground Pound) ---
 	if _down_action_just_pressed():
 		if not is_on_floor():

@@ -85,6 +85,8 @@ Regras importantes:
 
 - O início do dash passa por **`start_dash_with_direction(dir_sign)`**, que respeita `_can_start_dash()` (cooldown, carregar tiro, etc.).
 - Durante o dash, **`velocity.x`** mantém-se fixo no sentido do dash; o cooldown de dash só começa quando `duration` expira.
+- **Anti-encadeamento / anti-“flutuar”:** existe um intervalo mínimo `dash_min_gap_seconds` entre inícios de dash (aplica também quando o dash é cancelado por pulo/stun).
+- **Dash no ar:** por padrão, só **1 dash no ar** por sequência aérea (`limit_air_dash_to_one`), reset ao tocar o chão.
 - **Não** se pode iniciar dash se `input_enabled` for falso, se o cooldown ainda não acabou, ou se estiver a carregar tiro (`_is_charging`). O bloqueio por “skill de granada” (`_is_grenade_charging_active()`, ex. feixe do Esqueleto) só aplica se `_dash_blocked_by_grenade_skill()` for `true` na subclasse (no Esqueleto é `false`, para permitir dash durante o feixe).
 - **Pulo durante o dash:** `_apply_jump_during_dash()` usa **`velocity = (v_dash + v_jump) × dash_jump_impulse_mul`** — por defeito **pouco Y** (`dash_jump_vertical_mul` baixo), **X reforçado** (`dash_jump_horizontal_scale`) e impulso global (`dash_jump_impulse_mul`) para sensação de **arco diagonal** forte (exports em `Player`).
 - **Gravidade:** só se aplica `velocity.y += gravity_accel * gmul * delta` se `gmul > 0.0001` (evita somar gravidade com multiplicador ~0).
