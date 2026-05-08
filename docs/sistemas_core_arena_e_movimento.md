@@ -86,7 +86,7 @@ Regras importantes:
 - O início do dash passa por **`start_dash_with_direction(dir_sign)`**, que respeita `_can_start_dash()` (cooldown, carregar tiro, etc.).
 - Durante o dash, **`velocity.x`** mantém-se fixo no sentido do dash; o cooldown de dash só começa quando `duration` expira.
 - **Anti-encadeamento / anti-“flutuar”:** existe um intervalo mínimo `dash_min_gap_seconds` entre inícios de dash (aplica também quando o dash é cancelado por pulo/stun).
-- **Dash no ar:** por padrão, só **1 dash no ar** por sequência aérea (`limit_air_dash_to_one`), reset ao tocar o chão.
+- **Dash no ar:** por padrão, só **1 dash no ar** por sequência aérea (`limit_air_dash_to_one`); o contador repõe-se ao tocar o **chão** ou ao encostar numa **parede** no ar — o **cooldown** do dash (`cooldown` em `_get_dash_stats()` e `dash_min_gap_seconds`) continua a aplicar-se entre inícios de dash.
 - **Não** se pode iniciar dash se `input_enabled` for falso, se o cooldown ainda não acabou, ou se estiver a carregar tiro (`_is_charging`). O bloqueio por “skill de granada” (`_is_grenade_charging_active()`, ex. feixe do Esqueleto) só aplica se `_dash_blocked_by_grenade_skill()` for `true` na subclasse (no Esqueleto é `false`, para permitir dash durante o feixe).
 - **Pulo durante o dash:** `_apply_jump_during_dash()` usa **`velocity = (v_dash + v_jump) × dash_jump_impulse_mul`** — por defeito **pouco Y** (`dash_jump_vertical_mul` baixo), **X reforçado** (`dash_jump_horizontal_scale`) e impulso global (`dash_jump_impulse_mul`) para sensação de **arco diagonal** forte (exports em `Player`).
 - **Gravidade:** só se aplica `velocity.y += gravity_accel * gmul * delta` se `gmul > 0.0001` (evita somar gravidade com multiplicador ~0).
@@ -109,7 +109,7 @@ Regras importantes:
 ### Vida e combate comum
 
 - `max_hp` = **100** por padrão.
-- Mira: ângulo limitado a **±85°** (`aim_limit_deg`); P1 mira com eixo “frente” **direita**, P2 **esquerda** (`_apply_mouse_aim`).
+- Mira: ângulo limitado a **±85°** (`aim_limit_deg`); P1 mira com eixo “frente” **direita**, P2 **esquerda** — `Player._apply_aim_from_world_direction` usa o sinal de `angle_to(.)` coerente com o `player_id` (evita mira do analógico invertida no P2 com o mesmo vetor no mundo).
 - Tiro carregado na base: `min_launch_speed` / `max_launch_speed` **420 / 900**, `max_charge_time` **1,0** s; prévia com `trajectory_points` **24** e `trajectory_step` **0,08** s.
 - Recoil: acumula `_recoil_vel` e decai com `recoil_decay` **2400**; ver exports `recoil_*` em `player.gd`.
 

@@ -273,7 +273,9 @@ func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
 			Player.CharacterKind.ESQUELETO, Player.CharacterKind.ONGMA_EPILEF:
 				return (
 					base_pad_move
-					+ " · X segure/solta feixe · Y triplo antes do tiro · Dash: duplo frente/trás (D-pad/stick); B não inicia dash"
+					+ " · X segure/solta feixe · Y triplo (próximo tiro em 3) · Tiro carregado: segure/solte RB"
+					+ " · Dash: duplo frente/trás (D-pad/stick); B não inicia dash"
+					+ " · D-pad ↓ / stick esq. ↓ (no ar): queda"
 				)
 			_:
 				return base_pad
@@ -430,6 +432,8 @@ func _ensure_input_map() -> void:
 	RunConfig.ensure_valid_input_scheme_pair()
 	_ensure_move_vertical_actions("p1")
 	_ensure_move_vertical_actions("p2")
+	_ensure_ground_pound_action_exists("p1")
+	_ensure_ground_pound_action_exists("p2")
 	_add_action_if_missing("p1_left", KEY_A)
 	_add_action_if_missing("p1_right", KEY_D)
 	_add_action_if_missing("p1_jump", KEY_SPACE)
@@ -489,9 +493,18 @@ func _ensure_p2_action_shells_without_keys() -> void:
 		"p2_dash",
 		"p2_move_up",
 		"p2_move_down",
+		"p2_down",
 	]:
 		if not InputMap.has_action(n):
 			InputMap.add_action(n)
+
+
+## Garante `p1_down` / `p2_down` (queda / ground pound no ar). Teclado: **S** (igual a hover “baixo”; no ar o combate trata a prioridade).
+func _ensure_ground_pound_action_exists(prefix: String) -> void:
+	var an: StringName = StringName("%s_down" % prefix)
+	if not InputMap.has_action(an):
+		InputMap.add_action(an)
+	_ensure_action_has_key(an, KEY_S)
 
 
 ## Movimento vertical no comando (stick Y + D-pad ↑/↓): só mapeado em `_add_gamepad_mappings_for_player`; usado no duplo toque em `Player`.
@@ -521,6 +534,7 @@ func _ensure_p2_keyboard_mouse_shared_layout() -> void:
 	_add_action_if_missing("p2_mage_float", KEY_C)
 	_add_action_if_missing("p2_shield", KEY_Q)
 	_ensure_dash_action("p2_dash", true)
+	_add_action_if_missing("p2_down", KEY_S)
 
 
 func _player_action_names(prefix: String) -> Array:
@@ -544,6 +558,7 @@ func _player_action_names(prefix: String) -> Array:
 		p + "aim_down",
 		p + "move_up",
 		p + "move_down",
+		p + "down",
 	]
 
 
@@ -594,6 +609,9 @@ func _add_gamepad_mappings_for_player(prefix: String, device: int) -> void:
 	InputMap.action_add_event(p + "move_up", _joy_btn(device, JOY_BUTTON_DPAD_UP))
 	InputMap.action_add_event(p + "move_down", _joy_motion(device, JOY_AXIS_LEFT_Y, 1.0))
 	InputMap.action_add_event(p + "move_down", _joy_btn(device, JOY_BUTTON_DPAD_DOWN))
+	# Ground pound (ar): mesmo eixo de “baixo” que o movimento vertical, ação `*_down` separada em `Player._down_action_just_pressed`.
+	InputMap.action_add_event(p + "down", _joy_btn(device, JOY_BUTTON_DPAD_DOWN))
+	InputMap.action_add_event(p + "down", _joy_motion(device, JOY_AXIS_LEFT_Y, 1.0))
 	# Hover na flutuação: gatilhos (evita D-pad vertical em conflito com menus / movimento).
 	InputMap.action_add_event(p + "hover_up", _joy_motion(device, JOY_AXIS_TRIGGER_RIGHT, 1.0))
 	InputMap.action_add_event(p + "hover_down", _joy_motion(device, JOY_AXIS_TRIGGER_LEFT, 1.0))
@@ -602,7 +620,7 @@ func _add_gamepad_mappings_for_player(prefix: String, device: int) -> void:
 	InputMap.action_add_event(p + "aim_right", _joy_motion(device, JOY_AXIS_RIGHT_X, 1.0))
 	InputMap.action_add_event(p + "aim_up", _joy_motion(device, JOY_AXIS_RIGHT_Y, -1.0))
 	InputMap.action_add_event(p + "aim_down", _joy_motion(device, JOY_AXIS_RIGHT_Y, 1.0))
-	# Xbox-like: tiro RB, pulo A, dash B, especial Y, escudo LB, granada X, mago levitar R3, espinho L3.
+	# Xbox-like, por jogador (device = índice do comando). Esqueleto: RB tiro, X feixe (grenade), Y triplo (special), B não é dash nele; L3/R3 = spike/mago; duplo toque = dash.
 	InputMap.action_add_event(p + "shoot", _joy_btn(device, JOY_BUTTON_RIGHT_SHOULDER))
 	InputMap.action_add_event(p + "jump", _joy_btn(device, JOY_BUTTON_A))
 	InputMap.action_add_event(p + "dash", _joy_btn(device, JOY_BUTTON_B))

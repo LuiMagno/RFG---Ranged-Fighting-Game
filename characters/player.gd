@@ -456,6 +456,9 @@ func _physics_process(delta: float) -> void:
 	if is_on_floor():
 		_jumps_left = max_jumps
 		_air_dash_used_this_airborne = false
+	elif not is_on_floor() and is_on_wall():
+		# Renovar dash aéreo ao encostar na parede (cooldown `_dash_cd_left` / `dash_min_gap_seconds` mantém-se).
+		_air_dash_used_this_airborne = false
 
 	if (not hovering) and _jump_just_pressed() and _allow_jump_while_concentrating():
 		var special := _try_special_air_jump()
@@ -665,11 +668,13 @@ func _apply_aim_from_world_direction(dir: Vector2) -> void:
 	var d := dir.normalized()
 	var forward := Vector2.RIGHT if player_id == 1 else Vector2.LEFT
 	var signed_from_axis := forward.angle_to(d)
+	# A mesma direcção no mundo produz sinais opostos de `angle_to(.)` com frente = RIGHT vs LEFT;
+	# ajustar só a ramificação "à frente" (evita mira a gamepad / rato "invertida" no P2).
 	if forward.dot(d) < 0.0:
 		launch_angle_degrees = aim_limit_deg if d.y < 0.0 else -aim_limit_deg
 	else:
 		var clamped := clampf(signed_from_axis, deg_to_rad(-aim_limit_deg), deg_to_rad(aim_limit_deg))
-		launch_angle_degrees = -rad_to_deg(clamped)
+		launch_angle_degrees = -rad_to_deg(clamped) if player_id == 1 else rad_to_deg(clamped)
 
 
 func _reset_aim_direction_to_forward() -> void:
