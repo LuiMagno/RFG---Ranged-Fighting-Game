@@ -6,7 +6,7 @@ Este documento consolida os valores do **Esqueleto** (`EsqueletoPlayer` / `chara
 
 ## Política de design (baseline de personagens)
 
-Os números e comportamentos do **Esqueleto** definem o **padrão de referência** do projeto para duelo: velocidades de tiro, recoil, dash (duplo toque frente/trás — **comum a todos** em `Player`), movimento, pulo, sprint (manter só “frente” durante `sprint_forward_hold_seconds`), wall jump na base, dimensão do corpo e relação com o `Game` (spawn de projéteis, gravidade no voo, etc.). Ao equilibrar ou criar conteúdo novo, compara-se primeiro com esta folha antes de afastar valores “sem motivo”.
+Os números e comportamentos do **Esqueleto** definem o **padrão de referência** do projeto para duelo: velocidades de tiro, recoil, dash (duplo toque frente/trás — **comum a todos** em `Player`), movimento, pulo, regras de **dash no ar** e **anti-encadeamento**, **corrida pós-dash** (opcional), wall jump na base, dimensão do corpo e relação com o `Game` (spawn de projéteis, gravidade no voo, etc.). A **corrida por só manter “frente”** (`sprint_mechanic_enabled`) existe na base mas está **desligada** por defeito; o pacing actual privilegia dash + **sprint após dash para a frente**. Ao equilibrar ou criar conteúdo novo, compara-se primeiro com esta folha antes de afastar valores “sem motivo”.
 
 **Regra de trabalho:** daqui em diante, **todo personagem novo parte conceitual e numericamente do Esqueleto** — ou seja, copia-se o perfil do esqueleto (ou o script `esqueleto_player.gd` como ponto de partida) e **só depois** se alteram stats, skills e exceções de spawn à medida que o design do arquétipo exige. Personagens já existentes (pistoleiro, arqueiro, mago) continuam válidos, mas **evoluções e novos lutadores** devem documentar explicitamente o que mudou em relação a este baseline, para manter coerência de pacing e leitura de jogo.
 
@@ -23,7 +23,7 @@ No Vs, **só um** jogador pode usar **teclado+mouse**; o outro usa **controle**.
 | Tiro principal (carregar + soltar) | Botão esquerdo do mouse (`*_shoot`) | **RB** |
 | Skill “raio” (carregar + soltar) | **F** (`*_grenade`) | **X** |
 | Skill “triplo” (arma o próximo disparo) | **G** (`*_special`) | **Y** |
-| **Dash (todos)** | Duplo toque **D**→**D** (frente); duplo **A**→**A** (trás), janela `sprint_double_tap_window`. A tecla `*_dash` **não** inicia dash. | Duplo toque frente/trás no stick (`player.gd`). |
+| **Dash (todos)** | Duplo toque **D**→**D** (frente); duplo **A**→**A** (trás), janela `sprint_double_tap_window`. A tecla `*_dash` **não** inicia dash. | Duplo toque frente/trás no stick; vertical de locomoção em `p*_move_up` / `p*_move_down` entra nas regras de duplo toque estrito (`game.gd` + `Player`). |
 
 ---
 
@@ -84,6 +84,14 @@ Valores da instância em `main.tscn` (válidos para qualquer script de `Player`,
 
 ## 4. Skills (Esqueleto)
 
+### 4.0 Integração com a base `Player` (hooks)
+
+| Método / sinal | Comportamento no Esqueleto |
+|----------------|----------------------------|
+| `_is_grenade_charging_active()` | `true` enquanto o feixe está a carregar (`_beam_charging`) — usado na base para UI/bloqueios que dependem de “skill de granada” a carregar. |
+| `_dash_blocked_by_grenade_skill()` | **`false`** — o dash **não** é bloqueado pelo carregamento do feixe (diferente do default da base). |
+| `_preview_gravity_for_shot()` | **`0.0`** — pré-visualização de trajetória recta. |
+
 ### 4.1 Triplo (arma o próximo disparo do “tiro principal”)
 
 | Parâmetro | Valor |
@@ -107,7 +115,7 @@ Na prática é um disparo único via `shots_requested` com flags de dano/tamanho
 | Gravidade do projétil | **0** | payload em `_fire_beam` |
 | Ricochetes | **0** | `bounces: 0` |
 | Posição de spawn | `muzzle.global_position + dir × (22.0 × size)` | offset ao longo da mira |
-| Pulo durante carga | **Bloqueado** enquanto carrega o raio | `_allow_jump_while_concentrating()` |
+| Tiro normal durante carga do feixe | Ramo de carregar `*_shoot` **não** corre enquanto `_beam_charging` | `EsqueletoPlayer._process_combat` (prioridade ao feixe) |
 
 ---
 
@@ -124,7 +132,14 @@ Na prática é um disparo único via `shots_requested` com flags de dano/tamanho
 
 **No ar:** com `gravity_scale` **0**, durante o dash não há aceleração gravitacional; ao terminar o dash, a queda volta ao normal.
 
-**Pulo durante o dash:** `Player._apply_jump_during_dash()` — **`velocity = (v_dash + v_jump) × dash_jump_impulse_mul`**: por defeito **Y reduzido**, **X elevado** e impulso global moderado — sensação de **arco diagonal** (vs. pulo normal + `move_speed`).
+**Regras adicionais (todos, `Player`):**
+
+- **`dash_min_gap_seconds`:** intervalo mínimo entre **inícios** de dash (inclui cancelar dash por pulo ou stun), para evitar encadear dash→pulo→dash.
+- **`limit_air_dash_to_one`:** por defeito, **no máximo um dash no ar** por sequência aérea até tocar **chão** ou **parede**; o **cooldown** do dash (`cooldown` em `_get_dash_stats()` + o gap acima) continua a aplicar-se.
+- **Corrida pós-dash:** ao **terminar** um dash **para a frente** (P1: sentido +1; P2: −1), abre-se uma janela `post_dash_sprint_window_seconds`; se o jogador **só** segurar “frente” nessa janela, activa-se sprint (`post_dash_sprint_enabled`). Dash **para trás** não abre essa janela.
+- **Feixe do Esqueleto:** `_dash_blocked_by_grenade_skill()` devolve **false** — permite dash durante o carregamento do feixe; o bloqueio genérico por “granada a carregar” na base não aplica da mesma forma aqui.
+
+**Pulo durante o dash:** `Player._apply_jump_during_dash()` — **`velocity = (v_dash + v_jump) × dash_jump_impulse_mul`**, com `v_dash` / `v_jump` definidos pelos exports `dash_jump_vertical_mul`, `dash_jump_horizontal_scale`, `dash_jump_impulse_mul` (arco diagonal forte vs. pulo normal).
 
 ---
 
@@ -134,7 +149,7 @@ Herdado de `Player` para o pulo **fora** do dash e wall jump.
 
 | Parâmetro | Valor |
 |-----------|--------|
-| `jump_speed` | **650** (impulso inicial para cima; eixo Y negativo em Godot 2D) |
+| `jump_speed` | **700** (valor por defeito em `Player`; impulso inicial para cima; eixo Y negativo em Godot 2D) |
 | `max_jumps` | **2** (pulo + pulo duplo) |
 | `gravity_accel` | **1800** px/s² |
 | Reset de pulos | Ao tocar o chão (`is_on_floor()`), `_jumps_left = max_jumps` |
@@ -143,18 +158,25 @@ Exports em `Player` para pulo no dash: `dash_jump_vertical_mul`, `dash_jump_hori
 
 ---
 
-## 7. Corrida (sprint) e duplo toque
+## 7. Corrida (sprint), corrida pós-dash e duplo toque
 
-- **Dash:** duplo toque frente ou trás dentro de `sprint_double_tap_window` (`Player._update_double_tap_forward_movement`).
-- **Corrida:** manter **só** “para frente” durante `sprint_forward_hold_seconds` (`Player._update_sprint_from_forward_hold`); `start_dash_with_direction` chama `_interrupt_sprint()`.
+- **Dash:** duplo toque frente ou trás dentro de `sprint_double_tap_window` (`Player._update_double_tap_forward_movement`); duplo toque **estrito** (invalidação por input vertical / stick — ver [sistemas_core_arena_e_movimento.md](sistemas_core_arena_e_movimento.md)).
+- **Corrida “clássica” (só segurar frente):** `sprint_mechanic_enabled` (**false** por defeito). Quando **true**, `sprint_forward_hold_seconds` + `_update_sprint_from_forward_hold` activam `_sprint_active`; `start_dash_with_direction` chama `_interrupt_sprint()`.
+- **Corrida pós-dash:** `post_dash_sprint_enabled` (**true** por defeito). Só após dash **para a frente**; janela `post_dash_sprint_window_seconds`. Velocidade com `sprint_speed_multiplier` (por defeito **1,55** sobre `move_speed`).
+- **Indicador visual de corrida:** `sprint_indicator_*` — anel (`Polygon2D`) sob o personagem com pulso quando `_is_sprint_speed_boost_active()`.
 
-| Parâmetro | Valor (`Player`) |
-|-----------|------------------|
+| Parâmetro | Valor (`Player`, defeitos actuais) |
+|-----------|-------------------------------------|
 | `move_speed` (base) | **260** px/s |
 | `sprint_double_tap_window` | **0,50** s (janela do dash duplo) |
-| `sprint_forward_hold_seconds` | **0,12** s (corrida por manter frente) |
-| `sprint_speed_multiplier` | **1,42** → até **~369** px/s com sprint |
-| Condição sprint | Só tecla “frente” sem a contrária; visual com `sprint_visual_*` |
+| `sprint_mechanic_enabled` | **false** (corrida por manter frente desligada para testes / pacing) |
+| `sprint_forward_hold_seconds` | **0,12** s (só usado se `sprint_mechanic_enabled`) |
+| `post_dash_sprint_enabled` | **true** |
+| `post_dash_sprint_window_seconds` | **0,18** s |
+| `sprint_speed_multiplier` | **1,55** |
+| `dash_min_gap_seconds` | **0,06** s (entre inícios de dash) |
+| `limit_air_dash_to_one` | **true** |
+| Condição sprint activa | Só tecla “frente” sem a contrária (`_is_holding_forward_only`); visual corpo/arco com `sprint_visual_*` + indicador opcional |
 
 No **respawn Vs**, `EsqueletoPlayer._extra_reset_for_vs_round()` repõe `_last_forward_tap_time_s` e `_last_back_tap_time_s` para evitar dash acidental logo ao entrar no round.
 
@@ -181,7 +203,7 @@ Camadas (duelo): jogadores `collision_mask = 3`; flechas em `arrow.tscn` com `co
 
 - `characters/esqueleto_player.gd` — triplo, raio, cooldown mínimo de tiro, reset de toques no Vs.
 - `characters/ongma_epilef_player.gd` — laboratório; `extends EsqueletoPlayer`.
-- `characters/player.gd` — movimento, mira, recoil, pulo, sprint, dash (duplo toque), `_get_dash_stats()`, wall jump, `start_dash_with_direction`, pulo no dash, gravidade/clamp no dash.
+- `characters/player.gd` — movimento, mira, recoil, pulo, dash (duplo toque, gap mínimo, dash no ar com reset em chão/parede), `_get_dash_stats()`, wall jump, `start_dash_with_direction`, pulo no dash (vector composto), corrida clássica opcional, **corrida pós-dash**, indicador visual de sprint, gravidade/clamp no dash, duplo toque estrito (teclado + `move_up`/`move_down` no comando).
 - `levels/duel/game.gd` — flecha com `g = 0` se pistoleiro **ou** `owner_player is EsqueletoPlayer`; HUD do triplo para `left_player/right_player is EsqueletoPlayer`; spawn de `Arrow`.
 - `projectiles/arrow/arrow.gd` + `arrow.tscn` — física/dano/tamanho base do projétil.
 - `levels/duel/main.tscn` — dimensões do corpo, colisor, muzzle, UI de carga/trajetória.
