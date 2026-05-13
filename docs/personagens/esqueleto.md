@@ -15,7 +15,7 @@ Este ficheiro resume o **padrão de design** do Esqueleto e aponta para o baseli
 | Camada | Ficheiro | Papel |
 |--------|----------|--------|
 | Locomoção, mira, dash, pulo, wall jump, sprint visual, arena | `Player` | Comum a **todos** os duelistas |
-| Tiro carregado reta, triplo, feixe (beam), timers Vs | `EsqueletoPlayer` | Baseline de “arqueiro com flecha reta” |
+| Tiro carregado reta, feixe, buff de velocidade, timers Vs | `EsqueletoPlayer` | Baseline de “arqueiro com flecha reta” |
 | Família Esqueleto | `OngmaEpilefPlayer` etc. | `extends EsqueletoPlayer` — mesmas regras de spawn `g = 0` em `Game` quando `owner_player is EsqueletoPlayer` |
 
 ---
@@ -37,9 +37,9 @@ Este ficheiro resume o **padrão de design** do Esqueleto e aponta para o baseli
 ## O que é específico do `EsqueletoPlayer`
 
 - **Tiro principal:** carregar + soltar; flecha com **g = 0** no voo (como pistoleiro); cooldown mínimo **≥ 1,0** s após disparo (`MIN_SHOOT_COOLDOWN_S`).
-- **Triplo (G / Y):** arma o próximo disparo em **3** paralelos; CD `triple_shot_cooldown`; HUD via `special_buff_changed`.
-- **Feixe / “raio” (F+segurar / X):** carrega com `*_grenade`, solta com `shots_requested`; parâmetros `beam_*`; `_is_grenade_charging_active()` reflecte o carregamento do feixe.
+- **Buff de velocidade no tiro carregado (G / Y):** activa um período em que o tiro carregado sai com velocidade maior; CD e duração em `esqueleto_skill_buff_velocidade_tiro_*`; HUD via `special_buff_changed`.
+- **Feixe (F / X, segurar/soltar):** carrega com `*_grenade`, solta com `shots_requested`; parâmetros `esqueleto_skill_feixe_*`; `_is_grenade_charging_active()` reflecte o carregamento do feixe.
 - **Dash durante o feixe:** `_dash_blocked_by_grenade_skill()` devolve **false** — pode dar dash enquanto carrega o feixe (o bloqueio por granada na base não aplica aqui da mesma forma).
-- **Respawn Vs:** `_extra_reset_for_vs_round()` zera beam/triplo e janelas de duplo toque para evitar dash acidental.
+- **Respawn Vs:** `_extra_reset_for_vs_round()` zera feixe, buff e janelas de duplo toque para evitar dash acidental.
 
 Para números e tabelas completas, usar sempre **[../esqueleto_personagem_base.md](../esqueleto_personagem_base.md)** e **[../sistemas_core_arena_e_movimento.md](../sistemas_core_arena_e_movimento.md)**.

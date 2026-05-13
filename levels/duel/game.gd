@@ -273,7 +273,7 @@ func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
 			Player.CharacterKind.ESQUELETO, Player.CharacterKind.ONGMA_EPILEF:
 				return (
 					base_pad_move
-					+ " · X segure/solta feixe · Y triplo (próximo tiro em 3) · Tiro carregado: segure/solte RB"
+					+ " · X segure/solta feixe · Y buff de velocidade no tiro carregado · Tiro carregado: segure/solte RB"
 					+ " · Dash: duplo frente/trás (D-pad/stick); B não inicia dash"
 					+ " · D-pad ↓ / stick esq. ↓ (no ar): queda"
 				)
@@ -292,7 +292,7 @@ func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
 		Player.CharacterKind.ESQUELETO, Player.CharacterKind.ONGMA_EPILEF:
 			return (
 				base_kb_move
-				+ " · F segure feixe · G triplo (antes de soltar o tiro) · Dash: duplo A ou D (sem outro direcional no meio)"
+				+ " · F segure/solta feixe · G buff de velocidade no tiro carregado · Dash: duplo A ou D (sem outro direcional no meio)"
 			)
 		_:
 			return base_kb
@@ -620,7 +620,7 @@ func _add_gamepad_mappings_for_player(prefix: String, device: int) -> void:
 	InputMap.action_add_event(p + "aim_right", _joy_motion(device, JOY_AXIS_RIGHT_X, 1.0))
 	InputMap.action_add_event(p + "aim_up", _joy_motion(device, JOY_AXIS_RIGHT_Y, -1.0))
 	InputMap.action_add_event(p + "aim_down", _joy_motion(device, JOY_AXIS_RIGHT_Y, 1.0))
-	# Xbox-like, por jogador (device = índice do comando). Esqueleto: RB tiro, X feixe (grenade), Y triplo (special), B não é dash nele; L3/R3 = spike/mago; duplo toque = dash.
+	# Xbox-like, por jogador (device = índice do comando). Esqueleto: RB tiro, X feixe (grenade), Y buff de velocidade (special), B não é dash nele; L3/R3 = spike/mago; duplo toque = dash.
 	InputMap.action_add_event(p + "shoot", _joy_btn(device, JOY_BUTTON_RIGHT_SHOULDER))
 	InputMap.action_add_event(p + "jump", _joy_btn(device, JOY_BUTTON_A))
 	InputMap.action_add_event(p + "dash", _joy_btn(device, JOY_BUTTON_B))
@@ -993,7 +993,7 @@ func _on_right_hp_changed(hp: int) -> void:
 	p2_hp_bar.value = hp
 	_check_vs_ko_after_hp_change()
 
-func _on_left_special_buff_changed(active: bool, uses_left: int, _time_left: float) -> void:
+func _on_left_special_buff_changed(active: bool, uses_left: int, time_left: float) -> void:
 	var s1 := RunConfig.get_shoot_hint_token_for_player(1)
 	if left_player.is_pistoleiro():
 		p1_special_label.visible = active
@@ -1012,12 +1012,18 @@ func _on_left_special_buff_changed(active: bool, uses_left: int, _time_left: flo
 			p1_special_label.text = ""
 	elif left_player is EsqueletoPlayer:
 		p1_special_label.visible = active
-		p1_special_label.text = ("P1: próximo tiro (%s) = 3 flechas" % s1) if active else ""
+		if active:
+			p1_special_label.text = (
+				"P1: Buff ativo — tiros carregados mais rápidos (%.1f s) · solte %s para disparar"
+				% [time_left, s1]
+			)
+		else:
+			p1_special_label.text = ""
 	else:
 		p1_special_label.visible = false
 		p1_special_label.text = ""
 
-func _on_right_special_buff_changed(active: bool, uses_left: int, _time_left: float) -> void:
+func _on_right_special_buff_changed(active: bool, uses_left: int, time_left: float) -> void:
 	var s2 := RunConfig.get_shoot_hint_token_for_player(2)
 	if right_player.is_pistoleiro():
 		p2_special_label.visible = active
@@ -1036,7 +1042,13 @@ func _on_right_special_buff_changed(active: bool, uses_left: int, _time_left: fl
 			p2_special_label.text = ""
 	elif right_player is EsqueletoPlayer:
 		p2_special_label.visible = active
-		p2_special_label.text = ("P2: próximo tiro (%s) = 3 flechas" % s2) if active else ""
+		if active:
+			p2_special_label.text = (
+				"P2: Buff ativo — tiros carregados mais rápidos (%.1f s) · solte %s para disparar"
+				% [time_left, s2]
+			)
+		else:
+			p2_special_label.text = ""
 	else:
 		p2_special_label.visible = false
 		p2_special_label.text = ""

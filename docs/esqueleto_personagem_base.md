@@ -10,7 +10,7 @@ Os números e comportamentos do **Esqueleto** definem o **padrão de referência
 
 **Regra de trabalho:** daqui em diante, **todo personagem novo parte conceitual e numericamente do Esqueleto** — ou seja, copia-se o perfil do esqueleto (ou o script `esqueleto_player.gd` como ponto de partida) e **só depois** se alteram stats, skills e exceções de spawn à medida que o design do arquétipo exige. Personagens já existentes (pistoleiro, arqueiro, mago) continuam válidos, mas **evoluções e novos lutadores** devem documentar explicitamente o que mudou em relação a este baseline, para manter coerência de pacing e leitura de jogo.
 
-**Família Esqueleto no código:** qualquer nó com script que **é** `EsqueletoPlayer` (inclui **Ongma Epilef**, `extends EsqueletoPlayer`) entra nas mesmas regras de `Game` que o esqueleto para flecha reta e HUD do triplo — ver `owner_player is EsqueletoPlayer` em `levels/duel/game.gd`. Ficha do laboratório: [personagens/ongma_epilef.md](personagens/ongma_epilef.md).
+**Família Esqueleto no código:** qualquer nó com script que **é** `EsqueletoPlayer` (inclui **Ongma Epilef**, `extends EsqueletoPlayer`) entra nas mesmas regras de `Game` que o esqueleto para flecha reta e HUD do buff de velocidade — ver `owner_player is EsqueletoPlayer` em `levels/duel/game.gd`. Ficha do laboratório: [personagens/ongma_epilef.md](personagens/ongma_epilef.md).
 
 ---
 
@@ -21,8 +21,8 @@ No Vs, **só um** jogador pode usar **teclado+mouse**; o outro usa **controle**.
 | Ação | Teclado+mouse (`p1_*` ou `p2_*`) | Controle (RB / X / Y etc. em `p1_*` ou `p2_*`) |
 |------|-----------------------------------|-----------------------------------------------|
 | Tiro principal (carregar + soltar) | Botão esquerdo do mouse (`*_shoot`) | **RB** |
-| Skill “raio” (carregar + soltar) | **F** (`*_grenade`) | **X** |
-| Skill “triplo” (arma o próximo disparo) | **G** (`*_special`) | **Y** |
+| Skill **Feixe** (carregar + soltar) | **F** (`*_grenade`) | **X** |
+| Skill **Buff de velocidade do tiro carregado** (duração + CD próprios) | **G** (`*_special`) | **Y** |
 | **Dash (todos)** | Duplo toque **D**→**D** (frente); duplo **A**→**A** (trás), janela `sprint_double_tap_window`. A tecla `*_dash` **não** inicia dash. | Duplo toque frente/trás no stick; vertical de locomoção em `p*_move_up` / `p*_move_down` entra nas regras de duplo toque estrito (`game.gd` + `Player`). |
 
 ---
@@ -57,13 +57,13 @@ Base em `Player`; o esqueleto aplica multiplicadores em situações específicas
 |-----------|--------|--------|
 | `recoil_normal` | **170** | Tiro simples (um projétil) |
 | `recoil_special` | **290** | Export na base; o esqueleto não usa diretamente no script atual |
-| `recoil_special_big` | **480** | Usado na skill “raio” com fator |
-| `recoil_y_factor` | **0,25** | Componente vertical do recoil |
+| `recoil_special_big` | **480** | Export na base; o feixe **não** usa este valor (recoil próprio abaixo) |
+| `recoil_y_factor` | **0,25** | Componente vertical do recoil no tiro normal (`_apply_recoil`) |
 | `recoil_decay` | **2400** | Quão rápido o vetor extra de recoil decai |
-| Tiro triplo | **recoil_normal × 1,12** (= **190,4**) | Três projéteis paralelos |
-| Skill raio (beam) | **recoil_special_big × 0,82** (= **393,6**) | `_fire_beam` |
+| `knockback_carry_x_decay` | **3200** | Decaimento por frame de `_carry_knockback_x` (recuo horizontal que se soma ao movimento) |
+| Skill **Feixe** | `forca` **~760** px/s, ângulo **5–16°** | Horizontal: `add_carry_knockback_x` · Vertical: `_apply_velocity_knockback_once` só em Y — o movimento da base não apaga o recuo para trás |
 
-Implementação: `_apply_recoil(shot_velocity, strength)` em `player.gd` (impulso oposto à velocidade do tiro, com `y` atenuado).
+Implementação: `_apply_recoil(shot_velocity, strength)` em `player.gd` (tiro normal) · feixe: `add_carry_knockback_x` + `_apply_velocity_knockback_once` (ver linha acima).
 
 ---
 
@@ -88,34 +88,37 @@ Valores da instância em `main.tscn` (válidos para qualquer script de `Player`,
 
 | Método / sinal | Comportamento no Esqueleto |
 |----------------|----------------------------|
-| `_is_grenade_charging_active()` | `true` enquanto o feixe está a carregar (`_beam_charging`) — usado na base para UI/bloqueios que dependem de “skill de granada” a carregar. |
+| `_is_grenade_charging_active()` | `true` enquanto o feixe está a carregar (`_feixe_carregando`) — usado na base para UI/bloqueios que dependem de “skill de granada” a carregar. |
 | `_dash_blocked_by_grenade_skill()` | **`false`** — o dash **não** é bloqueado pelo carregamento do feixe (diferente do default da base). |
 | `_preview_gravity_for_shot()` | **`0.0`** — pré-visualização de trajetória recta. |
 
-### 4.1 Triplo (arma o próximo disparo do “tiro principal”)
+### 4.1 Buff de velocidade do tiro carregado (`*_special`: G / Y)
 
 | Parâmetro | Valor |
 |-----------|--------|
-| Cooldown da skill | **5,0** s | `triple_shot_cooldown` |
-| Uso | Um disparo: ao soltar o carregamento normal, nascem **3** flechas com a **mesma** velocidade `v0` |
-| Espaçamento lateral entre raias | **10,0** px | `triple_parallel_lane_spacing` (direção perpendicular a `v0`) |
-| HUD | `special_buff_changed(true, 1, 0)` ao armar; ao disparar, desarma e emite com usos 0 |
+| Duração do buff | **4,0** s | `esqueleto_skill_buff_velocidade_tiro_duracao_s` |
+| Recarga (antes de voltar a poder activar) | **10,0** s | `esqueleto_skill_buff_velocidade_tiro_recarga_s` |
+| Multiplicador de velocidade no tiro carregado | **2,0** × | `esqueleto_skill_buff_velocidade_tiro_multiplicador` (aplica-se à velocidade já interpolada por carga) |
+| HUD | `special_buff_changed(true, 1, tempo_restante)` enquanto activo; `false` ao expirar ou no reset Vs |
 
-### 4.2 “Raio” / projétil grande (segurar tecla de granada e soltar)
+### 4.2 Feixe (segurar `*_grenade` e soltar: F / X)
 
 Na prática é um disparo único via `shots_requested` com flags de dano/tamanho/gravidade.
 
 | Parâmetro | Valor |
 |-----------|--------|
-| Cooldown | **4,25** s | `beam_skill_cooldown` |
-| Tempo máximo de carga | **0,65** s | `beam_max_charge_time` |
-| Escala (tamanho) | `lerp(1.85, 3.45, t)` | `beam_min_scale` … `beam_max_scale` |
-| Dano | **36** | `beam_damage` |
-| Velocidade | `lerp(min_launch × 1.05, max_launch × 1.42, t)` | `beam_speed_mul_min` / `beam_speed_mul_max` → **441** … **1278** px/s nos extremos |
-| Gravidade do projétil | **0** | payload em `_fire_beam` |
+| Cooldown | **4,25** s | `esqueleto_skill_feixe_recarga_s` |
+| Tempo máximo de carga | **0,65** s | `esqueleto_skill_feixe_tempo_max_carga_s` |
+| Escala (tamanho) | `lerp(1.85, 3.45, t)` | `esqueleto_skill_feixe_escala_min` … `esqueleto_skill_feixe_escala_max` |
+| Dano | **36** | `esqueleto_skill_feixe_dano` |
+| Velocidade | `lerp(min_launch × 1.05, max_launch × 1.42, t)` | `esqueleto_skill_feixe_velocidade_mul_min` / `esqueleto_skill_feixe_velocidade_mul_max` → **441** … **1278** px/s nos extremos |
+| Gravidade do projétil | **0** | payload em `_disparar_feixe` |
 | Ricochetes | **0** | `bounces: 0` |
 | Posição de spawn | `muzzle.global_position + dir × (22.0 × size)` | offset ao longo da mira |
-| Tiro normal durante carga do feixe | Ramo de carregar `*_shoot` **não** corre enquanto `_beam_charging` | `EsqueletoPlayer._process_combat` (prioridade ao feixe) |
+| Recoil (jogador) | **~760** px/s (`esqueleto_skill_feixe_recoil_forca`) | Horizontal: `add_carry_knockback_x` · Vertical: `_apply_velocity_knockback_once` em Y |
+| Ângulo acima da horizontal | **5–16°** | `esqueleto_skill_feixe_recoil_angulo_acima_horizontal_graus` |
+| Decaimento do carry X (base) | **3200** | `Player.knockback_carry_x_decay` |
+| Tiro normal durante carga do feixe | Ramo de carregar `*_shoot` **não** corre enquanto `_feixe_carregando` | `EsqueletoPlayer._process_combat` (prioridade ao feixe) |
 
 ---
 
@@ -191,7 +194,7 @@ Além dos blocos acima, estes exports de `Player` costumam ser o “contrato” 
 | `max_hp` | **100** | Vida |
 | `hit_stun_time` | **0,14** s | Stun após knockback |
 | `knockback_friction` | **2400** | Deslize horizontal ao perder controle |
-| `special_cooldown` | **3,0** s | Cooldown genérico na base (o esqueleto usa timers próprios para triplo/raio) |
+| `special_cooldown` | **3,0** s | Cooldown genérico na base (o esqueleto usa timers próprios para feixe e buff) |
 | `projectile_gravity_accel` | **1200** | Usado na prévia e por outros personagens; esqueleto zera a prévia e o spawn |
 | `arena_padding_x` | **36** | Limite horizontal da metade da arena |
 
@@ -201,10 +204,10 @@ Camadas (duelo): jogadores `collision_mask = 3`; flechas em `arrow.tscn` com `co
 
 ## 9. Referência rápida de arquivos
 
-- `characters/esqueleto_player.gd` — triplo, raio, cooldown mínimo de tiro, reset de toques no Vs.
+- `characters/esqueleto_player.gd` — feixe, buff de velocidade no tiro carregado, cooldown mínimo de tiro, reset de toques no Vs.
 - `characters/ongma_epilef_player.gd` — laboratório; `extends EsqueletoPlayer`.
 - `characters/player.gd` — movimento, mira, recoil, pulo, dash (duplo toque, gap mínimo, dash no ar com reset em chão/parede), `_get_dash_stats()`, wall jump, `start_dash_with_direction`, pulo no dash (vector composto), corrida clássica opcional, **corrida pós-dash**, indicador visual de sprint, gravidade/clamp no dash, duplo toque estrito (teclado + `move_up`/`move_down` no comando).
-- `levels/duel/game.gd` — flecha com `g = 0` se pistoleiro **ou** `owner_player is EsqueletoPlayer`; HUD do triplo para `left_player/right_player is EsqueletoPlayer`; spawn de `Arrow`.
+- `levels/duel/game.gd` — flecha com `g = 0` se pistoleiro **ou** `owner_player is EsqueletoPlayer`; HUD do buff para `left_player/right_player is EsqueletoPlayer`; spawn de `Arrow`.
 - `projectiles/arrow/arrow.gd` + `arrow.tscn` — física/dano/tamanho base do projétil.
 - `levels/duel/main.tscn` — dimensões do corpo, colisor, muzzle, UI de carga/trajetória.
 

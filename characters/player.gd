@@ -97,6 +97,8 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 @export var recoil_special_big: float = 480.0
 @export_range(0.0, 1.0, 0.05) var recoil_y_factor: float = 0.25
 @export var recoil_decay: float = 2400.0
+## Velocidade horizontal extra (px/s) somada a `dir * move_speed` no solo/ar; decai por frame (ex.: feixe — o assign de movimento não pode apagar o recuo).
+@export var knockback_carry_x_decay: float = 3200.0
 @onready var muzzle: Marker2D = $Muzzle
 @onready var muzzle_top: Marker2D = get_node_or_null("MuzzleTop")
 @onready var muzzle_bottom: Marker2D = get_node_or_null("MuzzleBottom")
@@ -118,6 +120,7 @@ var _charge_time := 0.0
 var _jumps_left: int = 0
 var _control_lock_left := 0.0
 var _recoil_vel: Vector2 = Vector2.ZERO
+var _carry_knockback_x: float = 0.0
 var _special_buff_left := 0.0
 var _was_special_active := false
 var _traj_color_normal := Color.WHITE
@@ -421,7 +424,8 @@ func _physics_process(delta: float) -> void:
 		else:
 			var dir := 0.0 if not input_enabled else _get_move_axis()
 			var sp := _get_sprint_speed_mult()
-			velocity.x = dir * move_speed * sp
+			velocity.x = dir * move_speed * sp + _carry_knockback_x
+			_carry_knockback_x = move_toward(_carry_knockback_x, 0.0, knockback_carry_x_decay * delta)
 	else:
 		if hovering:
 			velocity = velocity.move_toward(Vector2.ZERO, knockback_friction * delta)
@@ -1043,6 +1047,7 @@ func prepare_for_vs_round_respawn(local_spawn: Vector2) -> void:
 	_interrupt_sprint()
 	position = local_spawn
 	velocity = Vector2.ZERO
+	_carry_knockback_x = 0.0
 	hp = max_hp
 	health_changed.emit(hp)
 	_cooldown_left = 0.0
@@ -1114,3 +1119,14 @@ func _apply_recoil(shot_velocity: Vector2, strength: float) -> void:
 	var impulse := -dir * strength
 	impulse.y *= recoil_y_factor
 	_recoil_vel += impulse
+
+
+## Um único `velocity +=` (chamar no fim de `_process_combat`). O feixe usa isto em vez de `_recoil_vel`, que se soma durante vários frames e distorce o arco.
+func _apply_velocity_knockback_once(impulse: Vector2) -> void:
+	if impulse.length_squared() < 0.0001:
+		return
+	velocity += impulse
+
+
+func add_carry_knockback_x(amount: float) -> void:
+	_carry_knockback_x += amount

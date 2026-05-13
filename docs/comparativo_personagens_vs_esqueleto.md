@@ -30,7 +30,7 @@ O **Esqueleto** é a referência de design; os valores “Esqueleto” abaixo re
 | Velocidade min / max carga | 420 / 900 | 420 / 900 | = exports `Player` |
 | Tempo de carga | 1,0 s | 1,0 s | = |
 | Cooldown após atirar | **≥ 1,0** s | **0,64** s (cadeia) / **0,4** s (durante buff especial) | ≠ cadência mais rápida |
-| Padrão de tiro | 1 projétil (ou triplo / raio) | Cadeia 3 passos (top / bottom / duplo) | ≠ identidade |
+| Padrão de tiro | 1 projétil (feixe ou buff de velocidade no carregado) | Cadeia 3 passos (top / bottom / duplo) | ≠ identidade |
 | Recoil tiro simples | 170 | 170 (passos 0–1); **190,4** passo 2 | ≈ |
 | Skills | Triplo + raio | Buff 3 ataques + granada | ≠ |
 | Dash (stats) | 620 / 0,20 / 0,1 / g=0 | **=** | = mesmo `Player._get_dash_stats()` |
@@ -95,7 +95,7 @@ Documento canónico: [esqueleto_personagem_base.md](esqueleto_personagem_base.md
 |--------|-----------|--------------|--------|
 | Script | `EsqueletoPlayer` | `OngmaEpilefPlayer` **extends EsqueletoPlayer** | Mesmo kit até overrides |
 | `CharacterKind` | **3** | **4** | Menu / `RunConfig` |
-| Projétil / dash / skills | baseline | **=** por padrão | `Game` usa `is EsqueletoPlayer` para flecha reta e HUD do triplo |
+| Projétil / dash / skills | baseline | **=** por padrão | `Game` usa `is EsqueletoPlayer` para flecha recta e HUD do buff |
 
 **Ficha:** [personagens/ongma_epilef.md](personagens/ongma_epilef.md)
 

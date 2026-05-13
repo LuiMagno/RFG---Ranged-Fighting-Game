@@ -11,6 +11,7 @@ extends Control
 
 func _ready() -> void:
 	RunConfig.clear_shoot_mouse_bindings_for_menu()
+	_apply_training_menu_quick_test_defaults()
 	MenuThemeUtil.apply_main_panel_style(_main_panel)
 	MenuThemeUtil.fill_class_option(opt_p1_class)
 	MenuThemeUtil.style_option(opt_p1_class)
@@ -32,6 +33,14 @@ func _ready() -> void:
 	btn_back.pressed.connect(_on_back_pressed)
 	btn_start.pressed.connect(_on_start_pressed)
 	btn_start.grab_focus()
+
+
+## Ao abrir este menu: atalho para testar (Esqueleto + controle 0 + boneco sem tiro automático).
+func _apply_training_menu_quick_test_defaults() -> void:
+	RunConfig.p1_character = Player.CharacterKind.ESQUELETO
+	RunConfig.p1_input_scheme = RunConfig.InputScheme.GAMEPAD
+	RunConfig.p1_joy_device = 0
+	RunConfig.training_dummy_shoot = false
 
 
 func _refresh_p1_device_visible() -> void:
