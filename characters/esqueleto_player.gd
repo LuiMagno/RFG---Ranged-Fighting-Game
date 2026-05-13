@@ -18,7 +18,20 @@ const MIN_SHOOT_COOLDOWN_S := 1.0
 @export var beam_damage: int = 36
 @export var beam_speed_mul_min: float = 1.05
 @export var beam_speed_mul_max: float = 1.42
+#skill que empurra
+@export var quick_shot_cooldown: float = 1.5
+@export var quick_shot_damage: int = 20
+@export var quick_shot_speed: float = 1300.0
+@export var quick_shot_recoil: float = 450.0
+#skill vuff
+@export var sniper_buff_duration: float = 4.0
+@export var sniper_buff_cooldown: float = 10.0
+@export var sniper_speed_multiplier: float = 2.0
 
+var _is_sniper_active := false
+var _sniper_time_left := 0.0
+var _sniper_cd_left := 0.0
+var _quick_shot_cd_left := 0.0
 var _triple_cd_left := 0.0
 var _triple_armed := false
 var _beam_cd_left := 0.0
@@ -38,7 +51,15 @@ func _ready() -> void:
 func _extra_timer_tick(delta: float) -> void:
 	_triple_cd_left = maxf(0.0, _triple_cd_left - delta)
 	_beam_cd_left = maxf(0.0, _beam_cd_left - delta)
-
+	_quick_shot_cd_left = maxf(0.0, _quick_shot_cd_left - delta)
+	_sniper_cd_left = maxf(0.0, _sniper_cd_left - delta)
+	_quick_shot_cd_left = maxf(0.0, _quick_shot_cd_left - delta)
+	if _is_sniper_active:
+		_sniper_time_left -= delta
+		if _sniper_time_left <= 0:
+			_is_sniper_active = false
+			self.modulate = Color(1, 1, 1)
+			special_buff_changed.emit(false, 0, 0.0)
 
 func _is_grenade_charging_active() -> bool:
 	return _beam_charging
@@ -116,6 +137,16 @@ func _process_combat(delta: float) -> void:
 			_beam_charging = false
 			_beam_cd_left = beam_skill_cooldown
 			_hide_charge_trajectory_ui()
+		if input_enabled and _control_lock_left <= 0.0:
+			if Input.is_action_just_pressed("p1_quick_shot" if player_id == 1 else "p2_quick_shot"):
+				if _quick_shot_cd_left <= 0.0:
+					_fire_quick_shot()
+					_quick_shot_cd_left = quick_shot_cooldown
+		if input_enabled and _control_lock_left <= 0.0:
+			if Input.is_action_just_pressed("p1_buff_r" if player_id == 1 else "p2_buff_r"):
+				if _sniper_cd_left <= 0.0 and not _is_sniper_active:
+					_activate_sniper_buff()
+					
 
 	if (
 		input_enabled
@@ -169,10 +200,19 @@ func _process_combat(delta: float) -> void:
 				_apply_recoil(v0, recoil_normal)
 			_cooldown_left = shoot_cooldown
 			_hide_charge_trajectory_ui()
+		if _is_charging and _shoot_just_released():
+			_is_charging = false
+			var t := 0.0 if max_charge_time <= 0.0 else (_charge_time / max_charge_time)
+			var speed := lerpf(min_launch_speed, max_launch_speed, t)
+			if _is_sniper_active:
+				speed *= sniper_speed_multiplier
 	else:
 		if _is_charging and not _beam_charging:
 			_is_charging = false
 			_hide_charge_trajectory_ui()
+			
+	
+		
 
 
 func _extra_reset_for_vs_round() -> void:
@@ -183,3 +223,32 @@ func _extra_reset_for_vs_round() -> void:
 	_beam_charge_time = 0.0
 	_last_forward_tap_time_s = -100.0
 	_last_back_tap_time_s = -100.0
+
+
+func _fire_quick_shot() -> void:
+	var speed := quick_shot_speed
+	var vel := _compute_launch_velocity(speed)
+	
+	if vel.length_squared() < 1.0:
+		vel = (Vector2.RIGHT * speed) if player_id == 1 else (Vector2.LEFT * speed) 
+	
+	var shots: Array = [{
+		"pos": muzzle.global_position,
+		"vel": vel,
+		"gravity": 0.0, 
+		"damage": quick_shot_damage,
+		"size": 1.2,
+	}]
+	
+	shots_requested.emit(self, shots)
+	_apply_recoil(vel, quick_shot_recoil)
+
+func _activate_sniper_buff() -> void:
+	_is_sniper_active = true
+	_sniper_time_left = sniper_buff_duration
+	_sniper_cd_left = sniper_buff_cooldown
+	
+	self.modulate = Color(0.5, 1.5, 2.0)
+	special_buff_changed.emit(true, 1, sniper_buff_duration)
+	print("Modo Sniper Ativado: Tiros muito mais rápidos!")
+	
