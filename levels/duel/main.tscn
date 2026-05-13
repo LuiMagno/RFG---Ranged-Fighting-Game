@@ -9,9 +9,9 @@
 [ext_resource type="PackedScene" path="res://projectiles/homing_missile/homing_missile.tscn" id="7_homing"]
 [ext_resource type="PackedScene" path="res://projectiles/ice_missile/ice_missile.tscn" id="8_ice"]
 [ext_resource type="PackedScene" path="res://projectiles/gravity_orb/gravity_orb.tscn" id="9_orb"]
-[ext_resource type="Script" path="res://levels/duel/pause_menu_controller.gd" id="10_pause"]
-[ext_resource type="Script" path="res://levels/duel/training_pause_menu_controller.gd" id="11_trpause"]
-[ext_resource type="Script" path="res://levels/duel/vs_match_end_menu.gd" id="12_vs_end"]
+[ext_resource type="Script" uid="uid://2ya3il0ul4fg" path="res://levels/duel/pause_menu_controller.gd" id="10_pause"]
+[ext_resource type="Script" uid="uid://d2qtsb1i5ovs2" path="res://levels/duel/training_pause_menu_controller.gd" id="11_trpause"]
+[ext_resource type="Script" uid="uid://4ehcmjfnrgv1" path="res://levels/duel/vs_match_end_menu.gd" id="12_vs_end"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_2"]
 size = Vector2(1920, 84)
@@ -35,23 +35,23 @@ grenade_scene = ExtResource("4_grnd")
 archer_spike_scene = ExtResource("6_spike")
 
 [node name="Background" type="ColorRect" parent="." unique_id=1305220782]
-mouse_filter = 2
 offset_right = 1920.0
 offset_bottom = 864.0
+mouse_filter = 2
 color = Color(0.12, 0.13, 0.15, 1)
 
 [node name="Ground" type="ColorRect" parent="." unique_id=323674890]
-mouse_filter = 2
 offset_top = 780.0
 offset_right = 1920.0
 offset_bottom = 864.0
+mouse_filter = 2
 color = Color(0.18, 0.2, 0.23, 1)
 
 [node name="MidDivider" type="ColorRect" parent="." unique_id=1539054452]
-mouse_filter = 2
 offset_left = 958.0
 offset_right = 962.0
 offset_bottom = 864.0
+mouse_filter = 2
 color = Color(1, 1, 1, 0.18)
 
 [node name="GroundBody" type="StaticBody2D" parent="." unique_id=787593236]
@@ -150,28 +150,28 @@ offset_bottom = 106.0
 theme_override_colors/font_color = Color(0.55, 0.95, 0.65, 1)
 horizontal_alignment = 2
 
-[node name="P1SkillHints" type="Label" parent="UI"]
+[node name="P1SkillHints" type="Label" parent="UI" unique_id=2029028019]
 offset_left = 24.0
 offset_top = 112.0
 offset_right = 920.0
 offset_bottom = 220.0
-theme_override_font_sizes/font_size = 11
 theme_override_colors/font_color = Color(0.62, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
 autowrap_mode = 3
 
-[node name="P2SkillHints" type="Label" parent="UI"]
+[node name="P2SkillHints" type="Label" parent="UI" unique_id=669080002]
 offset_left = 1000.0
 offset_top = 112.0
 offset_right = 1896.0
 offset_bottom = 220.0
-horizontal_alignment = 2
-theme_override_font_sizes/font_size = 11
 theme_override_colors/font_color = Color(0.62, 0.7, 0.8, 1)
+theme_override_font_sizes/font_size = 11
+horizontal_alignment = 2
 autowrap_mode = 3
 
-[node name="VsHud" type="Control" parent="UI"]
+[node name="VsHud" type="Control" parent="UI" unique_id=1609322490]
 visible = false
-layout_mode = 1
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -179,7 +179,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="VsTimerLabel" type="Label" parent="UI/VsHud"]
+[node name="VsTimerLabel" type="Label" parent="UI/VsHud" unique_id=120518568]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
@@ -189,38 +189,42 @@ offset_top = 4.0
 offset_right = 100.0
 offset_bottom = 48.0
 grow_horizontal = 2
+theme_override_colors/font_color = Color(0.95, 0.97, 1, 1)
+theme_override_font_sizes/font_size = 34
 text = "1:00"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 34
-theme_override_colors/font_color = Color(0.95, 0.97, 1, 1)
 
-[node name="VsP1CharacterLabel" type="Label" parent="UI/VsHud"]
+[node name="VsP1CharacterLabel" type="Label" parent="UI/VsHud" unique_id=1452945956]
 layout_mode = 1
-anchors_preset = 9
+anchors_preset = -1
 anchor_right = 0.5
+anchor_bottom = 1.0
 offset_left = 24.0
 offset_top = 48.0
 offset_right = -12.0
 offset_bottom = 86.0
 grow_horizontal = 2
-text = "Jogador 1 — Pistoleiro"
-horizontal_alignment = 0
+grow_vertical = 2
 theme_override_font_sizes/font_size = 20
+text = "Jogador 1 — Pistoleiro"
 
-[node name="VsP2CharacterLabel" type="Label" parent="UI/VsHud"]
+[node name="VsP2CharacterLabel" type="Label" parent="UI/VsHud" unique_id=1430210013]
 layout_mode = 1
-anchors_preset = 11
+anchors_preset = -1
 anchor_left = 0.5
+anchor_right = 1.0
+anchor_bottom = 1.0
 offset_left = 12.0
 offset_top = 48.0
 offset_right = -24.0
 offset_bottom = 86.0
 grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 20
 text = "Jogador 2 — Arqueiro"
 horizontal_alignment = 2
-theme_override_font_sizes/font_size = 20
 
-[node name="VsScoreLabel" type="Label" parent="UI/VsHud"]
+[node name="VsScoreLabel" type="Label" parent="UI/VsHud" unique_id=812716930]
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
@@ -230,16 +234,33 @@ offset_top = 92.0
 offset_right = 320.0
 offset_bottom = 126.0
 grow_horizontal = 2
+theme_override_colors/font_color = Color(0.72, 0.8, 0.92, 1)
+theme_override_font_sizes/font_size = 18
 text = "Vitórias: 0 — 0  (primeiro a 3)"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 18
-theme_override_colors/font_color = Color(0.72, 0.8, 0.92, 1)
 
-[node name="VsRoundBannerLayer" type="CanvasLayer" parent="."]
+[node name="VsRoundBannerLayer" type="CanvasLayer" parent="." unique_id=781887668]
 layer = 35
 
-[node name="BannerRoot" type="Control" parent="VsRoundBannerLayer"]
+[node name="BannerRoot" type="Control" parent="VsRoundBannerLayer" unique_id=1260360589]
 visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="BannerDim" type="ColorRect" parent="VsRoundBannerLayer/BannerRoot" unique_id=880685292]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.03, 0.06, 0.55)
+
+[node name="BannerCenter" type="CenterContainer" parent="VsRoundBannerLayer/BannerRoot" unique_id=998989596]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -247,32 +268,36 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="BannerDim" type="ColorRect" parent="VsRoundBannerLayer/BannerRoot"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-color = Color(0.02, 0.03, 0.06, 0.55)
-
-[node name="BannerCenter" type="CenterContainer" parent="VsRoundBannerLayer/BannerRoot"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-
-[node name="RoundBannerLabel" type="Label" parent="VsRoundBannerLayer/BannerRoot/BannerCenter"]
+[node name="RoundBannerLabel" type="Label" parent="VsRoundBannerLayer/BannerRoot/BannerCenter" unique_id=1399736793]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 38
 text = "Jogador 1 vence o round!"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 38
-theme_override_colors/font_color = Color(0.95, 0.98, 1, 1)
 
-[node name="VsMatchEndLayer" type="CanvasLayer" parent="."]
+[node name="VsMatchEndLayer" type="CanvasLayer" parent="." unique_id=1070392063]
 layer = 86
 script = ExtResource("12_vs_end")
 
-[node name="Root" type="Control" parent="VsMatchEndLayer"]
+[node name="Root" type="Control" parent="VsMatchEndLayer" unique_id=880635729]
 visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="VsMatchEndLayer/Root" unique_id=314464802]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.03, 0.06, 0.78)
+
+[node name="Center" type="CenterContainer" parent="VsMatchEndLayer/Root" unique_id=774186631]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -280,24 +305,11 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Dim" type="ColorRect" parent="VsMatchEndLayer/Root"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-color = Color(0.02, 0.03, 0.06, 0.78)
-
-[node name="Center" type="CenterContainer" parent="VsMatchEndLayer/Root"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-
-[node name="Panel" type="Panel" parent="VsMatchEndLayer/Root/Center"]
+[node name="Panel" type="Panel" parent="VsMatchEndLayer/Root/Center" unique_id=1082147142]
 custom_minimum_size = Vector2(440, 340)
 layout_mode = 2
 
-[node name="VBox" type="VBoxContainer" parent="VsMatchEndLayer/Root/Center/Panel"]
+[node name="VBox" type="VBoxContainer" parent="VsMatchEndLayer/Root/Center/Panel" unique_id=1941469420]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -306,34 +318,53 @@ offset_left = 22.0
 offset_top = 22.0
 offset_right = -22.0
 offset_bottom = -22.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_constants/separation = 14
 
-[node name="Title" type="Label" parent="VsMatchEndLayer/Root/Center/Panel/VBox"]
+[node name="Title" type="Label" parent="VsMatchEndLayer/Root/Center/Panel/VBox" unique_id=50259296]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.96, 1, 1)
+theme_override_font_sizes/font_size = 24
 text = "Jogador 1 venceu a partida!"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 24
-theme_override_colors/font_color = Color(0.92, 0.96, 1, 1)
 autowrap_mode = 3
 
-[node name="BtnRematch" type="Button" parent="VsMatchEndLayer/Root/Center/Panel/VBox"]
+[node name="BtnRematch" type="Button" parent="VsMatchEndLayer/Root/Center/Panel/VBox" unique_id=2069442178]
 layout_mode = 2
 text = "Revanche"
 
-[node name="BtnCharacters" type="Button" parent="VsMatchEndLayer/Root/Center/Panel/VBox"]
+[node name="BtnCharacters" type="Button" parent="VsMatchEndLayer/Root/Center/Panel/VBox" unique_id=315766242]
 layout_mode = 2
 text = "Escolher personagem"
 
-[node name="BtnExit" type="Button" parent="VsMatchEndLayer/Root/Center/Panel/VBox"]
+[node name="BtnExit" type="Button" parent="VsMatchEndLayer/Root/Center/Panel/VBox" unique_id=1236513171]
 layout_mode = 2
 text = "Sair"
 
-[node name="PauseLayer" type="CanvasLayer" parent="."]
+[node name="PauseLayer" type="CanvasLayer" parent="." unique_id=2051159751]
 layer = 100
 script = ExtResource("10_pause")
 
-[node name="Root" type="Control" parent="PauseLayer"]
+[node name="Root" type="Control" parent="PauseLayer" unique_id=949689258]
 visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="PauseLayer/Root" unique_id=1819334936]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.03, 0.06, 0.72)
+
+[node name="Center" type="CenterContainer" parent="PauseLayer/Root" unique_id=427364817]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -341,24 +372,11 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Dim" type="ColorRect" parent="PauseLayer/Root"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-color = Color(0.02, 0.03, 0.06, 0.72)
-
-[node name="Center" type="CenterContainer" parent="PauseLayer/Root"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-
-[node name="Panel" type="Panel" parent="PauseLayer/Root/Center"]
+[node name="Panel" type="Panel" parent="PauseLayer/Root/Center" unique_id=1219292683]
 custom_minimum_size = Vector2(420, 268)
 layout_mode = 2
 
-[node name="VBox" type="VBoxContainer" parent="PauseLayer/Root/Center/Panel"]
+[node name="VBox" type="VBoxContainer" parent="PauseLayer/Root/Center/Panel" unique_id=505472396]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -367,36 +385,55 @@ offset_left = 20.0
 offset_top = 20.0
 offset_right = -20.0
 offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_constants/separation = 16
 
-[node name="Title" type="Label" parent="PauseLayer/Root/Center/Panel/VBox"]
+[node name="Title" type="Label" parent="PauseLayer/Root/Center/Panel/VBox" unique_id=1608801659]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 28
 text = "Pausa"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 28
-theme_override_colors/font_color = Color(0.92, 0.95, 1, 1)
 
-[node name="Hint" type="Label" parent="PauseLayer/Root/Center/Panel/VBox"]
+[node name="Hint" type="Label" parent="PauseLayer/Root/Center/Panel/VBox" unique_id=182435107]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 14
 text = "Enter ou Start — abrir / fechar pausa"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
 
-[node name="BtnResume" type="Button" parent="PauseLayer/Root/Center/Panel/VBox"]
+[node name="BtnResume" type="Button" parent="PauseLayer/Root/Center/Panel/VBox" unique_id=398424683]
 layout_mode = 2
 text = "Continuar"
 
-[node name="BtnMenu" type="Button" parent="PauseLayer/Root/Center/Panel/VBox"]
+[node name="BtnMenu" type="Button" parent="PauseLayer/Root/Center/Panel/VBox" unique_id=311442725]
 layout_mode = 2
 text = "Voltar ao menu principal"
 
-[node name="TrainingPauseLayer" type="CanvasLayer" parent="."]
+[node name="TrainingPauseLayer" type="CanvasLayer" parent="." unique_id=748636116]
 layer = 100
 script = ExtResource("11_trpause")
 
-[node name="Root" type="Control" parent="TrainingPauseLayer"]
+[node name="Root" type="Control" parent="TrainingPauseLayer" unique_id=961619854]
 visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="TrainingPauseLayer/Root" unique_id=1478980583]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.03, 0.06, 0.72)
+
+[node name="Center" type="CenterContainer" parent="TrainingPauseLayer/Root" unique_id=1777152970]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -404,24 +441,11 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Dim" type="ColorRect" parent="TrainingPauseLayer/Root"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-color = Color(0.02, 0.03, 0.06, 0.72)
-
-[node name="Center" type="CenterContainer" parent="TrainingPauseLayer/Root"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-
-[node name="Panel" type="Panel" parent="TrainingPauseLayer/Root/Center"]
+[node name="Panel" type="Panel" parent="TrainingPauseLayer/Root/Center" unique_id=1147720330]
 custom_minimum_size = Vector2(480, 500)
 layout_mode = 2
 
-[node name="MainMenu" type="VBoxContainer" parent="TrainingPauseLayer/Root/Center/Panel"]
+[node name="MainMenu" type="VBoxContainer" parent="TrainingPauseLayer/Root/Center/Panel" unique_id=1160294152]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -430,36 +454,38 @@ offset_left = 20.0
 offset_top = 20.0
 offset_right = -20.0
 offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_constants/separation = 14
 
-[node name="Title" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/MainMenu"]
+[node name="Title" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/MainMenu" unique_id=566796605]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 26
 text = "Treinamento"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 26
-theme_override_colors/font_color = Color(0.92, 0.95, 1, 1)
 
-[node name="Hint" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/MainMenu"]
+[node name="Hint" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/MainMenu" unique_id=1449513135]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 13
 text = "Enter ou Start — abrir / fechar este menu"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
 autowrap_mode = 3
 
-[node name="BtnResume" type="Button" parent="TrainingPauseLayer/Root/Center/Panel/MainMenu"]
+[node name="BtnResume" type="Button" parent="TrainingPauseLayer/Root/Center/Panel/MainMenu" unique_id=905053592]
 layout_mode = 2
 text = "Continuar"
 
-[node name="BtnTrainingSettings" type="Button" parent="TrainingPauseLayer/Root/Center/Panel/MainMenu"]
+[node name="BtnTrainingSettings" type="Button" parent="TrainingPauseLayer/Root/Center/Panel/MainMenu" unique_id=443668513]
 layout_mode = 2
 text = "Configurações do treino"
 
-[node name="BtnModeMenu" type="Button" parent="TrainingPauseLayer/Root/Center/Panel/MainMenu"]
+[node name="BtnModeMenu" type="Button" parent="TrainingPauseLayer/Root/Center/Panel/MainMenu" unique_id=295945400]
 layout_mode = 2
 text = "Voltar à seleção de modo"
 
-[node name="SettingsMenu" type="VBoxContainer" parent="TrainingPauseLayer/Root/Center/Panel"]
+[node name="SettingsMenu" type="VBoxContainer" parent="TrainingPauseLayer/Root/Center/Panel" unique_id=1351679228]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -469,83 +495,85 @@ offset_left = 20.0
 offset_top = 20.0
 offset_right = -20.0
 offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_constants/separation = 14
 
-[node name="SettingsTitle" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu"]
+[node name="SettingsTitle" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=525326853]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.92, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 22
 text = "Configurações do treino"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 22
-theme_override_colors/font_color = Color(0.92, 0.95, 1, 1)
 
-[node name="SectionCharacter" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu"]
+[node name="SectionCharacter" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=84544475]
 layout_mode = 2
-text = "Personagem"
-theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+theme_override_font_sizes/font_size = 13
+text = "Personagem"
 
-[node name="ClassP1Row" type="HBoxContainer" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu"]
+[node name="ClassP1Row" type="HBoxContainer" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=156329092]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="ClassP1Label" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/ClassP1Row"]
+[node name="ClassP1Label" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/ClassP1Row" unique_id=1117316473]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 text = "Jogador 1 (esq.)"
 vertical_alignment = 1
 
-[node name="OptP1Class" type="OptionButton" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/ClassP1Row"]
+[node name="OptP1Class" type="OptionButton" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/ClassP1Row" unique_id=2136510887]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SectionInputP1" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu"]
+[node name="SectionInputP1" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=1285158622]
 layout_mode = 2
-text = "Controles (P1)"
-theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+theme_override_font_sizes/font_size = 13
+text = "Controles (P1)"
 
-[node name="InputP1Row" type="HBoxContainer" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu"]
+[node name="InputP1Row" type="HBoxContainer" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=157662925]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="InputP1Label" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/InputP1Row"]
+[node name="InputP1Label" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/InputP1Row" unique_id=1308288533]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 text = "P1 — Entrada"
 vertical_alignment = 1
 
-[node name="OptP1Scheme" type="OptionButton" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/InputP1Row"]
+[node name="OptP1Scheme" type="OptionButton" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/InputP1Row" unique_id=103942045]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="OptP1Device" type="OptionButton" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/InputP1Row"]
+[node name="OptP1Device" type="OptionButton" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/InputP1Row" unique_id=816118964]
 custom_minimum_size = Vector2(170, 0)
 layout_mode = 2
 
-[node name="CharChangeHint" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu"]
+[node name="CharChangeHint" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=127927138]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.62, 0.72, 1)
+theme_override_font_sizes/font_size = 12
 text = "Ao mudar o personagem, o treino recomeça do início."
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 12
-theme_override_colors/font_color = Color(0.55, 0.62, 0.72, 1)
 autowrap_mode = 3
 
-[node name="SepSettings" type="HSeparator" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu"]
+[node name="SepSettings" type="HSeparator" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=569332119]
 layout_mode = 2
 
-[node name="SettingsHint" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu"]
+[node name="SettingsHint" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=1304697792]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
+theme_override_font_sizes/font_size = 13
 text = "Boneco (lado direito)"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)
 
-[node name="ChkDummyShoot" type="CheckBox" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu"]
+[node name="ChkDummyShoot" type="CheckBox" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=424371221]
 layout_mode = 2
 button_pressed = true
 text = "Boneco atira automaticamente a cada 3 segundos"
 
-[node name="BtnBackSettings" type="Button" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu"]
+[node name="BtnBackSettings" type="Button" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=416777385]
 layout_mode = 2
 text = "Voltar"
 
@@ -563,6 +591,7 @@ visible = false
 z_index = 2
 
 [node name="Bow" type="Polygon2D" parent="LeftPlayer" unique_id=448013143]
+visible = false
 z_index = 40
 position = Vector2(18, -10)
 color = Color(0.95, 0.95, 0.95, 1)
@@ -574,11 +603,11 @@ shape = SubResource("RectangleShape2D_1")
 [node name="Muzzle" type="Marker2D" parent="LeftPlayer" unique_id=1095587038]
 position = Vector2(35, -10)
 
-[node name="OrbChargeVisual" type="Polygon2D" parent="LeftPlayer/Muzzle"]
+[node name="OrbChargeVisual" type="Polygon2D" parent="LeftPlayer/Muzzle" unique_id=127917856]
 visible = false
 z_index = 41
-polygon = PackedVector2Array(-11, -11, 11, -11, 11, 11, -11, 11)
 color = Color(0.72, 0.35, 1, 0.82)
+polygon = PackedVector2Array(-11, -11, 11, -11, 11, 11, -11, 11)
 
 [node name="MuzzleTop" type="Marker2D" parent="LeftPlayer" unique_id=503941261]
 position = Vector2(35, -26)
@@ -623,6 +652,7 @@ visible = false
 z_index = 2
 
 [node name="Bow" type="Polygon2D" parent="RightPlayer" unique_id=743516786]
+visible = false
 z_index = 40
 position = Vector2(-18, -10)
 color = Color(0.95, 0.95, 0.95, 1)
@@ -634,11 +664,11 @@ shape = SubResource("RectangleShape2D_1")
 [node name="Muzzle" type="Marker2D" parent="RightPlayer" unique_id=2094961323]
 position = Vector2(-35, -10)
 
-[node name="OrbChargeVisual" type="Polygon2D" parent="RightPlayer/Muzzle"]
+[node name="OrbChargeVisual" type="Polygon2D" parent="RightPlayer/Muzzle" unique_id=634172622]
 visible = false
 z_index = 41
-polygon = PackedVector2Array(-11, -11, 11, -11, 11, 11, -11, 11)
 color = Color(0.72, 0.35, 1, 0.82)
+polygon = PackedVector2Array(-11, -11, 11, -11, 11, 11, -11, 11)
 
 [node name="MuzzleTop" type="Marker2D" parent="RightPlayer" unique_id=503941262]
 position = Vector2(-35, -26)

@@ -1000,11 +1000,13 @@ func _special_just_released() -> bool:
 
 
 func _compute_launch_velocity(speed: float) -> Vector2:
-	var sign_x := 1.0 if player_id == 1 else -1.0
-	var angle := deg_to_rad(launch_angle_degrees)
-	var vx := cos(angle) * speed * sign_x
-	var vy := -sin(angle) * speed
-	return Vector2(vx, vy)
+	#var sign_x := 1.0 if player_id == 1 else -1.0
+	#var angle := deg_to_rad(launch_angle_degrees)
+	#var vx := cos(angle) * speed * sign_x
+	#var vy := -sin(angle) * speed
+	#return Vector2(vx, vy)
+	var direction := Vector2.RIGHT if player_id == 1 else Vector2.LEFT
+	return direction * speed
 
 
 func _compute_launch_velocity_with_angle(speed: float, angle_deg: float) -> Vector2:
