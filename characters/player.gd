@@ -205,6 +205,20 @@ func _dash_blocked_by_grenade_skill() -> bool:
 	return true
 
 
+## Se true, o dash inicia com `p*_dash` (Shift / B) em vez de duplo toque frente/trás (Esqueleto / Ongma).
+func uses_dash_action_button() -> bool:
+	return false
+
+
+func _dash_dir_sign_from_dash_button() -> float:
+	var axis := _get_move_axis() if input_enabled else 0.0
+	if absf(axis) > 0.01:
+		return signf(axis)
+	if absf(_aim_direction.x) > 0.01:
+		return signf(_aim_direction.x)
+	return 1.0 if player_id == 1 else -1.0
+
+
 func _get_dash_stats() -> Dictionary:
 	# Igual ao Esqueleto / Ongma Epilef para todos os duelistas (velocidade, duração, distância e CD).
 	return {
@@ -831,6 +845,13 @@ func _update_double_tap_forward_movement() -> void:
 	if not input_enabled:
 		return
 	var now_s := Time.get_ticks_msec() * 0.001
+	if uses_dash_action_button():
+		if Input.is_action_just_pressed("p1_dash" if player_id == 1 else "p2_dash"):
+			start_dash_with_direction(_dash_dir_sign_from_dash_button())
+		if _down_action_just_pressed():
+			if not is_on_floor():
+				_start_ground_pound_dash()
+		return
 	# Input vertical sustentado (teclado: W/S + gatilhos; comando: idem + stick esquerdo Y) anula a janela do duplo toque.
 	if _forward_double_tap_window_open(now_s) and _double_tap_vertical_input_active():
 		_last_forward_tap_time_s = -100.0

@@ -23,7 +23,7 @@ Este ficheiro resume o **padrão de design** do Esqueleto e aponta para o baseli
 ## Features básicas (o que o jogador “sente”)
 
 - **Movimento:** solo e ar com `move_speed`, gravidade e pulo duplo (`Player`).
-- **Dash:** duplo toque **frente** ou **trás** (teclado ou stick); tecla `*_dash` **não** inicia dash. Números em `_get_dash_stats()` (620 px/s, 0,20 s, CD 0,1 s, `gravity_scale` 0).
+- **Dash:** acção **`p*_dash`** (**Shift** teclado, **B** comando); direcção: movimento horizontal (A/D / stick) ou eixo X da mira se neutro. Números em `_get_dash_stats()` (620 px/s, 0,20 s, CD 0,1 s, `gravity_scale` 0). Os outros duelistas usam duplo toque frente/trás; o Esqueleto **não** inicia dash por duplo toque.
 - **Anti-spam de dash:** `dash_min_gap_seconds` entre inícios de dash; no ar, por defeito **um** dash por “voo” até tocar **chão** ou **parede** (`limit_air_dash_to_one` + reset em parede).
 - **Pulo no dash:** impulso composto `(v_dash + v_jump) * dash_jump_impulse_mul` (exports `dash_jump_*`).
 - **Corrida:** a corrida por **só segurar frente** (`sprint_mechanic_enabled`) está **desligada** por defeito. A **corrida pós-dash** (`post_dash_sprint_*`) está ligada: após um dash **para a frente**, segurar frente na janela abre sprint com `sprint_speed_multiplier` > 1.
@@ -40,6 +40,6 @@ Este ficheiro resume o **padrão de design** do Esqueleto e aponta para o baseli
 - **Buff de velocidade no tiro carregado (G / Y):** activa um período em que o tiro carregado sai com velocidade maior; CD e duração em `esqueleto_skill_buff_velocidade_tiro_*`; HUD via `special_buff_changed`.
 - **Feixe (F / X, segurar/soltar):** carrega com `*_grenade`, solta com `shots_requested`; parâmetros `esqueleto_skill_feixe_*`; `_is_grenade_charging_active()` reflecte o carregamento do feixe.
 - **Dash durante o feixe:** `_dash_blocked_by_grenade_skill()` devolve **false** — pode dar dash enquanto carrega o feixe (o bloqueio por granada na base não aplica aqui da mesma forma).
-- **Respawn Vs:** `_extra_reset_for_vs_round()` zera feixe, buff e janelas de duplo toque para evitar dash acidental.
+- **Respawn Vs:** `_extra_reset_for_vs_round()` zera feixe, buff e tempos de duplo toque na base (o dash do Esqueleto usa `p*_dash`).
 
 Para números e tabelas completas, usar sempre **[../esqueleto_personagem_base.md](../esqueleto_personagem_base.md)** e **[../sistemas_core_arena_e_movimento.md](../sistemas_core_arena_e_movimento.md)**.

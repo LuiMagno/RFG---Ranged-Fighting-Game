@@ -57,7 +57,8 @@ Posições iniciais de exemplo na cena: P1 **(210, 672)**, P2 **(1710, 672)** (p
 - Input: eixo esquerdo/direito (`_get_move_axis`).
 - Com **corrida** ativa e **só** a tecla “para a frente” (em direção ao adversário): multiplicador `sprint_speed_multiplier` = **1,42** → até **~369** px/s.
 - **Corrida (todos):** após manter **só** “frente” durante `sprint_forward_hold_seconds` (**0,12** s por padrão em `Player`, `_update_sprint_from_forward_hold`). Dash, hover, stun ou deixar de cumprir “só frente” repõem o temporizador.
-- **Dash (todos):** duplo toque **frente** ou **trás** dentro de `sprint_double_tap_window` (**0,50** s), via `Player._update_double_tap_forward_movement()` → `start_dash_with_direction(...)`. A tecla `p1_dash` / `p2_dash` **não** inicia dash.
+- **Dash (por defeito, pistoleiro / arqueiro / mago):** duplo toque **frente** ou **trás** dentro de `sprint_double_tap_window` (**0,50** s), via `Player._update_double_tap_forward_movement()` → `start_dash_with_direction(...)`. A tecla `p1_dash` / `p2_dash` **não** inicia dash para esses personagens.
+- **Esqueleto e Ongma Epilef:** `uses_dash_action_button()` — **`p*_dash` just pressed** (Shift / B) inicia o dash; direcção: `_dash_dir_sign_from_dash_button()` (movimento horizontal, senão mira X, senão frente do jogador). Duplo toque **não** inicia dash.
 - **Duplo toque estrito (todos):** entre o 1.º e o 2.º toque na mesma direção, qualquer outro input de locomoção **invalida** a janela: sentido oposto horizontal; eixo vertical de hover (`get_axis` hover_down/up) ao passar de neutro a ativo, ou `is_action_just_pressed` em hover; e **enquanto** o eixo vertical estiver acima do deadzone (W/S ou gatilho mantidos — evita D,W,D com W segurado no 2.º D). Com **controle**, o vertical de **locomoção** vem das ações `p*_move_up` / `p*_move_down` (stick esquerdo Y + D-pad ↑/↓), mapeadas em `Game._add_gamepad_mappings_for_player` — não usar só `get_joy_axis` nem só hover (gatilhos). Pulo, mira e skills **não** entram nesta regra. Implementação: `_double_tap_vertical_input_active`, `_vertical_locomotion_contaminates_double_tap`, `_update_double_tap_forward_movement` + `_invalidate_double_tap_chains_on_contaminant` em `Player`.
 
 ### Gravidade e pulo
@@ -83,6 +84,7 @@ Valores em `_get_dash_stats()` na classe `Player` (**comuns a todos** os duelist
 
 Regras importantes:
 
+- **Activar o dash:** na maioria dos duelistas, duplo toque (secção “Movimento horizontal” acima). **Esqueleto / Ongma:** `uses_dash_action_button()` e **`p*_dash` just pressed** (`Player`).
 - O início do dash passa por **`start_dash_with_direction(dir_sign)`**, que respeita `_can_start_dash()` (cooldown, carregar tiro, etc.).
 - Durante o dash, **`velocity.x`** mantém-se fixo no sentido do dash; o cooldown de dash só começa quando `duration` expira.
 - **Anti-encadeamento / anti-“flutuar”:** existe um intervalo mínimo `dash_min_gap_seconds` entre inícios de dash (aplica também quando o dash é cancelado por pulo/stun).

@@ -12,9 +12,9 @@ O **Esqueleto** é a referência de design; os valores “Esqueleto” abaixo re
 |------|----------------|
 | Projétil principal | `Arrow`; velocidade **420–900**; carga **1,0** s; **g = 0**; **0** ricochetes; cooldown **≥ 1,0** s |
 | Recoil tiro simples | **170** |
-| Dash | **620** px/s, **0,20** s, CD **0,1** s, **`gravity_scale` 0** (sem queda durante o dash no ar); activação por **duplo toque** frente/trás (todos os duelistas) |
+| Dash | **620** px/s, **0,20** s, CD **0,1** s, **`gravity_scale` 0**; activação **`p*_dash`** (Shift / B), direcção movimento ou mira |
 | Escudo | **Nenhum** (0 cargas) |
-| Movimento / pulo | `move_speed` **260**, `jump_speed` **650**, `max_jumps` **2**; sprint ao **manter só frente** (`sprint_forward_hold_seconds`); duplo toque = **dash**; **wall jump** na base |
+| Movimento / pulo | `move_speed` **260**, `jump_speed` **650**, `max_jumps` **2**; sprint ao **manter só frente** (`sprint_forward_hold_seconds`); **wall jump** na base (duplo toque de dash não aplica ao Esqueleto) |
 | Corpo (hitbox) | **40×90** px |
 | Skills | Triplo (CD **5** s) + raio carregável (CD **4,25** s, dano **36**, escala **1,85–3,45**) |
 

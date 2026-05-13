@@ -274,7 +274,7 @@ func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
 				return (
 					base_pad_move
 					+ " · X segure/solta feixe · Y buff de velocidade no tiro carregado · Tiro carregado: segure/solte RB"
-					+ " · Dash: duplo frente/trás (D-pad/stick); B não inicia dash"
+					+ " · B dash (direcção: stick esq. ou mira); duplo frente/trás não inicia dash"
 					+ " · D-pad ↓ / stick esq. ↓ (no ar): queda"
 				)
 			_:
@@ -292,7 +292,7 @@ func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
 		Player.CharacterKind.ESQUELETO, Player.CharacterKind.ONGMA_EPILEF:
 			return (
 				base_kb_move
-				+ " · F segure/solta feixe · G buff de velocidade no tiro carregado · Dash: duplo A ou D (sem outro direcional no meio)"
+				+ " · F segure/solta feixe · G buff de velocidade no tiro carregado · Shift dash (direcção: A/D ou mira); duplo A/D não inicia dash"
 			)
 		_:
 			return base_kb
@@ -620,7 +620,7 @@ func _add_gamepad_mappings_for_player(prefix: String, device: int) -> void:
 	InputMap.action_add_event(p + "aim_right", _joy_motion(device, JOY_AXIS_RIGHT_X, 1.0))
 	InputMap.action_add_event(p + "aim_up", _joy_motion(device, JOY_AXIS_RIGHT_Y, -1.0))
 	InputMap.action_add_event(p + "aim_down", _joy_motion(device, JOY_AXIS_RIGHT_Y, 1.0))
-	# Xbox-like, por jogador (device = índice do comando). Esqueleto: RB tiro, X feixe (grenade), Y buff de velocidade (special), B não é dash nele; L3/R3 = spike/mago; duplo toque = dash.
+	# Xbox-like, por jogador. Esqueleto/Ongma: RB tiro, X feixe, Y buff, B dash (acção p*_dash); L3/R3 = spike/mago.
 	InputMap.action_add_event(p + "shoot", _joy_btn(device, JOY_BUTTON_RIGHT_SHOULDER))
 	InputMap.action_add_event(p + "jump", _joy_btn(device, JOY_BUTTON_A))
 	InputMap.action_add_event(p + "dash", _joy_btn(device, JOY_BUTTON_B))

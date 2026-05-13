@@ -64,6 +64,10 @@ func _dash_blocked_by_grenade_skill() -> bool:
 	return false
 
 
+func uses_dash_action_button() -> bool:
+	return true
+
+
 func _special_uses_left() -> int:
 	return 1 if _esqueleto_buff_velocidade_tiro_ativo else 0
 
