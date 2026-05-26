@@ -54,6 +54,8 @@ offset_right = 962.0
 offset_bottom = 864.0
 color = Color(1, 1, 1, 0.18)
 
+[node name="ArenaVariantRoot" type="Node2D" parent="."]
+
 [node name="GroundBody" type="StaticBody2D" parent="." unique_id=787593236]
 position = Vector2(960, 822)
 collision_mask = 0
@@ -551,7 +553,7 @@ text = "Voltar"
 
 [node name="LeftPlayer" type="CharacterBody2D" parent="." unique_id=1571489207]
 position = Vector2(210, 672)
-collision_mask = 3
+collision_mask = 19
 script = ExtResource("3_2lq0l")
 
 [node name="Body" type="Polygon2D" parent="LeftPlayer" unique_id=37644554]
@@ -610,7 +612,7 @@ polygon = PackedVector2Array(0, -38, 32, -30, 34, 0, 32, 30, 0, 38)
 
 [node name="RightPlayer" type="CharacterBody2D" parent="." unique_id=60473321]
 position = Vector2(1710, 672)
-collision_mask = 3
+collision_mask = 19
 script = ExtResource("5_archer")
 player_id = 2
 

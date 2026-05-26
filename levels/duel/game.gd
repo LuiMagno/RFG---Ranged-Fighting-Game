@@ -22,8 +22,33 @@ const ONGMA_EPILEF_PLAYER_SCRIPT := "res://characters/ongma_epilef_player.gd"
 const VS_ROUND_DURATION_S := 60.0
 const VS_ROUNDS_TO_WIN := 3
 
+const STAGE_NORMAL_BG := Color(0.12, 0.13, 0.15, 1)
+const STAGE_NORMAL_GROUND := Color(0.18, 0.2, 0.23, 1)
+const STAGE_NORMAL_DIVIDER := Color(1, 1, 1, 0.18)
+
+const TIERED_ABYSS_SCENE := preload("res://levels/duel/arenas/tiered_abyss.tscn")
+const STAGE_TIERED_BG := Color(0.09, 0.1, 0.14, 1)
+const STAGE_TIERED_P1_SPAWN := Vector2(220, 735)
+const STAGE_TIERED_P2_SPAWN := Vector2(1700, 735)
+const STAGE_TIERED_HALF_GAP_EXTRA := 52.0
+const STAGE_TIERED_PIT_DAMAGE := 30
+const STAGE_TIERED_PIT_CD := 0.85
+
+const OLD_FACTORY_SCENE := preload("res://levels/duel/arenas/old_factory.tscn")
+const STAGE_FACTORY_BG := Color(0.14, 0.12, 0.10, 1)
+const STAGE_FACTORY_P1_SPAWN := Vector2(140, 735)
+const STAGE_FACTORY_P2_SPAWN := Vector2(1780, 735)
+const STAGE_FACTORY_HALF_GAP_EXTRA := 88.0
+const STAGE_FACTORY_PIT_DAMAGE := 30
+const STAGE_FACTORY_PIT_CD := 0.85
+
 @onready var left_player: Player = $LeftPlayer
 @onready var right_player: Player = $RightPlayer
+@onready var _stage_background: ColorRect = $Background
+@onready var _stage_ground: ColorRect = $Ground
+@onready var _stage_mid_divider: ColorRect = $MidDivider
+@onready var _ground_body: StaticBody2D = $GroundBody
+@onready var _arena_variant_root: Node2D = $ArenaVariantRoot
 @onready var p1_hp_label: Label = $UI/P1HP
 @onready var p2_hp_label: Label = $UI/P2HP
 @onready var p1_hp_bar: ProgressBar = $UI/P1HPBar
@@ -59,6 +84,13 @@ var _vs_match_end_menu_open: bool = false
 var _p1_rounds_won: int = 0
 var _p2_rounds_won: int = 0
 
+var _tiered_arena_inst: Node2D
+var _factory_arena_inst: Node2D
+var _tiered_pits_wired: bool = false
+var _factory_pit_wired: bool = false
+var _pit_cd_p1: float = 0.0
+var _pit_cd_p2: float = 0.0
+
 
 func _enter_tree() -> void:
 	_assign_player_scripts_from_run_config()
@@ -66,6 +98,163 @@ func _enter_tree() -> void:
 
 func _exit_tree() -> void:
 	RunConfig.clear_shoot_mouse_bindings_for_menu()
+
+
+func _apply_stage_from_run_config() -> void:
+	match RunConfig.stage:
+		RunConfig.Stage.TIERED_ABYSS:
+			_apply_stage_tiered_abyss()
+		RunConfig.Stage.OLD_FACTORY:
+			_apply_stage_old_factory()
+		_:
+			_apply_stage_normal()
+
+
+func _hide_variant_arenas() -> void:
+	if is_instance_valid(_tiered_arena_inst):
+		_tiered_arena_inst.visible = false
+		_set_tiered_pits_monitoring(false)
+	if is_instance_valid(_factory_arena_inst):
+		_factory_arena_inst.visible = false
+		_set_factory_pit_monitoring(false)
+
+
+func _apply_stage_normal() -> void:
+	_stage_background.color = STAGE_NORMAL_BG
+	_stage_ground.visible = true
+	_stage_ground.color = STAGE_NORMAL_GROUND
+	_stage_mid_divider.color = STAGE_NORMAL_DIVIDER
+	_ground_body.collision_layer = 1
+	_hide_variant_arenas()
+	left_player.set_arena_horizontal_split(1920.0, 960.0, 0.0)
+	right_player.set_arena_horizontal_split(1920.0, 960.0, 0.0)
+
+
+func _apply_stage_tiered_abyss() -> void:
+	_stage_background.color = STAGE_TIERED_BG
+	_stage_ground.visible = false
+	_stage_mid_divider.color = Color(1, 1, 1, 0.38)
+	_ground_body.collision_layer = 0
+	_hide_variant_arenas()
+	_ensure_tiered_arena_instance()
+	_tiered_arena_inst.visible = true
+	_set_tiered_pits_monitoring(true)
+	_connect_tiered_pit_signals_once()
+	left_player.set_arena_horizontal_split(1920.0, 960.0, STAGE_TIERED_HALF_GAP_EXTRA)
+	right_player.set_arena_horizontal_split(1920.0, 960.0, STAGE_TIERED_HALF_GAP_EXTRA)
+	left_player.position = STAGE_TIERED_P1_SPAWN
+	right_player.position = STAGE_TIERED_P2_SPAWN
+
+
+func _apply_stage_old_factory() -> void:
+	_stage_background.color = STAGE_FACTORY_BG
+	_stage_ground.visible = false
+	_stage_mid_divider.color = Color(1, 1, 1, 0.38)
+	_ground_body.collision_layer = 0
+	_hide_variant_arenas()
+	_ensure_factory_arena_instance()
+	_factory_arena_inst.visible = true
+	_set_factory_pit_monitoring(true)
+	_connect_factory_pit_signal_once()
+	left_player.set_arena_horizontal_split(1920.0, 960.0, STAGE_FACTORY_HALF_GAP_EXTRA)
+	right_player.set_arena_horizontal_split(1920.0, 960.0, STAGE_FACTORY_HALF_GAP_EXTRA)
+	left_player.position = STAGE_FACTORY_P1_SPAWN
+	right_player.position = STAGE_FACTORY_P2_SPAWN
+
+
+func _ensure_tiered_arena_instance() -> void:
+	if is_instance_valid(_tiered_arena_inst):
+		return
+	_tiered_arena_inst = TIERED_ABYSS_SCENE.instantiate()
+	_arena_variant_root.add_child(_tiered_arena_inst)
+
+
+func _ensure_factory_arena_instance() -> void:
+	if is_instance_valid(_factory_arena_inst):
+		return
+	_factory_arena_inst = OLD_FACTORY_SCENE.instantiate()
+	_arena_variant_root.add_child(_factory_arena_inst)
+
+
+func _set_tiered_pits_monitoring(active: bool) -> void:
+	if not is_instance_valid(_tiered_arena_inst):
+		return
+	var pl := _tiered_arena_inst.get_node_or_null("PitLeft") as Area2D
+	var pr := _tiered_arena_inst.get_node_or_null("PitRight") as Area2D
+	if pl != null:
+		pl.monitoring = active
+	if pr != null:
+		pr.monitoring = active
+
+
+func _connect_tiered_pit_signals_once() -> void:
+	if _tiered_pits_wired or not is_instance_valid(_tiered_arena_inst):
+		return
+	var pl := _tiered_arena_inst.get_node_or_null("PitLeft") as Area2D
+	var pr := _tiered_arena_inst.get_node_or_null("PitRight") as Area2D
+	if pl != null and not pl.body_entered.is_connected(_on_tiered_pit_left_entered):
+		pl.body_entered.connect(_on_tiered_pit_left_entered)
+	if pr != null and not pr.body_entered.is_connected(_on_tiered_pit_right_entered):
+		pr.body_entered.connect(_on_tiered_pit_right_entered)
+	_tiered_pits_wired = true
+
+
+func _set_factory_pit_monitoring(active: bool) -> void:
+	if not is_instance_valid(_factory_arena_inst):
+		return
+	var pc := _factory_arena_inst.get_node_or_null("PitCenter") as Area2D
+	if pc != null:
+		pc.monitoring = active
+
+
+func _connect_factory_pit_signal_once() -> void:
+	if _factory_pit_wired or not is_instance_valid(_factory_arena_inst):
+		return
+	var pc := _factory_arena_inst.get_node_or_null("PitCenter") as Area2D
+	if pc != null and not pc.body_entered.is_connected(_on_factory_pit_center_entered):
+		pc.body_entered.connect(_on_factory_pit_center_entered)
+	_factory_pit_wired = true
+
+
+func _on_tiered_pit_left_entered(body: Node2D) -> void:
+	_handle_arena_pit(body, 1)
+
+
+func _on_tiered_pit_right_entered(body: Node2D) -> void:
+	_handle_arena_pit(body, 2)
+
+
+func _on_factory_pit_center_entered(body: Node2D) -> void:
+	_handle_arena_pit(body, -1)
+
+
+func _handle_arena_pit(body: Node2D, expect_player_id: int) -> void:
+	if not (body is Player):
+		return
+	var p := body as Player
+	var stage := RunConfig.stage
+	if stage != RunConfig.Stage.TIERED_ABYSS and stage != RunConfig.Stage.OLD_FACTORY:
+		return
+	if expect_player_id > 0 and p.player_id != expect_player_id:
+		return
+	var pid := p.player_id
+	if pid == 1:
+		if _pit_cd_p1 > 0.0:
+			return
+		_pit_cd_p1 = STAGE_TIERED_PIT_CD if stage == RunConfig.Stage.TIERED_ABYSS else STAGE_FACTORY_PIT_CD
+	else:
+		if _pit_cd_p2 > 0.0:
+			return
+		_pit_cd_p2 = STAGE_TIERED_PIT_CD if stage == RunConfig.Stage.TIERED_ABYSS else STAGE_FACTORY_PIT_CD
+	var sp: Vector2
+	var dmg: int
+	if stage == RunConfig.Stage.TIERED_ABYSS:
+		sp = STAGE_TIERED_P1_SPAWN if pid == 1 else STAGE_TIERED_P2_SPAWN
+		dmg = STAGE_TIERED_PIT_DAMAGE
+	else:
+		sp = STAGE_FACTORY_P1_SPAWN if pid == 1 else STAGE_FACTORY_P2_SPAWN
+		dmg = STAGE_FACTORY_PIT_DAMAGE
+	p.apply_pit_fall_penalty(sp, dmg)
 
 
 ## Reaplica teclas + eventos de comando conforme `RunConfig` (útil se mudares input em pausa no treino).
@@ -117,6 +306,7 @@ func _assign_player_script(node: Node, kind: int) -> void:
 
 
 func _ready() -> void:
+	_apply_stage_from_run_config()
 	apply_input_map_from_run_config()
 	# Centralized wiring keeps Player and Arrow decoupled from "game rules".
 	left_player.shoot_requested.connect(_spawn_arrow)
@@ -176,6 +366,9 @@ func rematch_vs_after_post_game() -> void:
 
 
 func _process(delta: float) -> void:
+	if RunConfig.stage == RunConfig.Stage.TIERED_ABYSS or RunConfig.stage == RunConfig.Stage.OLD_FACTORY:
+		_pit_cd_p1 = maxf(0.0, _pit_cd_p1 - delta)
+		_pit_cd_p2 = maxf(0.0, _pit_cd_p2 - delta)
 	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
 		return
 	if not _vs_round_playing or _vs_match_end_menu_open or _vs_resolving_round:

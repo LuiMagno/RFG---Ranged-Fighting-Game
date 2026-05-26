@@ -2,6 +2,7 @@ extends Control
 
 @onready var opt_p1_class: OptionButton = $Center/MainPanel/VBox/ClassP1Row/OptP1Class
 @onready var opt_p2_class: OptionButton = $Center/MainPanel/VBox/ClassP2Row/OptP2Class
+@onready var opt_stage: OptionButton = $Center/MainPanel/VBox/StageRow/OptStage
 @onready var opt_p1_scheme: OptionButton = $Center/MainPanel/VBox/InputP1Row/OptP1Scheme
 @onready var opt_p1_device: OptionButton = $Center/MainPanel/VBox/InputP1Row/OptP1Device
 @onready var opt_p2_scheme: OptionButton = $Center/MainPanel/VBox/InputP2Row/OptP2Scheme
@@ -19,6 +20,8 @@ func _ready() -> void:
 	MenuThemeUtil.fill_class_option(opt_p2_class)
 	MenuThemeUtil.style_option(opt_p1_class)
 	MenuThemeUtil.style_option(opt_p2_class)
+	MenuThemeUtil.fill_stage_option(opt_stage)
+	MenuThemeUtil.style_option(opt_stage)
 	MenuThemeUtil.fill_input_scheme_option(opt_p1_scheme)
 	MenuThemeUtil.fill_input_scheme_option(opt_p2_scheme)
 	MenuThemeUtil.fill_joy_device_option(opt_p1_device)
@@ -32,7 +35,10 @@ func _ready() -> void:
 	var imax := maxi(opt_p1_class.item_count - 1, 0)
 	opt_p1_class.select(clampi(RunConfig.p1_character, 0, imax))
 	opt_p2_class.select(clampi(RunConfig.p2_character, 0, imax))
+	var smax := maxi(opt_stage.item_count - 1, 0)
+	opt_stage.select(clampi(int(RunConfig.stage), 0, smax))
 	_sync_input_controls_from_run_config()
+	opt_stage.item_selected.connect(_on_stage_selected)
 	opt_p1_scheme.item_selected.connect(_on_p1_scheme_selected)
 	opt_p1_device.item_selected.connect(_on_p1_device_selected)
 	opt_p2_scheme.item_selected.connect(_on_p2_scheme_selected)
@@ -55,6 +61,10 @@ func _refresh_device_controls_enabled() -> void:
 	var p2_pad := RunConfig.p2_input_scheme == RunConfig.InputScheme.GAMEPAD
 	opt_p1_device.visible = p1_pad
 	opt_p2_device.visible = p2_pad
+
+
+func _on_stage_selected(index: int) -> void:
+	RunConfig.stage = index as RunConfig.Stage
 
 
 func _on_p1_scheme_selected(index: int) -> void:
@@ -84,6 +94,7 @@ func _on_back_pressed() -> void:
 func _on_start_pressed() -> void:
 	RunConfig.p1_character = opt_p1_class.selected
 	RunConfig.p2_character = opt_p2_class.selected
+	RunConfig.stage = opt_stage.selected as RunConfig.Stage
 	RunConfig.p1_input_scheme = opt_p1_scheme.selected as RunConfig.InputScheme
 	RunConfig.p2_input_scheme = opt_p2_scheme.selected as RunConfig.InputScheme
 	RunConfig.ensure_valid_input_scheme_pair()

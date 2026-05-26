@@ -34,7 +34,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="MainPanel" type="Panel" parent="Center"]
-custom_minimum_size = Vector2(520, 480)
+custom_minimum_size = Vector2(520, 560)
 layout_mode = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center/MainPanel"]
@@ -82,6 +82,26 @@ text = "Jogador 1 (esq.)"
 vertical_alignment = 1
 
 [node name="OptP1Class" type="OptionButton" parent="Center/MainPanel/VBox/ClassP1Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SectionStage" type="Label" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+text = "Palco"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+
+[node name="StageRow" type="HBoxContainer" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="StageLabel" type="Label" parent="Center/MainPanel/VBox/StageRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Arena / stage"
+vertical_alignment = 1
+
+[node name="OptStage" type="OptionButton" parent="Center/MainPanel/VBox/StageRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 

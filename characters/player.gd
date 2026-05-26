@@ -57,6 +57,11 @@ signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_
 @export var trajectory_points: int = 24
 @export var trajectory_step: float = 0.08
 @export var arena_padding_x: float = 36.0
+
+var _arena_world_width: float = 1920.0
+var _arena_mid_x: float = 960.0
+## Metade da faixa extra em torno do meio (cada lado); 0 = comportamento legado só com `arena_padding_x`.
+var _arena_half_gap_extra: float = 0.0
 ## Pulo durante o dash: `(v_dash + v_jump) * dash_jump_impulse_mul` — arco **diagonal forte**, pouca sensação de “só para cima”.
 @export_range(0.70, 1.30, 0.01) var dash_jump_vertical_mul: float = 0.80
 ## Peso do dash no eixo X antes da soma; valores mais altos = mais força na diagonal / frente.
@@ -1038,19 +1043,41 @@ func _hide_charge_trajectory_ui() -> void:
 	trajectory.default_color = _traj_color_normal
 
 
+func set_arena_horizontal_split(world_width: float, mid_x: float, half_gap_extra: float = 0.0) -> void:
+	_arena_world_width = world_width
+	_arena_mid_x = mid_x
+	_arena_half_gap_extra = maxf(0.0, half_gap_extra)
+
+
+func apply_pit_fall_penalty(arena_local_spawn: Vector2, damage: int) -> void:
+	_interrupt_sprint()
+	if damage > 0:
+		hp = maxi(0, hp - damage)
+		health_changed.emit(hp)
+	position = arena_local_spawn
+	velocity = Vector2.ZERO
+	_carry_knockback_x = 0.0
+
+
 func _enforce_arena_half() -> void:
-	var rect := get_viewport_rect()
-	var w := rect.size.x
+	var w := _arena_world_width
+	var mid := _arena_mid_x
+	if w <= 0.0:
+		var rect := get_viewport_rect()
+		w = rect.size.x
+		mid = w * 0.5
 	if w <= 0.0:
 		return
-	var mid := w * 0.5
-	var min_x := arena_padding_x
-	var max_x := w - arena_padding_x
+	var pad := arena_padding_x
+	var gap := _arena_half_gap_extra
+	var boundary := pad + gap
+	var min_x := pad
+	var max_x := w - pad
 	var x := clampf(global_position.x, min_x, max_x)
 	if player_id == 1:
-		x = minf(x, mid - arena_padding_x)
+		x = minf(x, mid - boundary)
 	else:
-		x = maxf(x, mid + arena_padding_x)
+		x = maxf(x, mid + boundary)
 	if not is_equal_approx(x, global_position.x):
 		global_position.x = x
 		velocity.x = 0.0

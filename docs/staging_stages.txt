@@ -1,0 +1,234 @@
+================================================================================
+STAGING (PALCOS / STAGES) — RESUMO DO ESTADO ATUAL
+================================================================================
+Projeto: Arco - Duelo de Arqueiros (Godot 4)
+Viewport da arena: 1920 x 864 px (sem Camera2D; mundo = ecrã)
+Última revisão: alinhado ao código em core/run_config.gd, levels/duel/game.gd,
+                 levels/duel/arenas/tiered_abyss.*, levels/duel/arenas/old_factory.*
+
+--------------------------------------------------------------------------------
+1. VISÃO GERAL
+--------------------------------------------------------------------------------
+
+O jogador escolhe o palco nos menus de Vs Player e Treinamento (secção «Palco»).
+A escolha fica em RunConfig.stage (autoload) e é aplicada ao entrar em
+levels/duel/main.tscn pelo script Game (_apply_stage_from_run_config).
+
+Existem três palcos:
+
+  NORMAL          — arena clássica (chão único, divisor no meio)
+  TIERED_ABYSS    — «Patamares + abismo» (subcena com plataformas espelhadas)
+  OLD_FACTORY     — «Fábrica antiga» (vale central, tema industrial)
+
+--------------------------------------------------------------------------------
+2. CONFIGURAÇÃO E MENUS
+--------------------------------------------------------------------------------
+
+RunConfig (core/run_config.gd)
+  enum Stage { NORMAL, TIERED_ABYSS, OLD_FACTORY }
+  var stage: Stage = Stage.NORMAL   // persiste na sessão até mudar no menu
+
+MenuThemeUtil.fill_stage_option (ui/menu_theme.gd)
+  - «Normal»
+  - «Patamares + abismo»
+  - «Fábrica antiga»
+
+Menus com OptStage:
+  - ui/vs_character_menu.gd / .tscn
+  - ui/training_menu.gd / .tscn
+
+Ao «Começar», RunConfig.stage = valor do OptionButton; depois change_scene
+para res://levels/duel/main.tscn.
+
+--------------------------------------------------------------------------------
+3. STAGE NORMAL
+--------------------------------------------------------------------------------
+
+Geometria (levels/duel/main.tscn)
+  - Background, Ground (ColorRect), MidDivider (linha no x ≈ 960)
+  - GroundBody: StaticBody2D, collision_layer = 1 (chão largo total)
+  - LeftWallBody, RightWallBody, CeilingBody: layer 1
+
+Jogadores
+  - Spawns default no .tscn: P1 ~(210, 672), P2 ~(1710, 672)
+  - collision_mask = 19 (layers 1 + 2 + 16; ver secção 6)
+  - set_arena_horizontal_split(1920, 960, 0) — sem faixa extra no meio
+
+Comportamento
+  - Chão contínuo; não há abismos nem plataformas flutuantes neste stage.
+  - Projéteis colidem com layer 1 (chão/paredes) conforme máscaras habituais.
+
+--------------------------------------------------------------------------------
+4. STAGE «PATAMARES + ABISMO» (TIERED_ABYSS)
+--------------------------------------------------------------------------------
+
+4.1 Ativação (Game._apply_stage_tiered_abyss)
+  - Fundo mais escuro (STAGE_TIERED_BG)
+  - Ground visual oculto; GroundBody.collision_layer = 0 (sem chão global)
+  - Divisor central mais visível
+  - Instancia res://levels/duel/arenas/tiered_abyss.tscn em ArenaVariantRoot
+  - Spawns: P1 (220, 735), P2 (1700, 735) — também usados após queda no abismo
+  - arena_half_gap_extra = 52 px (afasta limite X de cada lado do meio)
+
+4.2 Layout espelhado (tiered_abyss.tscn)
+
+Por metade (eixo x = 960), geometria simétrica (x' = 1920 - x):
+
+  Baixo (y ≈ 822)
+    Plat*_Far     — plataforma larga (380x84), longe do centro
+    Plat*_Bridge  — ponte larga (200x84) junto ao abismo / limite do meio
+
+  Médio (y ≈ 618)
+    Plat*_High    — prateleira (260x28)
+
+  Alto (patamares aéreos)
+    Plat*_Up1     — y ≈ 162  (200x22)
+    Plat*_Up2     — y ≈ 238  (160x24)
+    Plat*_Up4     — y ≈ 318  (180x26)
+
+  Visual de vazio (sem colisão de chão)
+    PitVoidVisualL / R — retângulos escuros sobre o fosso em cada metade
+
+  Abismos (colisão de penalidade, não é chão)
+    PitLeft  — Area2D, centro ~(565, 920), shape 340x220
+    PitRight — Area2D, centro ~(1355, 920), espelhado
+
+Conceito de jogo:
+  - Divisória lógica no meio: jogador NÃO atravessa para o lado adversário
+    (_enforce_arena_half + half_gap_extra).
+  - Cada metade tem o seu abismo jogável (saltos arriscados); queda no Pit*
+    aplica penalidade, não vitória automática da ronda.
+
+4.3 Queda no abismo (Game._handle_arena_pit)
+  - Tiered: body_entered em PitLeft / PitRight (só Player com player_id correto)
+  - Dano fixo: 30 HP; cooldown 0,85 s por jogador
+  - Player.apply_pit_fall_penalty: dano + teleporte ao spawn do palco,
+    zera velocidade; NÃO reseta cooldowns como prepare_for_vs_round_respawn
+  - Se HP chegar a 0, o fluxo Vs normal trata KO (_check_vs_ko_after_hp_change)
+
+4.4 Plataformas one-way (tiered_abyss_arena.gd)
+  - Em _ready, todos os CollisionShape2D de StaticBody2D recebem:
+      one_way_collision = true
+      one_way_collision_margin = 6 px
+  - Salto de baixo para cima: atravessa a plataforma.
+  - Apoio só pelo topo (comportamento Godot 4 + move_and_slide).
+
+--------------------------------------------------------------------------------
+5. STAGE «FÁBRICA ANTIGA» (OLD_FACTORY)
+--------------------------------------------------------------------------------
+
+5.1 Ativação (Game._apply_stage_old_factory)
+  - Fundo ferrugem/sujo (STAGE_FACTORY_BG)
+  - Ground visual oculto; GroundBody.collision_layer = 0
+  - Instancia res://levels/duel/arenas/old_factory.tscn em ArenaVariantRoot
+  - Spawns: P1 (140, 735), P2 (1780, 735)
+  - arena_half_gap_extra = 88 px (vale central largo)
+
+5.2 Layout (old_factory.tscn) — espelho x' = 1920 - x
+
+  Chão (ilhas separadas, sem ligação no centro)
+    FloorL / FloorR — (380, 822) e (1540, 822), shape 760x84 cada
+    Gap visual: ColorRect amarelo/laranja x 760–1160, y 720–864
+
+  Patamares (layer 16, one-way via old_factory_arena.gd)
+    Alto:  (200,170) 200x22; (320,170) 60x60; (720,170) 180x22
+    Médio: (220,340) e (680,340) — 160x24
+    Baixo: (280,540) — 140x24
+
+  Abismo central
+    PitCenter — Area2D ~(960, 900), shape 400x220; qualquer Player que entre
+
+  Decoração (sem colisão)
+    Line2D cabos no teto; «goteiras» amarelas sob plataformas altas centrais
+
+5.3 Queda no vale (Game._handle_arena_pit, expect_player_id = -1)
+  - Mesma regra: 30 HP, cooldown 0,85 s, respawn no spawn do lado (P1/P2)
+
+5.4 Diferença vs Patamares + abismo
+  - Um vale central partilhado (gap no chão), não dois fossos laterais
+  - Duas ilhas de chão; sem ponte no fundo entre jogadores
+
+--------------------------------------------------------------------------------
+6. LIMITES HORIZONTAIS DO JOGADOR
+--------------------------------------------------------------------------------
+
+Player._enforce_arena_half (characters/player.gd), chamado após move_and_slide.
+
+Parâmetros via set_arena_horizontal_split(world_width, mid_x, half_gap_extra):
+  - arena_padding_x (export, default 36)
+  - boundary = padding + half_gap_extra
+  - P1: x <= mid - boundary
+  - P2: x >= mid + boundary
+  - Ambos: x entre padding e (world_width - padding)
+
+Normal:     (1920, 960, 0)
+Tiered:     (1920, 960, 52)
+Fábrica:    (1920, 960, 88)
+
+--------------------------------------------------------------------------------
+7. CAMADAS DE FÍSICA (2D)
+--------------------------------------------------------------------------------
+
+project.godot — layer 5 nomeada «ArenaPlatforms» (bit = 16).
+
+Layer 1 (default «World»)
+  - Chão/paredes/teto do main.tscn (Normal)
+  - Continua ativo para paredes/teto no palco Tiered; GroundBody desligado no Tiered
+
+Layer 16 — ArenaPlatforms
+  - StaticBody2D de tiered_abyss.tscn e old_factory.tscn (plataformas + chão das ilhas)
+  - Jogadores: collision_mask inclui 16 → mask total 19 (1+2+16)
+
+Projéteis (não colidem com plataformas dos palcos variantes)
+  - Flecha, fireball, ice_missile, homing_missile: mask 11 (layers 1, 2, 4)
+  - Não incluem bit 16 → atravessam plataformas; ricocheteiam / morrem em
+    chão e paredes (layer 1)
+  - Granade: mask 1 apenas
+  - ArcherSpike em voo: mask 3 (1+2)
+
+Pits (Area2D)
+  - collision_mask = 1 (detetam corpo do jogador na layer 1)
+
+--------------------------------------------------------------------------------
+8. FICHEIROS PRINCIPAIS
+--------------------------------------------------------------------------------
+
+core/run_config.gd              — enum Stage, var stage
+ui/menu_theme.gd                — fill_stage_option
+ui/vs_character_menu.gd/.tscn   — seleção Vs
+ui/training_menu.gd/.tscn       — seleção Treino
+levels/duel/main.tscn           — cena base, ArenaVariantRoot, GroundBody, players
+levels/duel/game.gd             — _apply_stage_*, _handle_arena_pit, variantes
+levels/duel/arenas/tiered_abyss.tscn
+levels/duel/arenas/tiered_abyss_arena.gd
+levels/duel/arenas/old_factory.tscn
+levels/duel/arenas/old_factory_arena.gd
+characters/player.gd            — set_arena_horizontal_split, apply_pit_fall_penalty,
+                                _enforce_arena_half
+
+--------------------------------------------------------------------------------
+9. COMO ADICIONAR UM NOVO STAGE (CHECKLIST)
+--------------------------------------------------------------------------------
+
+1. Acrescentar valor em RunConfig.Stage
+2. Item em MenuThemeUtil.fill_stage_option
+3. Ramo em Game._apply_stage_from_run_config (+ função _apply_stage_*)
+4. Cena em levels/duel/arenas/ ou toggles em main.tscn
+5. Spawns, cores, half_gap_extra, regras de pit se aplicável
+6. Se houver plataformas só para jogadores: collision_layer 16; manter
+   projéteis fora dessa layer na máscara
+7. Testar Vs, Treino e regressão do stage Normal
+
+--------------------------------------------------------------------------------
+10. NOTAS / LIMITAÇÕES ATUAIS
+--------------------------------------------------------------------------------
+
+- Tamanho do «mapa» continua 1920x864; «mais espaço» nos palcos variantes vem de
+  abismos/vale, patamares e half_gap_extra, não de viewport maior nem câmera.
+- Stage Normal não usa plataformas one-way nem layer ArenaPlatforms.
+- Fábrica: vale amarelo = só penalidade por queda (Area2D); sem dano por contacto
+  contínuo; decoração pendurada sem colisão.
+- Documentação de movimento base da arena: docs/sistemas_core_arena_e_movimento.md
+  (valores do Normal; palcos variantes alteram chão e limites X).
+
+================================================================================

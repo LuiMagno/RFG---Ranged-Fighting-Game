@@ -5,10 +5,15 @@ extends Node
 
 enum Mode { VS_PLAYER, TRAINING }
 
+## Palco da arena (`Game` aplica visual e, no futuro, regras por stage).
+enum Stage { NORMAL, TIERED_ABYSS, OLD_FACTORY }
+
 ## Teclado e mouse vs controle (por jogador). O mapa em runtime é aplicado em `Game._ensure_input_map()`.
 enum InputScheme { KEYBOARD_MOUSE, GAMEPAD }
 
 var mode: Mode = Mode.VS_PLAYER
+
+var stage: Stage = Stage.NORMAL
 
 var training_dummy_shoot: bool = true
 var training_dummy_interval: float = 3.0

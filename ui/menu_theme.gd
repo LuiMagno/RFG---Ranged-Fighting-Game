@@ -63,6 +63,13 @@ static func fill_class_option(ob: OptionButton) -> void:
 	ob.add_item("Ongma Epilef (teste)")
 
 
+static func fill_stage_option(ob: OptionButton) -> void:
+	ob.clear()
+	ob.add_item("Normal", RunConfig.Stage.NORMAL)
+	ob.add_item("Patamares + abismo", RunConfig.Stage.TIERED_ABYSS)
+	ob.add_item("Fábrica antiga", RunConfig.Stage.OLD_FACTORY)
+
+
 static func fill_input_scheme_option(ob: OptionButton) -> void:
 	ob.clear()
 	ob.add_item("Teclado e mouse", RunConfig.InputScheme.KEYBOARD_MOUSE)
