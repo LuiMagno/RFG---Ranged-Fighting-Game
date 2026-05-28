@@ -591,7 +591,6 @@ visible = false
 z_index = 2
 
 [node name="Bow" type="Polygon2D" parent="LeftPlayer" unique_id=448013143]
-visible = false
 z_index = 40
 position = Vector2(18, -10)
 color = Color(0.95, 0.95, 0.95, 1)
@@ -652,7 +651,6 @@ visible = false
 z_index = 2
 
 [node name="Bow" type="Polygon2D" parent="RightPlayer" unique_id=743516786]
-visible = false
 z_index = 40
 position = Vector2(-18, -10)
 color = Color(0.95, 0.95, 0.95, 1)
