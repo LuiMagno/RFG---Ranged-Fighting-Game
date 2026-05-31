@@ -21,6 +21,8 @@ const ONGMA_EPILEF_PLAYER_SCRIPT := "res://characters/ongma_epilef_player.gd"
 
 const CAM_ESQUELETO_FEIXE_FIRE := preload("res://levels/duel/camera/presets/esqueleto_feixe_fire.tres")
 const CAM_ESQUELETO_FEIXE_HIT := preload("res://levels/duel/camera/presets/esqueleto_feixe_hit.tres")
+const CAM_ESQUELETO_ULT_CHUVA_ARM := preload("res://levels/duel/camera/presets/esqueleto_ult_chuva_arm.tres")
+const BONE_RAIN_SPAWN_Y := 24.0
 
 const VS_ROUND_DURATION_S := 60.0
 const VS_ROUNDS_TO_WIN := 3
@@ -76,6 +78,20 @@ const STAGE_FACTORY_PIT_CD := 0.85
 var _archer_carriers: Dictionary = {}
 var _active_grenades: Dictionary = {}
 var _active_ice: Dictionary = {}
+var _bone_rain_gen_p1 := 0
+var _bone_rain_gen_p2 := 0
+var _bone_rain_running: Dictionary = {}
+var _ult_super_focus_active := false
+var _ult_super_focus_owner: Player = null
+var _ult_super_focus_opponent: Player = null
+var _ult_super_owner_input_saved := true
+var _ult_super_opponent_input_saved := true
+var _p1_ult_active := false
+var _p1_ult_time_left := 0.0
+var _p1_ult_super_phase := false
+var _p2_ult_active := false
+var _p2_ult_time_left := 0.0
+var _p2_ult_super_phase := false
 var _training_loop_running: bool = false
 var _training_ko_camera_active: bool = false
 var _training_p2_spawn: Vector2
@@ -336,12 +352,16 @@ func _ready() -> void:
 	right_player.mage_ice_detonate_requested.connect(_on_ice_detonate_requested)
 	left_player.mage_orb_requested.connect(_spawn_gravity_orb)
 	right_player.mage_orb_requested.connect(_spawn_gravity_orb)
+	left_player.bone_rain_requested.connect(_on_bone_rain_requested)
+	right_player.bone_rain_requested.connect(_on_bone_rain_requested)
 
 	# UI updates come from signals (easy to swap for a real HUD later).
 	left_player.health_changed.connect(_on_left_hp_changed)
 	right_player.health_changed.connect(_on_right_hp_changed)
 	left_player.special_buff_changed.connect(_on_left_special_buff_changed)
 	right_player.special_buff_changed.connect(_on_right_special_buff_changed)
+	left_player.ult_status_changed.connect(_on_left_ult_status_changed)
+	right_player.ult_status_changed.connect(_on_right_ult_status_changed)
 	left_player.archer_spike_hud_changed.connect(_on_left_archer_spike_hud)
 	right_player.archer_spike_hud_changed.connect(_on_right_archer_spike_hud)
 	_on_left_hp_changed(left_player.hp)
@@ -365,6 +385,8 @@ func _ready() -> void:
 func blocks_vs_pause_menu() -> bool:
 	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
 		return false
+	if _ult_super_focus_active:
+		return true
 	return _vs_match_end_menu_open or _vs_round_interstitial_active or _vs_resolving_round or (
 		_camera_system != null and _camera_system.is_ko_sequence_running()
 	)
@@ -400,6 +422,8 @@ func _start_vs_round() -> void:
 	if _camera_system != null:
 		_camera_system.reset_to_default()
 	_clear_vs_projectiles_and_carry_state()
+	cancel_bone_rain_for_player(left_player)
+	cancel_bone_rain_for_player(right_player)
 	left_player.prepare_for_vs_round_respawn(_vs_p1_spawn)
 	right_player.prepare_for_vs_round_respawn(_vs_p2_spawn)
 	left_player.input_enabled = true
@@ -481,7 +505,8 @@ func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
 			Player.CharacterKind.ESQUELETO, Player.CharacterKind.ONGMA_EPILEF:
 				return (
 					base_pad_move
-					+ " · X segure/solta feixe · Y buff de velocidade no tiro carregado · Tiro carregado: segure/solte RB"
+					+ " · X segure/solta feixe · Y buff de velocidade no tiro carregado · LB ULT (chuva de ossos)"
+					+ " · Tiro carregado: segure/solte RB"
 					+ " · B dash (direcção: stick esq. ou mira); duplo frente/trás não inicia dash"
 					+ " · D-pad ↓ / stick esq. ↓ (no ar): queda"
 				)
@@ -500,7 +525,8 @@ func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
 		Player.CharacterKind.ESQUELETO, Player.CharacterKind.ONGMA_EPILEF:
 			return (
 				base_kb_move
-				+ " · F segure/solta feixe · G buff de velocidade no tiro carregado · Shift dash (direcção: A/D ou mira); duplo A/D não inicia dash"
+				+ " · F segure/solta feixe · G buff de velocidade no tiro carregado · R chuva de ossos (ULT)"
+				+ " · Shift dash (direcção: A/D ou mira); duplo A/D não inicia dash"
 			)
 		_:
 			return base_kb
@@ -628,6 +654,8 @@ func _training_dummy_loop_async() -> void:
 	_training_loop_running = false
 
 func _fire_training_dummy_shot() -> void:
+	if _ult_super_focus_active:
+		return
 	# Simple straight shot from dummy toward player 1.
 	var from := right_player.get_node("Muzzle") as Marker2D
 	var origin := from.global_position
@@ -660,6 +688,7 @@ func _ensure_input_map() -> void:
 	# Mago: levitar = p1_mage_float (C) / p2_mage_float (C no teclado+mouse); orbe = segurar G e soltar.
 	_add_action_if_missing("p1_mage_float", KEY_C)
 	_add_action_if_missing("p1_shield", KEY_Q)
+	_add_action_if_missing("p1_ult", KEY_R)
 	_ensure_dash_action("p1_dash", true)
 	_ensure_ui_game_pause_input()
 
@@ -701,6 +730,7 @@ func _ensure_p2_action_shells_without_keys() -> void:
 		"p2_special",
 		"p2_mage_float",
 		"p2_shield",
+		"p2_ult",
 		"p2_dash",
 		"p2_move_up",
 		"p2_move_down",
@@ -744,6 +774,7 @@ func _ensure_p2_keyboard_mouse_shared_layout() -> void:
 	_add_action_if_missing("p2_special", KEY_G)
 	_add_action_if_missing("p2_mage_float", KEY_C)
 	_add_action_if_missing("p2_shield", KEY_Q)
+	_add_action_if_missing("p2_ult", KEY_R)
 	_ensure_dash_action("p2_dash", true)
 	_add_action_if_missing("p2_down", KEY_S)
 
@@ -762,6 +793,7 @@ func _player_action_names(prefix: String) -> Array:
 		p + "special",
 		p + "mage_float",
 		p + "shield",
+		p + "ult",
 		p + "dash",
 		p + "aim_left",
 		p + "aim_right",
@@ -837,6 +869,7 @@ func _add_gamepad_mappings_for_player(prefix: String, device: int) -> void:
 	InputMap.action_add_event(p + "dash", _joy_btn(device, JOY_BUTTON_B))
 	InputMap.action_add_event(p + "special", _joy_btn(device, JOY_BUTTON_Y))
 	InputMap.action_add_event(p + "shield", _joy_btn(device, JOY_BUTTON_LEFT_SHOULDER))
+	InputMap.action_add_event(p + "ult", _joy_btn(device, JOY_BUTTON_LEFT_SHOULDER))
 	InputMap.action_add_event(p + "grenade", _joy_btn(device, JOY_BUTTON_X))
 	InputMap.action_add_event(p + "mage_float", _joy_btn(device, JOY_BUTTON_RIGHT_STICK))
 	InputMap.action_add_event(p + "archer_spike", _joy_btn(device, JOY_BUTTON_LEFT_STICK))
@@ -1246,6 +1279,171 @@ func _camera_apply_preset(preset: CameraEffectPreset) -> void:
 		return
 	_camera_system.request_apply_preset(preset)
 
+
+func cancel_bone_rain_for_player(p: Player) -> void:
+	if p == null:
+		return
+	if p.player_id == 1:
+		_bone_rain_gen_p1 += 1
+	else:
+		_bone_rain_gen_p2 += 1
+	_end_ult_super_focus()
+
+
+func is_ult_super_focus_active() -> bool:
+	return _ult_super_focus_active
+
+
+func _begin_ult_super_focus(owner: Player, opponent: Player, super_s: float) -> void:
+	_ult_super_focus_active = true
+	_ult_super_focus_owner = owner
+	_ult_super_focus_opponent = opponent
+	_ult_super_owner_input_saved = owner.input_enabled if owner != null else true
+	_ult_super_opponent_input_saved = opponent.input_enabled if opponent != null else true
+	if owner != null:
+		owner.input_enabled = false
+		owner.stall_for(super_s)
+	if opponent != null:
+		opponent.input_enabled = false
+		opponent.stall_for(super_s)
+	if _camera_system != null:
+		_camera_system.set_super_focus_active(true)
+
+
+func _end_ult_super_focus() -> void:
+	if _ult_super_focus_owner != null and is_instance_valid(_ult_super_focus_owner):
+		_ult_super_focus_owner.clear_stall()
+		if _ult_super_focus_active:
+			_ult_super_focus_owner.input_enabled = _ult_super_owner_input_saved
+	if _ult_super_focus_opponent != null and is_instance_valid(_ult_super_focus_opponent):
+		_ult_super_focus_opponent.clear_stall()
+		if _ult_super_focus_active:
+			_ult_super_focus_opponent.input_enabled = _ult_super_opponent_input_saved
+	_ult_super_focus_active = false
+	_ult_super_focus_owner = null
+	_ult_super_focus_opponent = null
+	if _camera_system != null:
+		_camera_system.set_super_focus_active(false)
+		_camera_system.cancel_dominant_effect()
+	if Engine.time_scale <= 0.01:
+		Engine.time_scale = 1.0
+
+
+func _bone_rain_gen_for(p: Player) -> int:
+	return _bone_rain_gen_p1 if p.player_id == 1 else _bone_rain_gen_p2
+
+
+func _get_opponent_player(p: Player) -> Player:
+	if p == left_player:
+		return right_player
+	if p == right_player:
+		return left_player
+	return null
+
+
+func _on_bone_rain_requested(owner: Player) -> void:
+	if not owner is EsqueletoPlayer or _vs_resolving_round:
+		return
+	if _bone_rain_running.get(owner, false):
+		return
+	var ep := owner as EsqueletoPlayer
+	var super_s := ep.esqueleto_skill_ult_chuva_ossos_fase_super_s
+	var super_zoom := Vector2.ONE * ep.esqueleto_skill_ult_chuva_ossos_super_zoom
+	var opponent := _get_opponent_player(owner)
+	_bone_rain_running[owner] = true
+	var gen := _bone_rain_gen_for(owner)
+	_begin_ult_super_focus(owner, opponent, super_s)
+	if _camera_system != null:
+		_camera_system.show_super_highlight(super_s)
+	_camera_apply_preset(CAM_ESQUELETO_ULT_CHUVA_ARM)
+	if _camera_system != null:
+		await _camera_system.play_ult_super_focus_hold(owner, super_s, super_zoom)
+	else:
+		var super_ok := await _wait_bone_rain_phase(super_s, gen, owner)
+		if not super_ok:
+			_bone_rain_running[owner] = false
+			_end_ult_super_focus()
+			return
+	if not is_instance_valid(owner) or _bone_rain_gen_for(owner) != gen or _vs_resolving_round:
+		_bone_rain_running[owner] = false
+		if _camera_system != null:
+			_camera_system.hide_super_highlight()
+			await _camera_system.return_to_arena_framing()
+		_end_ult_super_focus()
+		return
+	if owner is EsqueletoPlayer:
+		(owner as EsqueletoPlayer).end_ult_super_phase_visual()
+	if _camera_system != null:
+		_camera_system.hide_super_highlight()
+	_end_ult_super_focus()
+	if _camera_system != null:
+		await _camera_system.return_to_arena_framing()
+	await _run_esqueleto_bone_rain(owner)
+	_bone_rain_running[owner] = false
+
+
+func _wait_bone_rain_phase(seconds: float, gen: int, owner: Player) -> bool:
+	if seconds <= 0.0:
+		return _bone_rain_gen_for(owner) == gen and not _vs_resolving_round
+	var elapsed := 0.0
+	while elapsed < seconds:
+		if _vs_resolving_round or _bone_rain_gen_for(owner) != gen:
+			return false
+		var step := minf(0.05, seconds - elapsed)
+		await get_tree().create_timer(step, true, false, true).timeout
+		elapsed += step
+	return _bone_rain_gen_for(owner) == gen and not _vs_resolving_round
+
+
+func _run_esqueleto_bone_rain(owner: Player) -> void:
+	var ep := owner as EsqueletoPlayer
+	if ep == null:
+		return
+	var gen := _bone_rain_gen_for(owner)
+	var duration := ep.esqueleto_skill_ult_chuva_ossos_duracao_s
+	var interval := maxf(0.04, ep.esqueleto_skill_ult_chuva_ossos_intervalo_s)
+	var time_left := duration
+	while time_left > 0.0 and not _vs_resolving_round and _bone_rain_gen_for(owner) == gen:
+		var xr := owner.get_enemy_half_x_range()
+		if xr.y > xr.x:
+			var x := randf_range(xr.x, xr.y)
+			_spawn_bone_rain_projectile(
+				owner,
+				Vector2(x, BONE_RAIN_SPAWN_Y),
+				Vector2(0.0, ep.esqueleto_skill_ult_chuva_ossos_velocidade_queda),
+				ep.esqueleto_skill_ult_chuva_ossos_dano,
+			)
+		if _camera_system != null:
+			_camera_system.request_shake(
+				ep.esqueleto_skill_ult_chuva_ossos_shake_intensidade,
+				ep.esqueleto_skill_ult_chuva_ossos_shake_duracao_s,
+			)
+		await get_tree().create_timer(interval, true, false, true).timeout
+		time_left -= interval
+
+
+func _spawn_bone_rain_projectile(
+	owner_player: Player,
+	spawn_position: Vector2,
+	initial_velocity: Vector2,
+	damage: int,
+) -> void:
+	var ep := owner_player as EsqueletoPlayer
+	var flags := {"esqueleto_chuva_osso": true}
+	if ep != null:
+		flags["knockback_x"] = ep.esqueleto_skill_ult_chuva_ossos_knockback_x
+		flags["knockback_up"] = ep.esqueleto_skill_ult_chuva_ossos_knockback_up
+	_spawn_one_arrow(
+		owner_player,
+		spawn_position,
+		initial_velocity,
+		flags,
+		0.0,
+		0,
+		damage,
+		0.85,
+	)
+
 func _on_left_hp_changed(hp: int) -> void:
 	p1_hp_label.text = "P1 HP: %d" % hp
 	p1_hp_bar.value = hp
@@ -1256,6 +1454,66 @@ func _on_right_hp_changed(hp: int) -> void:
 	p2_hp_bar.value = hp
 	_check_vs_ko_after_hp_change()
 	_try_training_ko_camera()
+
+func _on_left_ult_status_changed(active: bool, time_left: float, super_phase: bool = false) -> void:
+	_p1_ult_active = active
+	_p1_ult_time_left = time_left
+	_p1_ult_super_phase = super_phase
+	_refresh_left_esqueleto_status_label()
+
+
+func _on_right_ult_status_changed(active: bool, time_left: float, super_phase: bool = false) -> void:
+	_p2_ult_active = active
+	_p2_ult_time_left = time_left
+	_p2_ult_super_phase = super_phase
+	_refresh_right_esqueleto_status_label()
+
+
+func _refresh_left_esqueleto_status_label() -> void:
+	if not left_player is EsqueletoPlayer:
+		return
+	var s1 := RunConfig.get_shoot_hint_token_for_player(1)
+	if _p1_ult_active:
+		p1_special_label.visible = true
+		if _p1_ult_super_phase:
+			p1_special_label.text = "P1: SUPER!"
+		else:
+			p1_special_label.text = "P1: ULT — chuva de ossos (%.1f s)" % _p1_ult_time_left
+		return
+	var ep := left_player as EsqueletoPlayer
+	if ep.is_buff_velocidade_tiro_ativo():
+		p1_special_label.visible = true
+		p1_special_label.text = (
+			"P1: Buff ativo — tiros carregados mais rápidos (%.1f s) · solte %s para disparar"
+			% [ep.get_buff_velocidade_tiro_tempo_restante_s(), s1]
+		)
+	else:
+		p1_special_label.visible = false
+		p1_special_label.text = ""
+
+
+func _refresh_right_esqueleto_status_label() -> void:
+	if not right_player is EsqueletoPlayer:
+		return
+	var s2 := RunConfig.get_shoot_hint_token_for_player(2)
+	if _p2_ult_active:
+		p2_special_label.visible = true
+		if _p2_ult_super_phase:
+			p2_special_label.text = "P2: SUPER!"
+		else:
+			p2_special_label.text = "P2: ULT — chuva de ossos (%.1f s)" % _p2_ult_time_left
+		return
+	var ep := right_player as EsqueletoPlayer
+	if ep.is_buff_velocidade_tiro_ativo():
+		p2_special_label.visible = true
+		p2_special_label.text = (
+			"P2: Buff ativo — tiros carregados mais rápidos (%.1f s) · solte %s para disparar"
+			% [ep.get_buff_velocidade_tiro_tempo_restante_s(), s2]
+		)
+	else:
+		p2_special_label.visible = false
+		p2_special_label.text = ""
+
 
 func _on_left_special_buff_changed(active: bool, uses_left: int, time_left: float) -> void:
 	var s1 := RunConfig.get_shoot_hint_token_for_player(1)
@@ -1275,6 +1533,9 @@ func _on_left_special_buff_changed(active: bool, uses_left: int, time_left: floa
 		else:
 			p1_special_label.text = ""
 	elif left_player is EsqueletoPlayer:
+		if _p1_ult_active:
+			_refresh_left_esqueleto_status_label()
+			return
 		p1_special_label.visible = active
 		if active:
 			p1_special_label.text = (
@@ -1305,6 +1566,9 @@ func _on_right_special_buff_changed(active: bool, uses_left: int, time_left: flo
 		else:
 			p2_special_label.text = ""
 	elif right_player is EsqueletoPlayer:
+		if _p2_ult_active:
+			_refresh_right_esqueleto_status_label()
+			return
 		p2_special_label.visible = active
 		if active:
 			p2_special_label.text = (

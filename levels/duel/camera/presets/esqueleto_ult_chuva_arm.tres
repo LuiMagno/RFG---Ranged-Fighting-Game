@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CameraEffectPreset" load_steps=2 format=3 uid="uid://dpreset_ult_chuva_arm"]
+
+[ext_resource type="Script" path="res://levels/duel/camera/camera_effect_preset.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+shake_intensity = 11.0
+shake_duration = 0.14
+hit_stop_duration = 0.0
+flash_color = Color(1, 0.78, 0.22, 1)
+flash_intensity = 0.24
+flash_duration = 0.1

@@ -16,6 +16,8 @@ const _KO_ROUND_CONFIG := preload("res://levels/duel/camera/presets/ko_round_def
 
 @onready var _camera: Camera2D = _resolve_camera()
 @onready var _flash_overlay: ColorRect = _resolve_flash_overlay()
+@onready var _super_highlight: Control = _resolve_super_highlight()
+@onready var _super_callout: Label = _resolve_super_callout()
 
 var _dominant_state: DominantState = DominantState.NORMAL
 var _time_scale_end_usec: int = 0
@@ -29,6 +31,11 @@ var _shake_curve: Curve
 
 var _flash_tween: Tween
 var _camera_tween: Tween
+var _super_tween: Tween
+var _super_focus_active := false
+var _ult_super_track_target: Node2D = null
+var _ult_super_track_zoom := Vector2.ONE
+var _ult_super_track_padding := 32.0
 var _last_process_usec: int = 0
 var _ko_sequence_generation: int = 0
 var _ko_sequence_running: bool = false
@@ -61,6 +68,20 @@ func _resolve_flash_overlay() -> ColorRect:
 	return rig.get_node_or_null("CameraFxLayer/FlashOverlay") as ColorRect
 
 
+func _resolve_super_highlight() -> Control:
+	var rig := get_parent()
+	if rig == null:
+		return null
+	return rig.get_node_or_null("CameraFxLayer/SuperHighlight") as Control
+
+
+func _resolve_super_callout() -> Label:
+	var rig := get_parent()
+	if rig == null:
+		return null
+	return rig.get_node_or_null("CameraFxLayer/SuperHighlight/SuperCallout") as Label
+
+
 func _process(_delta: float) -> void:
 	var now_usec := Time.get_ticks_usec()
 	var real_delta := float(now_usec - _last_process_usec) / 1_000_000.0
@@ -75,6 +96,21 @@ func _process(_delta: float) -> void:
 
 	_update_time_scale_override(now_usec)
 	_update_shake(real_delta)
+	_update_ult_super_track()
+
+
+func _update_ult_super_track() -> void:
+	if _ult_super_track_target == null or _camera == null:
+		return
+	if not is_instance_valid(_ult_super_track_target):
+		_ult_super_track_target = null
+		return
+	var focus_pos := _compute_focus_position(
+		_ult_super_track_target.global_position,
+		_ult_super_track_zoom,
+		_ult_super_track_padding,
+	)
+	_camera.position = focus_pos
 
 
 func get_dominant_state() -> DominantState:
@@ -149,6 +185,114 @@ func request_flash(color: Color, intensity: float, duration: float) -> void:
 	_flash_tween.tween_callback(_hide_flash_overlay)
 
 
+func is_super_focus_active() -> bool:
+	return _super_focus_active
+
+
+func set_super_focus_active(active: bool) -> void:
+	_super_focus_active = active
+
+
+func show_super_highlight(duration: float) -> void:
+	if duration <= 0.0:
+		return
+	if _super_highlight != null:
+		_super_highlight.visible = true
+	if _super_callout != null:
+		_super_callout.visible = true
+		_super_callout.modulate = Color(1, 1, 1, 0)
+		_super_callout.scale = Vector2(2.2, 2.2)
+	if _super_tween != null and _super_tween.is_valid():
+		_super_tween.kill()
+	_super_tween = create_tween()
+	_super_tween.set_ignore_time_scale(true)
+	if _super_callout != null:
+		_super_tween.set_parallel(true)
+		_super_tween.tween_property(_super_callout, "modulate:a", 1.0, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_super_tween.tween_property(_super_callout, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_super_tween.set_parallel(false)
+	var hold := maxf(duration - 0.28, 0.05)
+	_super_tween.tween_interval(hold)
+	if _super_callout != null:
+		_super_tween.tween_property(_super_callout, "modulate:a", 0.0, 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	request_flash(Color(1.0, 0.78, 0.22), 0.22, 0.14)
+
+
+func _hide_super_callout_ui() -> void:
+	if _super_highlight != null:
+		_super_highlight.visible = false
+	if _super_callout != null:
+		_super_callout.visible = false
+		_super_callout.modulate = Color(1, 1, 1, 1)
+		_super_callout.scale = Vector2.ONE
+
+
+func hide_super_highlight() -> void:
+	if _super_tween != null and _super_tween.is_valid():
+		_super_tween.kill()
+	_super_tween = null
+	_hide_super_callout_ui()
+
+
+## SUPER de ULT: aproxima e mantém foco no jogador que activou durante `hold_duration`.
+func play_ult_super_focus_hold(
+	target: Node2D,
+	hold_duration: float,
+	zoom: Vector2,
+	pan_in_duration: float = 0.18,
+	padding: float = 28.0,
+) -> void:
+	if target == null or _camera == null or hold_duration <= 0.0:
+		return
+	if _dominant_state == DominantState.CINEMATIC:
+		return
+	if Engine.time_scale <= 0.01 or _dominant_state == DominantState.HIT_STOP or _dominant_state == DominantState.SLOW_MO:
+		cancel_dominant_effect()
+
+	_ult_super_track_target = target
+	_ult_super_track_zoom = zoom
+	_ult_super_track_padding = padding
+	_dominant_state = DominantState.FOCUS
+	_kill_camera_tween()
+
+	var focus_pos := _compute_focus_position(target.global_position, zoom, padding)
+	var pan_d := maxf(pan_in_duration, 0.01)
+	_camera_tween = create_tween()
+	_camera_tween.set_ignore_time_scale(true)
+	_camera_tween.set_parallel(true)
+	_camera_tween.tween_property(_camera, "position", focus_pos, pan_d).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_camera_tween.tween_property(_camera, "zoom", zoom, pan_d).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	await _camera_tween.finished
+
+	if not is_instance_valid(target):
+		_ult_super_track_target = null
+		_dominant_state = DominantState.NORMAL
+		return
+
+	var hold_left := hold_duration
+	while hold_left > 0.0 and is_instance_valid(target):
+		var step := minf(0.032, hold_left)
+		await get_tree().create_timer(step, true, false, true).timeout
+		hold_left -= step
+
+	_ult_super_track_target = null
+
+
+func return_to_arena_framing(return_duration: float = 0.22) -> void:
+	if _camera == null:
+		return
+	var ret_d := maxf(return_duration, 0.01)
+	_kill_camera_tween()
+	_camera_tween = create_tween()
+	_camera_tween.set_ignore_time_scale(true)
+	_camera_tween.set_parallel(true)
+	_camera_tween.tween_property(_camera, "position", VIEWPORT_CENTER, ret_d).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	_camera_tween.tween_property(_camera, "zoom", Vector2.ONE, ret_d).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	await _camera_tween.finished
+	if _dominant_state == DominantState.FOCUS:
+		_dominant_state = DominantState.NORMAL
+
+
 func request_zoom(
 	target_zoom: Vector2,
 	duration: float,
@@ -179,6 +323,8 @@ func request_focus(
 		return
 	if _dominant_state == DominantState.CINEMATIC:
 		return
+	if Engine.time_scale <= 0.01 or _dominant_state == DominantState.HIT_STOP or _dominant_state == DominantState.SLOW_MO:
+		cancel_dominant_effect()
 	var focus_pos := _compute_focus_position(target.global_position, zoom, padding)
 	_dominant_state = DominantState.FOCUS
 	_kill_camera_tween()
@@ -187,6 +333,43 @@ func request_focus(
 	_camera_tween.set_parallel(true)
 	_camera_tween.tween_property(_camera, "position", focus_pos, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	_camera_tween.tween_property(_camera, "zoom", zoom, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_camera_tween.set_parallel(false)
+	_camera_tween.tween_callback(func() -> void:
+		if _dominant_state == DominantState.FOCUS:
+			_dominant_state = DominantState.NORMAL
+	)
+
+
+## Foco estilo super de luta: aproxima, mantém durante `hold_duration`, repõe zoom e enquadramento.
+func request_focus_hold_return(
+	target: Node2D,
+	pan_in_duration: float,
+	zoom: Vector2,
+	hold_duration: float,
+	return_duration: float = 0.22,
+	padding: float = 64.0,
+) -> void:
+	if target == null or _camera == null or pan_in_duration <= 0.0:
+		return
+	if _dominant_state == DominantState.CINEMATIC:
+		return
+	if Engine.time_scale <= 0.01 or _dominant_state == DominantState.HIT_STOP or _dominant_state == DominantState.SLOW_MO:
+		cancel_dominant_effect()
+	var focus_pos := _compute_focus_position(target.global_position, zoom, padding)
+	_dominant_state = DominantState.FOCUS
+	_kill_camera_tween()
+	_camera_tween = create_tween()
+	_camera_tween.set_ignore_time_scale(true)
+	_camera_tween.set_parallel(true)
+	_camera_tween.tween_property(_camera, "position", focus_pos, pan_in_duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_camera_tween.tween_property(_camera, "zoom", zoom, pan_in_duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_camera_tween.set_parallel(false)
+	if hold_duration > 0.0:
+		_camera_tween.tween_interval(hold_duration)
+	var ret_d := maxf(return_duration, 0.01)
+	_camera_tween.set_parallel(true)
+	_camera_tween.tween_property(_camera, "position", VIEWPORT_CENTER, ret_d).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	_camera_tween.tween_property(_camera, "zoom", Vector2.ONE, ret_d).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	_camera_tween.set_parallel(false)
 	_camera_tween.tween_callback(func() -> void:
 		if _dominant_state == DominantState.FOCUS:
@@ -252,6 +435,9 @@ func play_ko_round_sequence(victim: Node2D, winner: Node2D, impact_style: int) -
 func cancel_overlays() -> void:
 	_shake_time_left = 0.0
 	_shake_intensity = 0.0
+	_ult_super_track_target = null
+	hide_super_highlight()
+	set_super_focus_active(false)
 	if _camera != null:
 		_camera.offset = Vector2.ZERO
 	if _flash_tween != null and _flash_tween.is_valid():
@@ -373,10 +559,14 @@ func _apply_time_scale_override(scale: float, duration: float) -> void:
 
 
 func _update_time_scale_override(now_usec: int) -> void:
-	if _dominant_state != DominantState.HIT_STOP and _dominant_state != DominantState.SLOW_MO:
+	if _dominant_state == DominantState.HIT_STOP or _dominant_state == DominantState.SLOW_MO:
+		if now_usec >= _time_scale_end_usec:
+			cancel_dominant_effect()
 		return
-	if now_usec >= _time_scale_end_usec:
-		cancel_dominant_effect()
+	# Hit-stop + troca para FOCUS deixa time_scale=0 preso (dominant_state já não é HIT_STOP).
+	if Engine.time_scale <= 0.01:
+		_time_scale_end_usec = 0
+		Engine.time_scale = _time_scale_before_override if _time_scale_before_override > 0.0 else 1.0
 
 
 func _update_shake(real_delta: float) -> void:

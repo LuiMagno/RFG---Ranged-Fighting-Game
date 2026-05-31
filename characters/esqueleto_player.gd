@@ -2,9 +2,10 @@ extends Player
 class_name EsqueletoPlayer
 
 ## Baseline de duelo: tiro carregado (velocidade proporcional à carga), flecha sem gravidade no voo.
-## Duas skills do Esqueleto (mapeamento em `game.gd` / `project.godot`):
+## Três skills + ULT do Esqueleto (mapeamento em `game.gd` / `project.godot`):
 ## - **Skill Esqueleto — Feixe:** ação `p*_grenade` (teclado **F**, controle **X**) — segura e solta para disparar o projétil grande.
 ## - **Skill Esqueleto — Buff de velocidade do tiro carregado:** ação `p*_special` (teclado **G**, controle **Y**) — ativa um período em que o **tiro carregado** (RB / mouse) sai com velocidade maior.
+## - **Skill Esqueleto — ULT Chuva de ossos:** ação `p*_ult` (teclado **R**, controle **LB**) — chuva automática de ossos verticais na metade inimiga (~3 s).
 ## Tiro base: mínimo 1 s entre disparos após soltar o carregamento (`MIN_SHOOT_COOLDOWN_S`).
 
 const MIN_SHOOT_COOLDOWN_S := 1.0
@@ -26,12 +27,30 @@ const MIN_SHOOT_COOLDOWN_S := 1.0
 @export var esqueleto_skill_buff_velocidade_tiro_recarga_s: float = 10.0
 @export var esqueleto_skill_buff_velocidade_tiro_multiplicador: float = 2.0
 
+## Skill Esqueleto — ULT Chuva de ossos (`*_ult`: teclado R, controle LB)
+@export var esqueleto_skill_ult_chuva_ossos_recarga_s: float = 38.0
+@export var esqueleto_skill_ult_chuva_ossos_fase_super_s: float = 2.2
+@export var esqueleto_skill_ult_chuva_ossos_super_zoom: float = 1.42
+@export var esqueleto_skill_ult_chuva_ossos_duracao_s: float = 3.0
+@export var esqueleto_skill_ult_chuva_ossos_intervalo_s: float = 0.14
+@export var esqueleto_skill_ult_chuva_ossos_dano: int = 10
+@export var esqueleto_skill_ult_chuva_ossos_velocidade_queda: float = 720.0
+@export var esqueleto_skill_ult_chuva_ossos_knockback_x: float = 380.0
+@export var esqueleto_skill_ult_chuva_ossos_knockback_up: float = 180.0
+@export var esqueleto_skill_ult_chuva_ossos_modulate: Color = Color(1.35, 1.15, 0.55)
+@export var esqueleto_skill_ult_chuva_ossos_shake_intensidade: float = 4.0
+@export var esqueleto_skill_ult_chuva_ossos_shake_duracao_s: float = 0.18
+
 var _esqueleto_buff_velocidade_tiro_ativo := false
 var _esqueleto_buff_velocidade_tiro_tempo_restante_s := 0.0
 var _esqueleto_buff_velocidade_tiro_cd_restante_s := 0.0
 var _feixe_cd_restante_s := 0.0
 var _feixe_carregando := false
 var _feixe_tempo_carga_s := 0.0
+var _esqueleto_ult_cd_restante_s := 0.0
+var _esqueleto_chuva_ossos_ativa := false
+var _esqueleto_chuva_ossos_fase_super_restante_s := 0.0
+var _esqueleto_chuva_ossos_tempo_restante_s := 0.0
 
 
 func is_esqueleto() -> bool:
@@ -46,7 +65,21 @@ func _ready() -> void:
 func _extra_timer_tick(delta: float) -> void:
 	_feixe_cd_restante_s = maxf(0.0, _feixe_cd_restante_s - delta)
 	_esqueleto_buff_velocidade_tiro_cd_restante_s = maxf(0.0, _esqueleto_buff_velocidade_tiro_cd_restante_s - delta)
-	if _esqueleto_buff_velocidade_tiro_ativo:
+	_esqueleto_ult_cd_restante_s = maxf(0.0, _esqueleto_ult_cd_restante_s - delta)
+	if _esqueleto_chuva_ossos_ativa:
+		if _esqueleto_chuva_ossos_fase_super_restante_s > 0.0:
+			_esqueleto_chuva_ossos_fase_super_restante_s -= delta
+			if _esqueleto_chuva_ossos_fase_super_restante_s <= 0.0:
+				ult_status_changed.emit(true, _esqueleto_chuva_ossos_tempo_restante_s, false)
+			else:
+				ult_status_changed.emit(true, _esqueleto_chuva_ossos_fase_super_restante_s, true)
+		else:
+			_esqueleto_chuva_ossos_tempo_restante_s -= delta
+			if _esqueleto_chuva_ossos_tempo_restante_s <= 0.0:
+				_finalizar_chuva_ossos()
+			else:
+				ult_status_changed.emit(true, _esqueleto_chuva_ossos_tempo_restante_s, false)
+	if _esqueleto_buff_velocidade_tiro_ativo and not _esqueleto_chuva_ossos_ativa:
 		_esqueleto_buff_velocidade_tiro_tempo_restante_s -= delta
 		if _esqueleto_buff_velocidade_tiro_tempo_restante_s <= 0.0:
 			_esqueleto_buff_velocidade_tiro_ativo = false
@@ -88,6 +121,63 @@ func _grenade_pressed() -> bool:
 
 func _grenade_just_released() -> bool:
 	return Input.is_action_just_released("p1_grenade" if player_id == 1 else "p2_grenade")
+
+
+func _ult_just_pressed() -> bool:
+	if player_id == 1:
+		return Input.is_action_just_pressed("p1_ult")
+	return Input.is_action_just_pressed("p2_ult")
+
+
+func is_chuva_ossos_ativa() -> bool:
+	return _esqueleto_chuva_ossos_ativa
+
+
+func is_buff_velocidade_tiro_ativo() -> bool:
+	return _esqueleto_buff_velocidade_tiro_ativo
+
+
+func get_buff_velocidade_tiro_tempo_restante_s() -> float:
+	return _esqueleto_buff_velocidade_tiro_tempo_restante_s
+
+
+func end_ult_super_phase_visual() -> void:
+	if not _esqueleto_chuva_ossos_ativa:
+		return
+	_esqueleto_chuva_ossos_fase_super_restante_s = 0.0
+	if _esqueleto_buff_velocidade_tiro_ativo:
+		self.modulate = Color(0.5, 1.5, 2.0)
+	else:
+		self.modulate = Color(1, 1, 1)
+	ult_status_changed.emit(true, _esqueleto_chuva_ossos_tempo_restante_s, false)
+
+
+func _finalizar_chuva_ossos() -> void:
+	_esqueleto_chuva_ossos_ativa = false
+	_esqueleto_chuva_ossos_tempo_restante_s = 0.0
+	if _esqueleto_buff_velocidade_tiro_ativo:
+		self.modulate = Color(0.5, 1.5, 2.0)
+	else:
+		self.modulate = Color(1, 1, 1)
+	ult_status_changed.emit(false, 0.0, false)
+
+
+func _tentar_ativar_ult_chuva_ossos() -> void:
+	if not input_enabled or _control_lock_left > 0.0:
+		return
+	if _esqueleto_ult_cd_restante_s > 0.0 or _esqueleto_chuva_ossos_ativa:
+		return
+	if _feixe_carregando or _is_charging or _esqueleto_buff_velocidade_tiro_ativo:
+		return
+	if not _ult_just_pressed():
+		return
+	_esqueleto_ult_cd_restante_s = esqueleto_skill_ult_chuva_ossos_recarga_s
+	_esqueleto_chuva_ossos_ativa = true
+	_esqueleto_chuva_ossos_fase_super_restante_s = esqueleto_skill_ult_chuva_ossos_fase_super_s
+	_esqueleto_chuva_ossos_tempo_restante_s = esqueleto_skill_ult_chuva_ossos_duracao_s
+	self.modulate = esqueleto_skill_ult_chuva_ossos_modulate
+	ult_status_changed.emit(true, _esqueleto_chuva_ossos_fase_super_restante_s, true)
+	bone_rain_requested.emit(self)
 
 
 func _refresh_feixe_preview() -> void:
@@ -149,7 +239,10 @@ func _ativar_buff_velocidade_tiro_carregado() -> void:
 
 
 func _process_combat(delta: float) -> void:
-	if input_enabled and _control_lock_left <= 0.0 and not _is_charging:
+	if input_enabled and _control_lock_left <= 0.0:
+		_tentar_ativar_ult_chuva_ossos()
+
+	if input_enabled and _control_lock_left <= 0.0 and not _is_charging and not _esqueleto_chuva_ossos_ativa:
 		if _feixe_cd_restante_s <= 0.0 and _grenade_just_pressed() and not _feixe_carregando:
 			_feixe_carregando = true
 			_feixe_tempo_carga_s = 0.0
@@ -177,10 +270,11 @@ func _process_combat(delta: float) -> void:
 				_special_just_pressed()
 				and _esqueleto_buff_velocidade_tiro_cd_restante_s <= 0.0
 				and not _esqueleto_buff_velocidade_tiro_ativo
+				and not _esqueleto_chuva_ossos_ativa
 			):
 				_ativar_buff_velocidade_tiro_carregado()
 
-	if _cooldown_left <= 0.0 and input_enabled and not _feixe_carregando:
+	if _cooldown_left <= 0.0 and input_enabled and not _feixe_carregando and not _esqueleto_chuva_ossos_ativa:
 		if (not _is_charging) and _shoot_just_pressed():
 			_is_charging = true
 			_charge_time = 0.0
@@ -220,7 +314,12 @@ func _extra_reset_for_vs_round() -> void:
 	_esqueleto_buff_velocidade_tiro_ativo = false
 	_esqueleto_buff_velocidade_tiro_tempo_restante_s = 0.0
 	_esqueleto_buff_velocidade_tiro_cd_restante_s = 0.0
+	_esqueleto_ult_cd_restante_s = 0.0
+	_esqueleto_chuva_ossos_ativa = false
+	_esqueleto_chuva_ossos_fase_super_restante_s = 0.0
+	_esqueleto_chuva_ossos_tempo_restante_s = 0.0
 	self.modulate = Color(1, 1, 1)
 	_last_forward_tap_time_s = -100.0
 	_last_back_tap_time_s = -100.0
 	special_buff_changed.emit(false, 0, 0.0)
+	ult_status_changed.emit(false, 0.0, false)

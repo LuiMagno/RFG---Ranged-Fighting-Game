@@ -77,6 +77,8 @@ func get_owner_player() -> Player:
 
 func set_shot_flags(flags: Dictionary) -> void:
 	_shot_flags = flags.duplicate()
+	if _shot_flags.get("esqueleto_chuva_osso", false) and _body_poly != null:
+		_body_poly.modulate = Color(0.95, 0.88, 0.72, 1.0)
 
 
 func get_shot_flags() -> Dictionary:
@@ -205,10 +207,20 @@ func _physics_process(delta: float) -> void:
 				if victim.try_block_arrow_with_shield(self):
 					return
 				victim.take_damage(damage)
+				var kb_x := knockback_x
+				var kb_up := knockback_up
+				if _shot_flags.has("knockback_x"):
+					kb_x = float(_shot_flags["knockback_x"])
+				if _shot_flags.has("knockback_up"):
+					kb_up = float(_shot_flags["knockback_up"])
 				var dir_x := 1.0
-				if velocity.x < -0.01:
+				if _shot_flags.get("esqueleto_chuva_osso", false):
+					dir_x = signf(victim.global_position.x - global_position.x)
+					if absf(dir_x) < 0.01:
+						dir_x = 1.0 if victim.player_id == 2 else -1.0
+				elif velocity.x < -0.01:
 					dir_x = -1.0
-				victim.apply_knockback(Vector2(dir_x * knockback_x, -knockback_up))
+				victim.apply_knockback(Vector2(dir_x * kb_x, -kb_up))
 				hit_player.emit(victim, damage)
 			queue_free()
 			return
@@ -223,8 +235,11 @@ func _physics_process(delta: float) -> void:
 			queue_free()
 			return
 
-	var rect := get_viewport_rect()
-	if not rect.has_point(global_position):
+	if not _shot_flags.get("esqueleto_chuva_osso", false):
+		var rect := get_viewport_rect()
+		if not rect.has_point(global_position):
+			queue_free()
+	elif global_position.y > get_viewport_rect().size.y + 120.0:
 		queue_free()
 
 

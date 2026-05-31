@@ -19,6 +19,8 @@ signal grenade_detonate_requested(owner_player: Player)
 signal mage_ice_requested(owner_player: Player, spawn_position: Vector2, initial_velocity: Vector2)
 signal mage_ice_detonate_requested(owner_player: Player)
 signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_t: float)
+signal bone_rain_requested(owner_player: Player)
+signal ult_status_changed(active: bool, time_left: float, super_phase: bool)
 
 @export var player_id: int = 1
 @export var move_speed: float = 260.0
@@ -137,6 +139,7 @@ var _shield_cd_left := 0.0
 var _frozen_left: float = 0.0
 var _frozen_anchor_pos: Vector2 = Vector2.ZERO
 var _frozen_prev: bool = false
+var _frozen_use_ice_visual: bool = true
 var _orig_body_modulate: Color = Color.WHITE
 var _orig_bow_modulate: Color = Color.WHITE
 var _sprint_indicator: Polygon2D = null
@@ -321,6 +324,10 @@ func try_block_arrow_with_shield(arrow: Arrow) -> bool:
 
 
 func _update_shield(delta: float) -> void:
+	if _frozen_left > 0.0:
+		if shield_visual != null:
+			shield_visual.visible = false
+		return
 	var max_c := _max_shield_charges()
 	if max_c <= 0:
 		if shield_visual != null:
@@ -543,17 +550,44 @@ func _get_hover_move_vector() -> Vector2:
 	return v
 
 
-func freeze_for(seconds: float) -> void:
+func freeze_for(seconds: float, use_ice_visual: bool = true) -> void:
 	if seconds <= 0.0:
 		return
 	_interrupt_sprint()
 	if _frozen_left <= 0.0:
 		_frozen_anchor_pos = global_position
+		_frozen_use_ice_visual = use_ice_visual
 	_frozen_left = maxf(_frozen_left, seconds)
 	velocity = Vector2.ZERO
 
 
+## Travamento no lugar sem visual de gelo (ex.: adversário durante ULT de luta).
+func stall_for(seconds: float) -> void:
+	_dash_time_left = 0.0
+	_hover_float_left = 0.0
+	_interrupt_sprint()
+	if shield_visual != null:
+		shield_visual.visible = false
+	freeze_for(seconds, false)
+
+
+func clear_stall() -> void:
+	if _frozen_left <= 0.0:
+		return
+	_frozen_left = 0.0
+	velocity = Vector2.ZERO
+	if _frozen_prev:
+		_frozen_prev = false
+		_set_frozen_visual(false)
+
+
+func is_stalled() -> bool:
+	return _frozen_left > 0.0
+
+
 func _set_frozen_visual(active: bool) -> void:
+	if active and not _frozen_use_ice_visual:
+		return
 	# "Filtro menos saturado": puxa para um azul pálido / gelo.
 	if _body_visual != null:
 		_body_visual.modulate = Color(0.75, 0.9, 1.0, 1.0) if active else _orig_body_modulate
@@ -744,6 +778,8 @@ func _update_aim_direction_gamepad(delta: float) -> void:
 
 
 func _update_aim(delta: float) -> void:
+	if _frozen_left > 0.0:
+		return
 	if not input_enabled:
 		_update_bow_visual()
 		return
@@ -1049,6 +1085,21 @@ func set_arena_horizontal_split(world_width: float, mid_x: float, half_gap_extra
 	_arena_world_width = world_width
 	_arena_mid_x = mid_x
 	_arena_half_gap_extra = maxf(0.0, half_gap_extra)
+
+
+## Intervalo X [min, max] da metade adversária (para spawn de chuva de ossos, etc.).
+func get_enemy_half_x_range() -> Vector2:
+	var w := _arena_world_width
+	var mid := _arena_mid_x
+	if w <= 0.0:
+		var rect := get_viewport_rect()
+		w = rect.size.x
+		mid = w * 0.5
+	var pad := arena_padding_x
+	var boundary := pad + _arena_half_gap_extra
+	if player_id == 1:
+		return Vector2(mid + boundary, w - pad)
+	return Vector2(pad, mid - boundary)
 
 
 func apply_pit_fall_penalty(arena_local_spawn: Vector2, damage: int) -> void:
