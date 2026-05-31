@@ -1,0 +1,171 @@
+================================================================================
+SISTEMA DE CÂMERA — O QUE FOI IMPLEMENTADO (v1)
+================================================================================
+Referência de arquitectura completa: docs/sistema_camera.md
+Sessão de design/implementação: agente "Sistema de Câmera" (Cursor, 2025)
+
+================================================================================
+1. RESUMO
+================================================================================
+
+Antes: viewport 1920×864 sem Camera2D; mundo = ecrã (1:1 com coordenadas).
+
+Agora: existe uma Camera2D fixa no centro do viewport, gerida exclusivamente
+por CameraSystem. Gameplay normal continua estático (sem follow, sem zoom
+dinâmico). Efeitos especiais passam por uma API única (shake, hit stop, flash).
+
+Piloto v1: feedback de câmera **apenas** na skill Feixe do Esqueleto (e Ongma,
+que herda EsqueletoPlayer) — disparo e impacto. Tiro carregado normal, buff G/Y,
+dash, KO, pit, outros personagens: **sem** câmera na v1.
+
+================================================================================
+2. FICHEIROS CRIADOS / ALTERADOS
+================================================================================
+
+NOVOS (levels/duel/camera/)
+  camera_system.gd          class_name CameraSystem — facade + FSM parcial
+  camera_system.tscn        CameraRig + Camera2D + CameraSystem + FlashOverlay
+  camera_effect_preset.gd   Resource tunável (shake / hit stop / flash)
+  camera_cinematic_sequence.gd   Stub para cinemáticas futuras
+  presets/
+    esqueleto_feixe_fire.tres   ao soltar o Feixe
+    esqueleto_feixe_hit.tres    quando Feixe acerta jogador
+
+INTEGRAÇÃO
+  levels/duel/main.tscn       instância CameraRig (PackedScene camera_system.tscn)
+  levels/duel/game.gd         @onready _camera_system; reset; presets Feixe
+  projectiles/arrow/arrow.gd  _shot_flags + set_shot_flags / get_shot_flags
+  characters/esqueleto_player.gd   flags.esqueleto_feixe no payload do Feixe
+
+DOCUMENTAÇÃO
+  docs/sistema_camera.md      arquitectura oficial, API, checklist v1
+
+================================================================================
+3. HIERARQUIA NA CENA (main.tscn)
+================================================================================
+
+Game (Node2D)
+  … arena, LeftPlayer, RightPlayer, projéteis …
+  CameraRig (instância de camera_system.tscn)
+    Camera2D          position (960, 432), ignore_rotation true, enabled
+    CameraSystem      script camera_system.gd, grupo "camera_system"
+    CameraFxLayer     CanvasLayer layer=5 (abaixo HUD layer 10)
+      FlashOverlay    ColorRect 1920×864, mouse_filter IGNORE
+
+Regra: personagens e projéteis NÃO tocam em Camera2D. Só CameraSystem altera
+offset (shake), zoom (futuro) e Engine.time_scale (hit stop).
+
+================================================================================
+4. API IMPLEMENTADA (CameraSystem)
+================================================================================
+
+FUNCIONA HOJE
+  request_shake(intensity, duration, curve?)
+  request_hit_stop(duration, scope=GLOBAL)   — PARTIAL = stub (warning)
+  request_flash(color, intensity, duration)  — tween ignore_time_scale
+  request_apply_preset(CameraEffectPreset)   — aplica shake+hit+flash do .tres
+  cancel_overlays() / cancel_dominant_effect() / reset_to_default()
+  get_dominant_state()
+
+STUBS (push_warning se chamados)
+  request_zoom, request_focus, request_focus_point, request_cinematic
+
+DETALHES DE COMPORTAMENTO
+  - Shake: Camera2D.offset aleatório por frame, envelope linear ou Curve;
+    novo shake só substitui se intensidade >= actual ou shake expirado.
+  - Hit stop: Engine.time_scale = 0; PROCESS_MODE_ALWAYS no CameraSystem;
+    acumula duração (max de pedidos); cancela se get_tree().paused.
+  - Flash: subida rápida + fade alpha no FlashOverlay; layer UI, não move mundo.
+  - _exit_tree: repõe time_scale; Game._exit_tree chama reset_to_default().
+
+================================================================================
+5. PRESETS v1 (valores actuais nos .tres)
+================================================================================
+
+esqueleto_feixe_fire.tres (disparo)
+  shake 10 px / 0,12 s
+  hit_stop 0,02 s
+  flash azul-claro, intensity 0,12 / 0,05 s
+
+esqueleto_feixe_hit.tres (impacto em jogador)
+  shake 14 px / 0,15 s
+  hit_stop 0,05 s
+  flash azul-claro, intensity 0,28 / 0,08 s
+
+Ajustar no inspector Godot ou editar os .tres; não hardcodar em personagem.
+
+================================================================================
+6. FLUXO DE INTEGRAÇÃO (FEIXE ESQUELETO)
+================================================================================
+
+1) esqueleto_player._disparar_feixe()
+     shots_requested com flags: { "esqueleto_feixe": true }
+
+2) Game._spawn_shots()
+     detecta esqueleto_feixe → spawna Arrow → _camera_apply_preset(FIRE)
+
+3) Game._spawn_one_arrow()
+     arrow.set_shot_flags(shot_flags)  — persiste tag na flecha
+
+4) Arrow acerta jogador → signal hit_player(victim, damage)
+
+5) Game._on_arrow_hit_player()
+     se get_shot_flags().esqueleto_feixe → _camera_apply_preset(HIT)
+
+Tiro carregado normal (shoot_requested sem flag): sem passo de câmera.
+
+================================================================================
+7. RESET / CICLO DE VIDA
+================================================================================
+
+  Game._start_vs_round()     → camera_system.reset_to_default()
+  Game._exit_tree()          → reset_to_default() (evita time_scale preso)
+  Pausa (tree paused)        → hit stop cancelado no _process do CameraSystem
+
+Palcos variantes (Tiered / Factory): mesma câmera fixa; staging_stages.txt
+actualizado — viewport continua 1920×864, câmera centrada.
+
+================================================================================
+8. FORA DO ESCOPO v1 (previsto em sistema_camera.md)
+================================================================================
+
+  - Câmera em hit normal de flecha, granada, pit (sem KO)
+  - Sequências cinematográficas genéricas (request_cinematic)
+  - Hit stop PARTIAL (só alguns nós)
+  - Autoload global de câmera (só existe no duelo)
+  - Personagens a chamar CameraSystem directamente (anti-padrão)
+  - KO por timeout ou pit sem zerar HP
+
+================================================================================
+8b. PÓS-v1 — KO DE ROUND (implementado)
+================================================================================
+
+  camera_ko_round_config.gd + presets/ko_round_default.tres
+  CameraSystem.play_ko_round_sequence(victim, winner, impact_style)
+  request_slow_motion, request_focus, request_zoom (mínimo)
+  Game._finish_vs_round_ko → sequência → banner
+  Treino: RunConfig.ko_camera_impact_style + menu ui/training_menu
+  Treino: matar boneco → mesma sequência + respawn (sem banner Vs)
+
+================================================================================
+9. COMO ADICIONAR FEEDBACK A OUTRA SKILL / PERSONAGEM
+================================================================================
+
+1) Criar levels/duel/camera/presets/meu_evento.tres (CameraEffectPreset)
+2) Em game.gd: preload + helper _camera_apply_preset ou chamar no hook certo
+3) Opcional: tag em shot_flags (como esqueleto_feixe) para impacto diferenciado
+4) NUNCA referenciar Camera2D em characters/ ou projectiles/
+5) Documentar linha em docs/sistema_camera.md (tabela piloto / integração)
+
+================================================================================
+10. ÍNDICE DE DOCS RELACIONADOS
+================================================================================
+
+  docs/sistema_camera.md        Arquitectura, FSM, API, checklist, diagrama
+  docs/handoff_projeto.txt      Visão geral do jogo (secção câmera)
+  docs/staging_stages.txt       Palcos + nota Camera2D fixa
+  docs/esqueleto_personagem_base.md   Skill Feixe (gameplay, não câmera)
+
+================================================================================
+FIM
+================================================================================

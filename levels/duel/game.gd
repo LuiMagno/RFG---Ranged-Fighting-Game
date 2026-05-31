@@ -19,6 +19,9 @@ const MAGO_PLAYER_SCRIPT := "res://characters/mago_player.gd"
 const ESQUELETO_PLAYER_SCRIPT := "res://characters/esqueleto_player.gd"
 const ONGMA_EPILEF_PLAYER_SCRIPT := "res://characters/ongma_epilef_player.gd"
 
+const CAM_ESQUELETO_FEIXE_FIRE := preload("res://levels/duel/camera/presets/esqueleto_feixe_fire.tres")
+const CAM_ESQUELETO_FEIXE_HIT := preload("res://levels/duel/camera/presets/esqueleto_feixe_hit.tres")
+
 const VS_ROUND_DURATION_S := 60.0
 const VS_ROUNDS_TO_WIN := 3
 
@@ -67,12 +70,15 @@ const STAGE_FACTORY_PIT_CD := 0.85
 @onready var _vs_round_banner_root: Control = $VsRoundBannerLayer/BannerRoot
 @onready var _vs_round_banner_label: Label = $VsRoundBannerLayer/BannerRoot/BannerCenter/RoundBannerLabel
 @onready var _vs_match_end_menu: VsMatchEndMenu = $VsMatchEndLayer
+@onready var _camera_system: CameraSystem = $CameraRig/CameraSystem
 
 # Flecha especial do arqueiro no ar (segundo disparo fragmenta).
 var _archer_carriers: Dictionary = {}
 var _active_grenades: Dictionary = {}
 var _active_ice: Dictionary = {}
 var _training_loop_running: bool = false
+var _training_ko_camera_active: bool = false
+var _training_p2_spawn: Vector2
 
 var _vs_p1_spawn: Vector2
 var _vs_p2_spawn: Vector2
@@ -97,6 +103,10 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	if _camera_system != null:
+		_camera_system.reset_to_default()
+	else:
+		Engine.time_scale = 1.0
 	RunConfig.clear_shoot_mouse_bindings_for_menu()
 
 
@@ -343,6 +353,7 @@ func _ready() -> void:
 
 	_vs_p1_spawn = left_player.position
 	_vs_p2_spawn = right_player.position
+	_training_p2_spawn = right_player.position
 	_apply_mode()
 	if RunConfig.mode == RunConfig.Mode.VS_PLAYER:
 		_vs_hud.visible = true
@@ -354,7 +365,9 @@ func _ready() -> void:
 func blocks_vs_pause_menu() -> bool:
 	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
 		return false
-	return _vs_match_end_menu_open or _vs_round_interstitial_active or _vs_resolving_round
+	return _vs_match_end_menu_open or _vs_round_interstitial_active or _vs_resolving_round or (
+		_camera_system != null and _camera_system.is_ko_sequence_running()
+	)
 
 
 func rematch_vs_after_post_game() -> void:
@@ -384,6 +397,8 @@ func _process(delta: float) -> void:
 func _start_vs_round() -> void:
 	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
 		return
+	if _camera_system != null:
+		_camera_system.reset_to_default()
 	_clear_vs_projectiles_and_carry_state()
 	left_player.prepare_for_vs_round_respawn(_vs_p1_spawn)
 	right_player.prepare_for_vs_round_respawn(_vs_p2_spawn)
@@ -520,6 +535,9 @@ func _finish_vs_round_ko(winner_id: int) -> void:
 	_vs_round_playing = false
 	left_player.input_enabled = false
 	right_player.input_enabled = false
+	var victim := left_player if left_player.hp <= 0 else right_player
+	var winner := right_player if winner_id == 2 else left_player
+	await _camera_play_ko_round(victim, winner)
 	await _show_round_banner_and_wait("Jogador %d vence o round!" % winner_id)
 	if winner_id == 1:
 		_p1_rounds_won += 1
@@ -1023,7 +1041,8 @@ func _on_grenade_detonate_requested(owner_player: Player) -> void:
 
 func _spawn_shots(owner_player: Player, shots: Array) -> void:
 	# shots is an Array[Dictionary] with optional keys:
-	# pos, vel, gravity, bounces, damage, size
+	# pos, vel, gravity, bounces, damage, size, flags
+	var feixe_fired := false
 	for s in shots:
 		if typeof(s) != TYPE_DICTIONARY:
 			continue
@@ -1034,7 +1053,11 @@ func _spawn_shots(owner_player: Player, shots: Array) -> void:
 		var damage: int = s.get("damage", -1)
 		var size: float = s.get("size", 1.0)
 		var shot_flags: Dictionary = s.get("flags", {})
+		if shot_flags.get("esqueleto_feixe", false):
+			feixe_fired = true
 		_spawn_one_arrow(owner_player, pos, vel, shot_flags, gravity, bounces, damage, size)
+	if feixe_fired:
+		_camera_apply_preset(CAM_ESQUELETO_FEIXE_FIRE)
 
 func _spawn_one_arrow(
 	owner_player: Player,
@@ -1093,6 +1116,8 @@ func _spawn_one_arrow(
 		size_multiplier = maxf(size_multiplier, 1.12)
 
 	arrow.setup(owner_player, initial_velocity, g, b, damage_override, size_multiplier, is_carrier, cluster_spread)
+	if not shot_flags.is_empty():
+		arrow.set_shot_flags(shot_flags)
 	if want_homing and arrow.has_method("set_homing_target"):
 		var target := left_player
 		if owner_player == left_player:
@@ -1101,7 +1126,7 @@ func _spawn_one_arrow(
 	if is_carrier:
 		_archer_carriers[owner_player] = arrow
 		arrow.tree_exiting.connect(_on_archer_carrier_tree_exiting.bind(owner_player, arrow))
-	arrow.hit_player.connect(_on_arrow_hit_player)
+	arrow.hit_player.connect(_on_arrow_hit_player.bind(arrow))
 
 func _spawn_p1_special(_owner_player: Player, _spawn_position: Vector2) -> void:
 	# Player handles special-buff state; this signal is kept for future UI/SFX hooks.
@@ -1172,9 +1197,54 @@ func _spawn_archer_split_fragments(owner_player: Player, at_pos: Vector2, cluste
 
 ## (Old special burst removed)
 
-func _on_arrow_hit_player(_victim: Player, _damage: int) -> void:
-	# Intentionally empty for now. Victim prints remaining HP in Player.take_damage().
-	pass
+func _on_arrow_hit_player(victim: Player, _damage: int, arrow: Arrow) -> void:
+	if arrow == null:
+		return
+	if victim != null and victim.hp <= 0:
+		return
+	if _vs_resolving_round or _training_ko_camera_active:
+		return
+	if not arrow.get_shot_flags().get("esqueleto_feixe", false):
+		return
+	_camera_apply_preset(CAM_ESQUELETO_FEIXE_HIT)
+
+
+func _camera_play_ko_round(victim: Player, winner: Player) -> void:
+	if _camera_system == null or victim == null or winner == null:
+		return
+	await _camera_system.play_ko_round_sequence(victim, winner, int(RunConfig.ko_camera_impact_style))
+
+
+func _try_training_ko_camera() -> void:
+	if _training_ko_camera_active or RunConfig.mode != RunConfig.Mode.TRAINING:
+		return
+	if right_player.hp > 0:
+		return
+	call_deferred("_run_training_ko_camera")
+
+
+func _run_training_ko_camera() -> void:
+	if _training_ko_camera_active or RunConfig.mode != RunConfig.Mode.TRAINING:
+		return
+	if right_player.hp > 0:
+		return
+	_training_ko_camera_active = true
+	right_player.input_enabled = false
+	left_player.input_enabled = false
+	await _camera_play_ko_round(right_player, left_player)
+	if _camera_system != null:
+		_camera_system.reset_to_default()
+	right_player.prepare_for_vs_round_respawn(_training_p2_spawn)
+	_on_right_hp_changed(right_player.hp)
+	right_player.input_enabled = true
+	left_player.input_enabled = true
+	_training_ko_camera_active = false
+
+
+func _camera_apply_preset(preset: CameraEffectPreset) -> void:
+	if _camera_system == null or preset == null:
+		return
+	_camera_system.request_apply_preset(preset)
 
 func _on_left_hp_changed(hp: int) -> void:
 	p1_hp_label.text = "P1 HP: %d" % hp
@@ -1185,6 +1255,7 @@ func _on_right_hp_changed(hp: int) -> void:
 	p2_hp_label.text = "P2 HP: %d" % hp
 	p2_hp_bar.value = hp
 	_check_vs_ko_after_hp_change()
+	_try_training_ko_camera()
 
 func _on_left_special_buff_changed(active: bool, uses_left: int, time_left: float) -> void:
 	var s1 := RunConfig.get_shoot_hint_token_for_player(1)

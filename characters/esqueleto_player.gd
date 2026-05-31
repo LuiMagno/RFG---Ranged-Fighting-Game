@@ -128,6 +128,7 @@ func _disparar_feixe() -> void:
 		"bounces": 0,
 		"damage": esqueleto_skill_feixe_dano,
 		"size": size,
+		"flags": {"esqueleto_feixe": true},
 	}]
 	shots_requested.emit(self, shots)
 	var f := esqueleto_skill_feixe_recoil_forca

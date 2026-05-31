@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="CameraKoRoundConfig" load_steps=2 format=3 uid="uid://dpreset_ko_round"]
+
+[ext_resource type="Script" path="res://levels/duel/camera/camera_ko_round_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+victim_zoom = 1.32
+victim_pan_duration = 0.4
+victim_hold = 0.35
+winner_zoom = 1.24
+winner_pan_duration = 0.5
+winner_hold = 1.0
+slow_motion_scale = 0.12
+slow_motion_duration = 0.85
+hit_stop_duration = 0.1
+hybrid_hit_stop_duration = 0.08
+hybrid_slow_scale = 0.15
+hybrid_slow_duration = 0.5
+impact_shake_intensity = 24.0
+impact_shake_duration = 0.2
+impact_flash_intensity = 0.4
+impact_flash_duration = 0.12
+winner_shake_intensity = 6.0
+winner_shake_duration = 0.1

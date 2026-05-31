@@ -25,6 +25,10 @@ No **Vs** ou no **Treino**, dá para escolher **teclado e mouse** ou **controle*
 
 Organização alinhada ao guia Godot em `docs/project_organization.rst` (`snake_case`, recursos junto às cenas em `projectiles/`).
 
+Documentação de onboarding / handoff completo: **`docs/handoff_projeto.txt`**
+
+Sistema de câmera: **`docs/sistema_camera.md`** · implementação v1: **`docs/camera_implementacao_v1.txt`**
+
 - `project.godot`: configurações do projeto + Input Map
 - `docs/.gdignore`: a pasta `docs/` não é importada pelo editor
 - `core/run_config.gd`: autoload (modo de jogo, personagens)

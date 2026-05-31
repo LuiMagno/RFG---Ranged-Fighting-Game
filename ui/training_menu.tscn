@@ -147,6 +147,20 @@ layout_mode = 2
 button_pressed = true
 text = "Boneco atira a cada 3 segundos"
 
+[node name="KoCameraRow" type="HBoxContainer" parent="Center/MainPanel/VBox/TrainingBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="KoCameraLabel" type="Label" parent="Center/MainPanel/VBox/TrainingBox/KoCameraRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Câmera KO (impacto)"
+vertical_alignment = 1
+
+[node name="OptKoCameraImpact" type="OptionButton" parent="Center/MainPanel/VBox/TrainingBox/KoCameraRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="SepMid" type="HSeparator" parent="Center/MainPanel/VBox"]
 layout_mode = 2
 

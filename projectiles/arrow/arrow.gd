@@ -23,6 +23,7 @@ var _explosion_scene := preload("res://projectiles/explosion/explosion.tscn")
 @export var max_lifetime := 6.0
 
 var _owner: Player
+var _shot_flags: Dictionary = {}
 var _life_left: float = 0.0
 @onready var _body_poly: Polygon2D = $Body
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
@@ -72,6 +73,14 @@ func setup(
 
 func get_owner_player() -> Player:
 	return _owner
+
+
+func set_shot_flags(flags: Dictionary) -> void:
+	_shot_flags = flags.duplicate()
+
+
+func get_shot_flags() -> Dictionary:
+	return _shot_flags
 
 
 func apply_grenade_explosion_boost(explosion_center: Vector2, multiply: int = 3) -> void:

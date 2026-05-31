@@ -2,7 +2,8 @@
 STAGING (PALCOS / STAGES) — RESUMO DO ESTADO ATUAL
 ================================================================================
 Projeto: Arco - Duelo de Arqueiros (Godot 4)
-Viewport da arena: 1920 x 864 px (sem Camera2D; mundo = ecrã)
+Viewport da arena: 1920 x 864 px. Camera2D fixa em (960, 432) via CameraRig
+                 (levels/duel/camera/camera_system.tscn) — ver docs/sistema_camera.md
 Última revisão: alinhado ao código em core/run_config.gd, levels/duel/game.gd,
                  levels/duel/arenas/tiered_abyss.*, levels/duel/arenas/old_factory.*
 

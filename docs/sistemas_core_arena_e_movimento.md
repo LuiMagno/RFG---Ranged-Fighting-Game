@@ -1,6 +1,6 @@
 # Sistemas centrais: arena, movimento e física “por baixo dos panos”
 
-Este texto descreve o **design técnico comum** do duelo 2D: dimensões, colisões, movimento, dash, pulo, limites da arena e fluxo de simulação. Os valores citados vêm de `project.godot`, `levels/duel/main.tscn` e `characters/player.gd` (salvo nota em contrário). Personagens específicos sobrescrevem sobretudo `_get_dash_stats()` e combate; ver [personagens/](personagens/) e [comparativo_personagens_vs_esqueleto.md](comparativo_personagens_vs_esqueleto.md).
+Este texto descreve o **design técnico comum** do duelo 2D: dimensões, colisões, movimento, dash, pulo, limites da arena e fluxo de simulação. **Câmera:** [sistema_camera.md](sistema_camera.md), [camera_implementacao_v1.txt](camera_implementacao_v1.txt). Os valores citados vêm de `project.godot`, `levels/duel/main.tscn` e `characters/player.gd` (salvo nota em contrário). Personagens específicos sobrescrevem sobretudo `_get_dash_stats()` e combate; ver [personagens/](personagens/) e [comparativo_personagens_vs_esqueleto.md](comparativo_personagens_vs_esqueleto.md).
 
 ---
 

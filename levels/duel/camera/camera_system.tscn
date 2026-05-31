@@ -1,0 +1,22 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8m4r1sys7duel"]
+
+[ext_resource type="Script" path="res://levels/duel/camera/camera_system.gd" id="1_cam_sys"]
+
+[node name="CameraRig" type="Node2D"]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(960, 432)
+ignore_rotation = true
+
+[node name="CameraSystem" type="Node" parent="."]
+script = ExtResource("1_cam_sys")
+
+[node name="CameraFxLayer" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="FlashOverlay" type="ColorRect" parent="CameraFxLayer"]
+visible = false
+mouse_filter = 2
+offset_right = 1920.0
+offset_bottom = 864.0
+color = Color(1, 1, 1, 0)

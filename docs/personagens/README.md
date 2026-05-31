@@ -1,5 +1,9 @@
 # Personagens — documentação
 
+**Handoff geral do projeto (agentes / onboarding):** [handoff_projeto.txt](../handoff_projeto.txt)
+
+**Câmera:** [sistema_camera.md](../sistema_camera.md) · [camera_implementacao_v1.txt](../camera_implementacao_v1.txt)
+
 Sistemas comuns do duelo (arena, dash, pulo, colisões, fluxo por frame): **[sistemas_core_arena_e_movimento.md](../sistemas_core_arena_e_movimento.md)**.
 
 Cada lutador tem uma **ficha** com a mesma estrutura conceitual do documento base do Esqueleto.
