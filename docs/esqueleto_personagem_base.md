@@ -128,19 +128,18 @@ Na prática é um disparo único via `shots_requested` com flags de dano/tamanho
 | Parâmetro | Valor |
 |-----------|--------|
 | Recarga | **38,0** s | `esqueleto_skill_ult_chuva_ossos_recarga_s` |
-| Fase **SUPER** (câmera + destaque) | **2,2** s | `esqueleto_skill_ult_chuva_ossos_fase_super_s` |
-| Zoom na fase SUPER | **1,42×** | `esqueleto_skill_ult_chuva_ossos_super_zoom` |
-| Duração da chuva (após SUPER) | **3,0** s | `esqueleto_skill_ult_chuva_ossos_duracao_s` |
+| Fase **acionamento + animação** (câmera + destaque) | **2,2** s | `esqueleto_skill_ult_chuva_ossos_fase_armagem_animacao_s` |
+| Zoom na animação | **1,42×** | `esqueleto_skill_ult_chuva_ossos_super_zoom` |
+| Duração do **efeito** (chuva, após animação) | **3,0** s | `esqueleto_skill_ult_chuva_ossos_duracao_s` |
 | Intervalo entre ossos | **0,14** s (~21 projéteis) | `esqueleto_skill_ult_chuva_ossos_intervalo_s` |
 | Dano por osso | **10** | `esqueleto_skill_ult_chuva_ossos_dano` |
 | Knockback por osso | **380** / **180** (X / Y) | `esqueleto_skill_ult_chuva_ossos_knockback_*` |
 | Velocidade de queda | **720** px/s (vertical, `g = 0`) | `esqueleto_skill_ult_chuva_ossos_velocidade_queda` |
 | Zona | Metade **inimiga** apenas | `Player.get_enemy_half_x_range()` + spawn em `Game._run_esqueleto_bone_rain` |
 | Brilho corporal | `Color(1.35, 1.15, 0.55)` | `esqueleto_skill_ult_chuva_ossos_modulate` |
-| Câmera SUPER | Foco + zoom + callout **SUPER!** + vignette | `CameraSystem.show_super_highlight` |
-| Chuva | Após SUPER; tremor leve; câmera repõe enquadramento | `Game._run_esqueleto_bone_rain` |
-| Adversário | Travado (`stall_for` + `input_enabled = false`) **só na fase SUPER**; livre na chuva | `Game._begin_ult_super_focus` / `_end_ult_super_focus` |
-| Quem ultou | Igual ao adversário durante SUPER (pose de especial) | idem |
+| Câmera (animação) | Foco + zoom + callout **SUPER!** + vignette | `CameraSystem.show_super_highlight` |
+| Efeito (chuva) | Após animação; tremor leve; câmera já repôs enquadramento | `Game._run_esqueleto_bone_rain` |
+| Ambos jogadores | Parados **só** em acionamento + animação; **livres** no efeito | `Game._begin_ult_armagem_animacao` / `enter_ult_efeito_phase` |
 | HUD | **SUPER!** → chuva (Xs) | `ult_status_changed(..., super_phase)` |
 | Bloqueios | Não activa durante feixe a carregar, tiro a carregar, buff G activo ou ULT já activa | `_tentar_ativar_ult_chuva_ossos` |
 

@@ -22,6 +22,9 @@ const ONGMA_EPILEF_PLAYER_SCRIPT := "res://characters/ongma_epilef_player.gd"
 const CAM_ESQUELETO_FEIXE_FIRE := preload("res://levels/duel/camera/presets/esqueleto_feixe_fire.tres")
 const CAM_ESQUELETO_FEIXE_HIT := preload("res://levels/duel/camera/presets/esqueleto_feixe_hit.tres")
 const CAM_ESQUELETO_ULT_CHUVA_ARM := preload("res://levels/duel/camera/presets/esqueleto_ult_chuva_arm.tres")
+const CAM_HIT_LIGHT := preload("res://levels/duel/camera/presets/hit_light.tres")
+const CLUTCH_HP_RATIO := 0.15
+const CLUTCH_AMBIENT_SHAKE := 2.5
 const BONE_RAIN_SPAWN_Y := 24.0
 
 const VS_ROUND_DURATION_S := 60.0
@@ -69,6 +72,8 @@ const STAGE_FACTORY_PIT_CD := 0.85
 @onready var _vs_p1_character_label: Label = $UI/VsHud/VsP1CharacterLabel
 @onready var _vs_p2_character_label: Label = $UI/VsHud/VsP2CharacterLabel
 @onready var _vs_score_label: Label = $UI/VsHud/VsScoreLabel
+@onready var _vs_intro_root: Control = $VsIntroLayer/Root
+@onready var _vs_intro_name_label: Label = $VsIntroLayer/Root/TopCenter/NameLabel
 @onready var _vs_round_banner_root: Control = $VsRoundBannerLayer/BannerRoot
 @onready var _vs_round_banner_label: Label = $VsRoundBannerLayer/BannerRoot/BannerCenter/RoundBannerLabel
 @onready var _vs_match_end_menu: VsMatchEndMenu = $VsMatchEndLayer
@@ -81,11 +86,12 @@ var _active_ice: Dictionary = {}
 var _bone_rain_gen_p1 := 0
 var _bone_rain_gen_p2 := 0
 var _bone_rain_running: Dictionary = {}
-var _ult_super_focus_active := false
-var _ult_super_focus_owner: Player = null
-var _ult_super_focus_opponent: Player = null
-var _ult_super_owner_input_saved := true
-var _ult_super_opponent_input_saved := true
+## ULT fases 1–2 (acionamento + animação): ambos parados até `enter_ult_efeito_phase`.
+var _ult_armagem_animacao_active := false
+var _ult_armagem_owner: Player = null
+var _ult_armagem_opponent: Player = null
+var _ult_armagem_owner_input_saved := true
+var _ult_armagem_opponent_input_saved := true
 var _p1_ult_active := false
 var _p1_ult_time_left := 0.0
 var _p1_ult_super_phase := false
@@ -105,6 +111,8 @@ var _vs_round_interstitial_active: bool = false
 var _vs_match_end_menu_open: bool = false
 var _p1_rounds_won: int = 0
 var _p2_rounds_won: int = 0
+var _vs_match_intro_done: bool = false
+var _bone_rain_ambient_active: bool = false
 
 var _tiered_arena_inst: Node2D
 var _factory_arena_inst: Node2D
@@ -378,6 +386,14 @@ func _ready() -> void:
 	if RunConfig.mode == RunConfig.Mode.VS_PLAYER:
 		_vs_hud.visible = true
 		_start_vs_round()
+		if not _vs_match_intro_done:
+			_vs_round_playing = false
+			left_player.input_enabled = false
+			right_player.input_enabled = false
+			await _play_vs_match_intro()
+			_vs_round_playing = true
+			left_player.input_enabled = true
+			right_player.input_enabled = true
 	else:
 		_vs_hud.visible = false
 
@@ -385,7 +401,7 @@ func _ready() -> void:
 func blocks_vs_pause_menu() -> bool:
 	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
 		return false
-	if _ult_super_focus_active:
+	if _ult_armagem_animacao_active:
 		return true
 	return _vs_match_end_menu_open or _vs_round_interstitial_active or _vs_resolving_round or (
 		_camera_system != null and _camera_system.is_ko_sequence_running()
@@ -397,6 +413,7 @@ func rematch_vs_after_post_game() -> void:
 	_vs_match_end_menu.close_menu()
 	_p1_rounds_won = 0
 	_p2_rounds_won = 0
+	_vs_match_intro_done = false
 	_start_vs_round()
 
 
@@ -421,6 +438,7 @@ func _start_vs_round() -> void:
 		return
 	if _camera_system != null:
 		_camera_system.reset_to_default()
+	_update_clutch_state()
 	_clear_vs_projectiles_and_carry_state()
 	cancel_bone_rain_for_player(left_player)
 	cancel_bone_rain_for_player(right_player)
@@ -432,6 +450,118 @@ func _start_vs_round() -> void:
 	_vs_round_playing = true
 	_refresh_vs_character_labels()
 	_update_vs_hud()
+
+func _play_vs_match_intro() -> void:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
+		return
+	if _vs_match_intro_done:
+		return
+	if _camera_system == null or _vs_intro_root == null or _vs_intro_name_label == null:
+		_vs_match_intro_done = true
+		return
+
+	_vs_round_interstitial_active = true
+	_vs_intro_root.visible = true
+	if _camera_system != null:
+		_camera_system.set_letterbox(true, 0.0)
+
+	var k1 := RunConfig.p1_character
+	var k2 := RunConfig.p2_character
+	var n1 := MenuThemeUtil.vs_character_name(k1)
+	var n2 := MenuThemeUtil.vs_character_name(k2)
+	var c1 := MenuThemeUtil.vs_character_accent_color(k1)
+	var c2 := MenuThemeUtil.vs_character_accent_color(k2)
+
+	var pan_in := 0.35
+	var hold := 0.65
+	var ret := 0.30
+	var zoom := Vector2.ONE * 1.22
+	match RunConfig.vs_intro_style:
+		RunConfig.VsIntroStyle.A_FAST:
+			pan_in = 0.25
+			hold = 0.45
+			ret = 0.25
+			zoom = Vector2.ONE * 1.18
+		RunConfig.VsIntroStyle.C_CINEMATIC:
+			pan_in = 0.50
+			hold = 0.90
+			ret = 0.35
+			zoom = Vector2.ONE * 1.28
+
+	var one_total := pan_in + hold + ret
+	var battle_callout_s := 0.75
+	_camera_system.request_hit_stop(one_total * 2.0 + battle_callout_s + 0.10)
+
+	await _vs_intro_focus_player(1, left_player, n1, c1, pan_in, hold, ret, zoom)
+	await _vs_intro_focus_player(2, right_player, n2, c2, pan_in, hold, ret, zoom)
+	await _vs_intro_battle_callout(battle_callout_s)
+
+	_vs_intro_root.visible = false
+	_vs_round_interstitial_active = false
+	_vs_match_intro_done = true
+	if _camera_system != null:
+		_camera_system.set_letterbox(false, 0.12)
+		_camera_system.reset_to_default()
+	_update_clutch_state()
+
+
+func _play_vs_round_short_intro(round_num: int) -> void:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER or round_num < 2:
+		return
+	_vs_round_interstitial_active = true
+	_vs_round_banner_label.text = "ROUND %d" % round_num
+	_vs_round_banner_root.visible = true
+	if _camera_system != null:
+		_camera_system.set_letterbox(true, 0.0)
+	await get_tree().create_timer(0.5, true, false, true).timeout
+	_vs_round_banner_root.visible = false
+	_vs_round_interstitial_active = false
+	if _camera_system != null:
+		_camera_system.set_letterbox(false, 0.12)
+
+
+func _vs_intro_focus_player(
+	player_id: int,
+	p: Player,
+	name_text: String,
+	accent: Color,
+	pan_in: float,
+	hold: float,
+	ret: float,
+	zoom: Vector2,
+) -> void:
+	if p == null or not is_instance_valid(p):
+		return
+
+	_vs_intro_name_label.text = "Jogador %d — %s" % [player_id, name_text]
+	_vs_intro_name_label.add_theme_color_override("font_color", accent)
+
+	_vs_intro_name_label.modulate = Color(1, 1, 1, 0)
+	_vs_intro_name_label.scale = Vector2(1.10, 1.10)
+	var tw := create_tween()
+	tw.set_ignore_time_scale(true)
+	tw.set_parallel(true)
+	tw.tween_property(_vs_intro_name_label, "modulate:a", 1.0, minf(0.18, pan_in)).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_vs_intro_name_label, "scale", Vector2.ONE, minf(0.22, pan_in)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+	_camera_system.request_focus_hold_return(p, pan_in, zoom, hold, ret, 28.0)
+	await get_tree().create_timer(pan_in + hold + ret, true, false, true).timeout
+
+
+func _vs_intro_battle_callout(duration_s: float) -> void:
+	if duration_s <= 0.0:
+		return
+	_vs_intro_name_label.text = "QUE COMECE A BATALHA!!!"
+	_vs_intro_name_label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
+	_vs_intro_name_label.modulate = Color(1, 1, 1, 0)
+	_vs_intro_name_label.scale = Vector2(1.25, 1.25)
+	var tw := create_tween()
+	tw.set_ignore_time_scale(true)
+	tw.tween_property(_vs_intro_name_label, "modulate:a", 1.0, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(_vs_intro_name_label, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(maxf(duration_s - 0.36, 0.05))
+	tw.tween_property(_vs_intro_name_label, "modulate:a", 0.0, 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	await get_tree().create_timer(duration_s, true, false, true).timeout
 
 
 func _clear_vs_projectiles_and_carry_state() -> void:
@@ -613,7 +743,17 @@ func _try_finish_match_or_continue() -> void:
 		var mw := 1 if _p1_rounds_won >= VS_ROUNDS_TO_WIN else 2
 		_open_vs_match_end(mw)
 	else:
+		var round_num := _p1_rounds_won + _p2_rounds_won + 1
 		_start_vs_round()
+		if round_num >= 2:
+			_vs_round_playing = false
+			left_player.input_enabled = false
+			right_player.input_enabled = false
+			await _play_vs_round_short_intro(round_num)
+			left_player.input_enabled = true
+			right_player.input_enabled = true
+			_vs_round_playing = true
+		_update_clutch_state()
 
 
 func _open_vs_match_end(match_winner_id: int) -> void:
@@ -654,7 +794,7 @@ func _training_dummy_loop_async() -> void:
 	_training_loop_running = false
 
 func _fire_training_dummy_shot() -> void:
-	if _ult_super_focus_active:
+	if _ult_armagem_animacao_active:
 		return
 	# Simple straight shot from dummy toward player 1.
 	var from := right_player.get_node("Muzzle") as Marker2D
@@ -1230,16 +1370,30 @@ func _spawn_archer_split_fragments(owner_player: Player, at_pos: Vector2, cluste
 
 ## (Old special burst removed)
 
+func _shot_flags_skip_light_hit(flags: Dictionary) -> bool:
+	return (
+		flags.get("esqueleto_feixe", false)
+		or flags.get("esqueleto_chuva_osso", false)
+		or flags.get("spike_shot", false)
+		or flags.get("spike_volley", false)
+		or flags.get("archer_split", false)
+	)
+
+
 func _on_arrow_hit_player(victim: Player, _damage: int, arrow: Arrow) -> void:
-	if arrow == null:
+	if arrow == null or victim == null:
 		return
-	if victim != null and victim.hp <= 0:
+	if victim.hp <= 0:
 		return
 	if _vs_resolving_round or _training_ko_camera_active:
 		return
-	if not arrow.get_shot_flags().get("esqueleto_feixe", false):
+	var flags := arrow.get_shot_flags()
+	if flags.get("esqueleto_feixe", false):
+		_camera_apply_preset(CAM_ESQUELETO_FEIXE_HIT, arrow.velocity)
 		return
-	_camera_apply_preset(CAM_ESQUELETO_FEIXE_HIT)
+	if _shot_flags_skip_light_hit(flags):
+		return
+	_camera_apply_preset(CAM_HIT_LIGHT, arrow.velocity)
 
 
 func _camera_play_ko_round(victim: Player, winner: Player) -> void:
@@ -1274,10 +1428,10 @@ func _run_training_ko_camera() -> void:
 	_training_ko_camera_active = false
 
 
-func _camera_apply_preset(preset: CameraEffectPreset) -> void:
+func _camera_apply_preset(preset: CameraEffectPreset, direction: Vector2 = Vector2.ZERO) -> void:
 	if _camera_system == null or preset == null:
 		return
-	_camera_system.request_apply_preset(preset)
+	_camera_system.request_apply_preset(preset, direction)
 
 
 func cancel_bone_rain_for_player(p: Player) -> void:
@@ -1287,41 +1441,48 @@ func cancel_bone_rain_for_player(p: Player) -> void:
 		_bone_rain_gen_p1 += 1
 	else:
 		_bone_rain_gen_p2 += 1
-	_end_ult_super_focus()
+	if _bone_rain_ambient_active:
+		_bone_rain_ambient_active = false
+		_refresh_ambient_shake()
+	_end_ult_armagem_animacao()
+
+
+func is_ult_armagem_animacao_active() -> bool:
+	return _ult_armagem_animacao_active
 
 
 func is_ult_super_focus_active() -> bool:
-	return _ult_super_focus_active
+	return is_ult_armagem_animacao_active()
 
 
-func _begin_ult_super_focus(owner: Player, opponent: Player, super_s: float) -> void:
-	_ult_super_focus_active = true
-	_ult_super_focus_owner = owner
-	_ult_super_focus_opponent = opponent
-	_ult_super_owner_input_saved = owner.input_enabled if owner != null else true
-	_ult_super_opponent_input_saved = opponent.input_enabled if opponent != null else true
+func _begin_ult_armagem_animacao(owner: Player, opponent: Player, duration_s: float) -> void:
+	_ult_armagem_animacao_active = true
+	_ult_armagem_owner = owner
+	_ult_armagem_opponent = opponent
+	_ult_armagem_owner_input_saved = owner.input_enabled if owner != null else true
+	_ult_armagem_opponent_input_saved = opponent.input_enabled if opponent != null else true
 	if owner != null:
 		owner.input_enabled = false
-		owner.stall_for(super_s)
+		owner.stall_for(duration_s)
 	if opponent != null:
 		opponent.input_enabled = false
-		opponent.stall_for(super_s)
+		opponent.stall_for(duration_s)
 	if _camera_system != null:
 		_camera_system.set_super_focus_active(true)
 
 
-func _end_ult_super_focus() -> void:
-	if _ult_super_focus_owner != null and is_instance_valid(_ult_super_focus_owner):
-		_ult_super_focus_owner.clear_stall()
-		if _ult_super_focus_active:
-			_ult_super_focus_owner.input_enabled = _ult_super_owner_input_saved
-	if _ult_super_focus_opponent != null and is_instance_valid(_ult_super_focus_opponent):
-		_ult_super_focus_opponent.clear_stall()
-		if _ult_super_focus_active:
-			_ult_super_focus_opponent.input_enabled = _ult_super_opponent_input_saved
-	_ult_super_focus_active = false
-	_ult_super_focus_owner = null
-	_ult_super_focus_opponent = null
+func _end_ult_armagem_animacao() -> void:
+	if _ult_armagem_owner != null and is_instance_valid(_ult_armagem_owner):
+		_ult_armagem_owner.clear_stall()
+		if _ult_armagem_animacao_active:
+			_ult_armagem_owner.input_enabled = _ult_armagem_owner_input_saved
+	if _ult_armagem_opponent != null and is_instance_valid(_ult_armagem_opponent):
+		_ult_armagem_opponent.clear_stall()
+		if _ult_armagem_animacao_active:
+			_ult_armagem_opponent.input_enabled = _ult_armagem_opponent_input_saved
+	_ult_armagem_animacao_active = false
+	_ult_armagem_owner = null
+	_ult_armagem_opponent = null
 	if _camera_system != null:
 		_camera_system.set_super_focus_active(false)
 		_camera_system.cancel_dominant_effect()
@@ -1347,37 +1508,44 @@ func _on_bone_rain_requested(owner: Player) -> void:
 	if _bone_rain_running.get(owner, false):
 		return
 	var ep := owner as EsqueletoPlayer
-	var super_s := ep.esqueleto_skill_ult_chuva_ossos_fase_super_s
+	var armagem_anim_s := ep.esqueleto_skill_ult_chuva_ossos_fase_armagem_animacao_s
 	var super_zoom := Vector2.ONE * ep.esqueleto_skill_ult_chuva_ossos_super_zoom
 	var opponent := _get_opponent_player(owner)
 	_bone_rain_running[owner] = true
 	var gen := _bone_rain_gen_for(owner)
-	_begin_ult_super_focus(owner, opponent, super_s)
+	# Fases 1–2: acionamento + animação (câmera) — ambos parados.
+	_begin_ult_armagem_animacao(owner, opponent, armagem_anim_s)
 	if _camera_system != null:
-		_camera_system.show_super_highlight(super_s)
+		_camera_system.show_super_highlight(armagem_anim_s)
 	_camera_apply_preset(CAM_ESQUELETO_ULT_CHUVA_ARM)
 	if _camera_system != null:
-		await _camera_system.play_ult_super_focus_hold(owner, super_s, super_zoom)
+		await _camera_system.play_ult_super_focus_sequence(
+			owner,
+			armagem_anim_s,
+			super_zoom,
+			ep.esqueleto_skill_ult_super_pan_fraction,
+			ep.esqueleto_skill_ult_super_hold_fraction,
+			ep.esqueleto_skill_ult_super_return_fraction,
+		)
 	else:
-		var super_ok := await _wait_bone_rain_phase(super_s, gen, owner)
+		var super_ok := await _wait_bone_rain_phase(armagem_anim_s, gen, owner)
 		if not super_ok:
 			_bone_rain_running[owner] = false
-			_end_ult_super_focus()
+			_end_ult_armagem_animacao()
 			return
 	if not is_instance_valid(owner) or _bone_rain_gen_for(owner) != gen or _vs_resolving_round:
 		_bone_rain_running[owner] = false
 		if _camera_system != null:
 			_camera_system.hide_super_highlight()
 			await _camera_system.return_to_arena_framing()
-		_end_ult_super_focus()
+		_end_ult_armagem_animacao()
 		return
+	# Fase 3: efeito (chuva) — liberta movimento dos dois.
 	if owner is EsqueletoPlayer:
-		(owner as EsqueletoPlayer).end_ult_super_phase_visual()
+		(owner as EsqueletoPlayer).enter_ult_efeito_phase()
 	if _camera_system != null:
 		_camera_system.hide_super_highlight()
-	_end_ult_super_focus()
-	if _camera_system != null:
-		await _camera_system.return_to_arena_framing()
+	_end_ult_armagem_animacao()
 	await _run_esqueleto_bone_rain(owner)
 	_bone_rain_running[owner] = false
 
@@ -1403,6 +1571,9 @@ func _run_esqueleto_bone_rain(owner: Player) -> void:
 	var duration := ep.esqueleto_skill_ult_chuva_ossos_duracao_s
 	var interval := maxf(0.04, ep.esqueleto_skill_ult_chuva_ossos_intervalo_s)
 	var time_left := duration
+	_bone_rain_ambient_active = true
+	if _camera_system != null:
+		_camera_system.set_ambient_shake(ep.esqueleto_skill_ult_chuva_ossos_shake_intensidade)
 	while time_left > 0.0 and not _vs_resolving_round and _bone_rain_gen_for(owner) == gen:
 		var xr := owner.get_enemy_half_x_range()
 		if xr.y > xr.x:
@@ -1413,13 +1584,10 @@ func _run_esqueleto_bone_rain(owner: Player) -> void:
 				Vector2(0.0, ep.esqueleto_skill_ult_chuva_ossos_velocidade_queda),
 				ep.esqueleto_skill_ult_chuva_ossos_dano,
 			)
-		if _camera_system != null:
-			_camera_system.request_shake(
-				ep.esqueleto_skill_ult_chuva_ossos_shake_intensidade,
-				ep.esqueleto_skill_ult_chuva_ossos_shake_duracao_s,
-			)
 		await get_tree().create_timer(interval, true, false, true).timeout
 		time_left -= interval
+	_bone_rain_ambient_active = false
+	_refresh_ambient_shake()
 
 
 func _spawn_bone_rain_projectile(
@@ -1444,16 +1612,50 @@ func _spawn_bone_rain_projectile(
 		0.85,
 	)
 
+func _player_in_clutch(p: Player) -> bool:
+	if p == null or p.max_hp <= 0 or p.hp <= 0:
+		return false
+	return float(p.hp) / float(p.max_hp) < CLUTCH_HP_RATIO
+
+
+func _should_show_clutch() -> bool:
+	if _vs_resolving_round or _vs_round_interstitial_active or _ult_armagem_animacao_active:
+		return false
+	if _camera_system != null and _camera_system.is_ko_sequence_running():
+		return false
+	return _player_in_clutch(left_player) or _player_in_clutch(right_player)
+
+
+func _refresh_ambient_shake() -> void:
+	if _camera_system == null:
+		return
+	if _bone_rain_ambient_active:
+		return
+	if _should_show_clutch():
+		_camera_system.set_ambient_shake(CLUTCH_AMBIENT_SHAKE)
+	else:
+		_camera_system.set_ambient_shake(0.0)
+
+
+func _update_clutch_state() -> void:
+	if _camera_system == null:
+		return
+	_camera_system.set_clutch_overlay(_should_show_clutch())
+	_refresh_ambient_shake()
+
+
 func _on_left_hp_changed(hp: int) -> void:
 	p1_hp_label.text = "P1 HP: %d" % hp
 	p1_hp_bar.value = hp
 	_check_vs_ko_after_hp_change()
+	_update_clutch_state()
 
 func _on_right_hp_changed(hp: int) -> void:
 	p2_hp_label.text = "P2 HP: %d" % hp
 	p2_hp_bar.value = hp
 	_check_vs_ko_after_hp_change()
 	_try_training_ko_camera()
+	_update_clutch_state()
 
 func _on_left_ult_status_changed(active: bool, time_left: float, super_phase: bool = false) -> void:
 	_p1_ult_active = active

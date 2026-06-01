@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CameraEffectPreset" load_steps=2 format=3 uid="uid://dpreset_hit_light"]
+
+[ext_resource type="Script" path="res://levels/duel/camera/camera_effect_preset.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+shake_intensity = 6.0
+shake_duration = 0.11
+hit_stop_duration = 0.03
+flash_color = Color(1, 1, 1, 1)
+flash_intensity = 0.15
+flash_duration = 0.06

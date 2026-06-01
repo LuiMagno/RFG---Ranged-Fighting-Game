@@ -20,11 +20,18 @@ Implementado em `levels/duel/camera/`. Integração **apenas** via `Game` → `C
 | Feixe — soltar carga | `presets/esqueleto_feixe_fire.tres` |
 | Feixe — impacto | `presets/esqueleto_feixe_hit.tres` |
 | Buff G/Y, dash | **Nenhuma** |
-| Outros personagens / KO / pit / granada | **Nenhuma** (v1) |
-| **KO de round (HP = 0, Vs)** | Sequência `play_ko_round_sequence` — ver § Piloto KO |
-| Timeout / pit | **Nenhuma** |
+| ULT Chuva — armagem/anim | `esqueleto_ult_chuva_arm.tres` + `play_ult_super_focus_sequence` |
+| ULT Chuva — fase efeito | `set_ambient_shake` contínuo leve (sem parar jogadores) |
+| **Hit leve (flecha genérica)** | `presets/hit_light.tres` — shake 6px, flash fraco, hit stop 0,03s |
+| **Clutch (HP &lt; 15%)** | `set_clutch_overlay` + `set_ambient_shake` ~2,5px |
+| **KO de round (HP = 0, Vs)** | `play_ko_round_sequence` + letterbox — ver § Piloto KO |
+| Intro partida (round 1) | `_play_vs_match_intro` + letterbox |
+| Intro rounds 2–3 (Vs) | `_play_vs_round_short_intro` — só `"ROUND N"` 0,5s |
+| Timeout / pit / granada | **Nenhuma** |
 
 Tag de projétil: `flags.esqueleto_feixe` em `esqueleto_player._disparar_feixe()` → repassada a `Arrow.set_shot_flags()`.
+
+**Hit leve:** em `Game._on_arrow_hit_player`, exceto flags `esqueleto_feixe`, `esqueleto_chuva_osso`, `spike_shot`, `spike_volley`, `archer_split` e golpe letal (`hp <= 0` após dano).
 
 ---
 
@@ -51,6 +58,24 @@ Tuning: [`presets/ko_round_default.tres`](levels/duel/camera/presets/ko_round_de
 
 **Golpe letal com Feixe:** preset `esqueleto_feixe_hit` **suprimido** — a sequência KO substitui.
 
+**Letterbox:** `set_letterbox(true/false)` durante intro Vs, intro curta de round e sequência KO (barras pretas em `CameraFxLayer`; arena não faz pan).
+
+---
+
+## Pacote FX v2 — APIs adicionais
+
+| Método | Uso |
+|--------|-----|
+| `request_shake(..., direction)` | Shake com viés para o lado do impacto (`direction` normalizado em runtime) |
+| `request_apply_preset(preset, direction)` | Preset + direção opcional (`CameraEffectPreset.shake_direction` fallback) |
+| `set_ambient_shake(intensity)` | Tremor contínuo em `Camera2D.offset` (clutch, chuva de ossos) — **não** altera `position` |
+| `set_letterbox(active, tween_s)` | Barras cinemáticas superior/inferior |
+| `set_clutch_overlay(active, tween_s)` | Vignette avermelhada em `ClutchOverlay` |
+
+**Prioridade do shake ambiente (Game):** chuva de ossos &gt; clutch &gt; 0 (`_bone_rain_ambient_active` + `_refresh_ambient_shake`).
+
+**Rematch Vs:** `rematch_vs_after_post_game()` repõe `_vs_match_intro_done = false` para intro longa no novo match.
+
 ---
 
 ## 1. Princípios
@@ -66,7 +91,7 @@ Tuning: [`presets/ko_round_default.tres`](levels/duel/camera/presets/ko_round_de
 ### Estado actual do código
 
 - `Camera2D` fixa em `(960, 432)` via `levels/duel/camera/camera_system.tscn` instanciada em `main.tscn`.
-- `CameraSystem` (grupo `"camera_system"`) expõe `request_shake`, `request_hit_stop`, `request_slow_motion`, `request_flash`, `request_apply_preset`, `request_focus`, `request_zoom`, `play_ko_round_sequence`.
+- `CameraSystem` (grupo `"camera_system"`) expõe `request_shake`, `request_hit_stop`, `request_slow_motion`, `request_flash`, `request_apply_preset`, `request_focus`, `request_zoom`, `play_ko_round_sequence`, `set_ambient_shake`, `set_letterbox`, `set_clutch_overlay`.
 - `Player.freeze_for()` congela **um jogador** (gelo), **independente** do hit stop global.
 - Stubs: `request_cinematic`, `HitStopScope.PARTIAL`.
 
@@ -175,7 +200,14 @@ func request_shake(
     intensity: float,
     duration: float,
     curve: Curve = null,
+    direction: Vector2 = Vector2.ZERO,
 ) -> void
+
+func request_apply_preset(preset: CameraEffectPreset, direction: Vector2 = Vector2.ZERO) -> void
+
+func set_ambient_shake(intensity: float) -> void
+func set_letterbox(active: bool, tween_s: float = 0.12) -> void
+func set_clutch_overlay(active: bool, tween_s: float = 0.2) -> void
 
 func request_hit_stop(
     duration: float,
@@ -267,7 +299,8 @@ Configuração inicial em `main.tscn`:
 - **Intensidade:** deslocamento máximo em pixels (ex.: 4–16 para hits leves; 20–40 para KO).
 - **Duração:** segundos de simulação (respeitar `Engine.time_scale` durante hit stop).
 - **Curva opcional:** `Curve` mapeia `t ∈ [0,1]` → multiplicador de amplitude (decaimento não-linear).
-- **Algoritmo v1:** offset pseudo-aleatório por frame com envelope de decaimento; alternativa: `FastNoiseLite` 2D para shake orgânico.
+- **Algoritmo v1:** offset pseudo-aleatório por frame com envelope de decaimento; com `direction` válido, mistura aleatório + viés (~60%) para rumble direcional.
+- **Ambiente:** `set_ambient_shake` usa seno/cosseno contínuo, composto com impulse one-shot no mesmo `offset`.
 - **Stacking:** novo shake com intensidade maior **substitui**; menor **ignora** ou **soma parcial** (config: `shake_stack_mode`).
 
 ```gdscript

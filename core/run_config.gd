@@ -14,6 +14,9 @@ enum InputScheme { KEYBOARD_MOUSE, GAMEPAD }
 ## Estilo de impacto da câmera no KO de round (testável no menu de treino).
 enum KoCameraImpactStyle { SLOW_MOTION, HIT_STOP, HYBRID }
 
+## Estilo da intro de partida no Vs (testável no menu de treino).
+enum VsIntroStyle { A_FAST, B_MEDIUM, C_CINEMATIC }
+
 var mode: Mode = Mode.VS_PLAYER
 
 var stage: Stage = Stage.NORMAL
@@ -21,6 +24,7 @@ var stage: Stage = Stage.NORMAL
 var training_dummy_shoot: bool = true
 var training_dummy_interval: float = 3.0
 var ko_camera_impact_style: KoCameraImpactStyle = KoCameraImpactStyle.HYBRID
+var vs_intro_style: VsIntroStyle = VsIntroStyle.B_MEDIUM
 
 # Personagem: 0 = pistoleiro, 1 = arqueiro, 2 = mago, 3 = esqueleto, 4 = ongma epilef (teste). Ver Game._assign_player_script.
 var p1_character: int = 0

@@ -161,6 +161,20 @@ vertical_alignment = 1
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="VsIntroRow" type="HBoxContainer" parent="Center/MainPanel/VBox/TrainingBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="VsIntroLabel" type="Label" parent="Center/MainPanel/VBox/TrainingBox/VsIntroRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Intro Vs"
+vertical_alignment = 1
+
+[node name="OptVsIntro" type="OptionButton" parent="Center/MainPanel/VBox/TrainingBox/VsIntroRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="SepMid" type="HSeparator" parent="Center/MainPanel/VBox"]
 layout_mode = 2
 
