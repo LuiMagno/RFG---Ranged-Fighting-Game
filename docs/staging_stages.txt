@@ -52,7 +52,7 @@ Geometria (levels/duel/main.tscn)
 
 Jogadores
   - Spawns default no .tscn: P1 ~(210, 672), P2 ~(1710, 672)
-  - collision_mask = 19 (layers 1 + 2 + 16; ver secção 6)
+  - collision_mask = 51 em palcos com variantes (1+2+16+32); Normal só usa subset (1+2)
   - set_arena_horizontal_split(1920, 960, 0) — sem faixa extra no meio
 
 Comportamento
@@ -176,9 +176,11 @@ Layer 1 (default «World»)
   - Chão/paredes/teto do main.tscn (Normal)
   - Continua ativo para paredes/teto no palco Tiered; GroundBody desligado no Tiered
 
-Layer 16 — ArenaPlatforms
-  - StaticBody2D de tiered_abyss.tscn e old_factory.tscn (plataformas + chão das ilhas)
-  - Jogadores: collision_mask inclui 16 → mask total 19 (1+2+16)
+Layer 16 — ArenaPlatforms (patamares flutuantes, one-way)
+Layer 32 — ArenaFloor (chão das ilhas nos palcos variantes; NÃO atravessa com «baixo»)
+  - Jogadores: collision_mask 51 (1+2+16+32)
+  - Segurar p1_down / p2_down em patamar (layer 16): desliga colisão com 16 ~0,18 s
+    (Player.platform_drop_through_seconds) para descer; chão layer 32 mantém-se
 
 Projéteis (não colidem com plataformas dos palcos variantes)
   - Flecha, fireball, ice_missile, homing_missile: mask 11 (layers 1, 2, 4)

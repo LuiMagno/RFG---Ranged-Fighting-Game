@@ -59,11 +59,21 @@ signal ult_status_changed(active: bool, time_left: float, super_phase: bool)
 @export var trajectory_points: int = 24
 @export var trajectory_step: float = 0.08
 @export var arena_padding_x: float = 36.0
+## Segurar «baixo» em patamar (layer ArenaPlatforms, não chão da arena): atravessa one-way ~este tempo.
+@export_range(0.05, 0.35, 0.01) var platform_drop_through_seconds: float = 0.18
+@export_range(1.0, 24.0, 1.0) var platform_drop_through_nudge_y: float = 10.0
 
 var _arena_world_width: float = 1920.0
 var _arena_mid_x: float = 960.0
 ## Metade da faixa extra em torno do meio (cada lado); 0 = comportamento legado só com `arena_padding_x`.
 var _arena_half_gap_extra: float = 0.0
+
+const _ARENA_PLATFORM_LAYER_BIT := 16
+const _ARENA_FLOOR_LAYER_BIT := 32
+## Índice da layer de física no editor (valor 16 = ArenaPlatforms).
+const _PHYSICS_LAYER_ARENA_PLATFORMS := 5
+
+var _platform_drop_through_left: float = 0.0
 ## Pulo durante o dash: `(v_dash + v_jump) * dash_jump_impulse_mul` — arco **diagonal forte**, pouca sensação de “só para cima”.
 @export_range(0.70, 1.30, 0.01) var dash_jump_vertical_mul: float = 0.80
 ## Peso do dash no eixo X antes da soma; valores mais altos = mais força na diagonal / frente.
@@ -474,10 +484,10 @@ func _physics_process(delta: float) -> void:
 			velocity.y = 0.0
 	
 	#função de wallslide.
-	if not is_on_floor() and is_on_wall():
+	if not is_on_floor() and _is_on_blocking_wall():
 		# Verifica se o jogador está tentando se mover contra a parede
 		var move_dir = _get_move_axis() if input_enabled else 0.0
-		var wall_normal = get_wall_normal()
+		var wall_normal := _get_blocking_wall_normal()
 		
 		# Se estiver caindo e empurrando o direcional contra a parede
 		if velocity.y > 0 and move_dir != 0 and sign(move_dir) != sign(wall_normal.x):
@@ -486,7 +496,7 @@ func _physics_process(delta: float) -> void:
 	if is_on_floor():
 		_jumps_left = max_jumps
 		_air_dash_used_this_airborne = false
-	elif not is_on_floor() and is_on_wall():
+	elif not is_on_floor() and _is_on_blocking_wall():
 		# Renovar dash aéreo ao encostar na parede (cooldown `_dash_cd_left` / `dash_min_gap_seconds` mantém-se).
 		_air_dash_used_this_airborne = false
 
@@ -507,6 +517,7 @@ func _physics_process(delta: float) -> void:
 	
 
 	_refresh_sprint_body_modulate()
+	_tick_platform_drop_through(delta)
 	move_and_slide()
 	_enforce_arena_half()
 	if is_on_floor():
@@ -689,10 +700,9 @@ func _apply_wall_jump_visual_flash(delta: float) -> void:
 
 
 func _get_wall_jump_away_sign() -> float:
-	if is_on_wall_only():
-		var wn := get_wall_normal()
-		if absf(wn.x) >= 0.1:
-			return signf(wn.x)
+	var wn := _get_blocking_wall_normal()
+	if absf(wn.x) >= 0.1:
+		return signf(wn.x)
 	var from := global_position + Vector2(0.0, wall_detect_vertical_offset)
 	var d_left := _wall_ray_hit_dist(from, Vector2.LEFT)
 	var d_right := _wall_ray_hit_dist(from, Vector2.RIGHT)
@@ -707,10 +717,34 @@ func _get_wall_jump_away_sign() -> float:
 	return 0.0
 
 
+func _wall_ray_collision_mask() -> int:
+	return collision_mask & (~_ARENA_PLATFORM_LAYER_BIT)
+
+
+func _collider_is_arena_platform(collider: Object) -> bool:
+	return collider is CollisionObject2D and ((collider as CollisionObject2D).collision_layer & _ARENA_PLATFORM_LAYER_BIT) != 0
+
+
+func _is_on_blocking_wall() -> bool:
+	return _get_blocking_wall_normal().length_squared() > 0.01
+
+
+func _get_blocking_wall_normal() -> Vector2:
+	for i in range(get_slide_collision_count()):
+		var col := get_slide_collision(i)
+		var n := col.get_normal()
+		if absf(n.x) < 0.55:
+			continue
+		if _collider_is_arena_platform(col.get_collider()):
+			continue
+		return n
+	return Vector2.ZERO
+
+
 func _wall_ray_hit_dist(from: Vector2, dir: Vector2) -> float:
 	var to := from + dir.normalized() * wall_detect_distance
 	var pq := PhysicsRayQueryParameters2D.create(from, to)
-	pq.collision_mask = collision_mask
+	pq.collision_mask = _wall_ray_collision_mask()
 	pq.exclude = [get_rid()]
 	var space := get_world_2d().direct_space_state
 	var r := space.intersect_ray(pq)
@@ -1004,7 +1038,45 @@ func _hover_down_just_pressed() -> bool:
 func _down_action_just_pressed() -> bool:
 	if player_id == 1:
 		return Input.is_action_just_pressed("p1_down")
-	return Input.is_action_just_pressed("p2_down")	
+	return Input.is_action_just_pressed("p2_down")
+
+
+func _down_action_pressed() -> bool:
+	if player_id == 1:
+		return Input.is_action_pressed("p1_down")
+	return Input.is_action_pressed("p2_down")
+
+
+func _tick_platform_drop_through(delta: float) -> void:
+	if _platform_drop_through_left > 0.0:
+		_platform_drop_through_left = maxf(0.0, _platform_drop_through_left - delta)
+	var dropping := _platform_drop_through_left > 0.0
+	if (
+		not dropping
+		and input_enabled
+		and is_on_floor()
+		and _down_action_pressed()
+		and _is_standing_on_arena_platform()
+	):
+		_platform_drop_through_left = platform_drop_through_seconds
+		dropping = true
+		velocity.y = maxf(velocity.y, platform_drop_through_nudge_y)
+	set_collision_mask_value(_PHYSICS_LAYER_ARENA_PLATFORMS, not dropping)
+
+
+func _is_standing_on_arena_platform() -> bool:
+	if not is_on_floor():
+		return false
+	for i in range(get_slide_collision_count()):
+		var col := get_slide_collision(i)
+		if col.get_normal().y >= -0.5:
+			continue
+		var collider := col.get_collider()
+		if collider is CollisionObject2D:
+			var layer := (collider as CollisionObject2D).collision_layer
+			if (layer & _ARENA_PLATFORM_LAYER_BIT) != 0 and (layer & _ARENA_FLOOR_LAYER_BIT) == 0:
+				return true
+	return false
 
 func _backward_action_just_pressed() -> bool:
 	if player_id == 1:

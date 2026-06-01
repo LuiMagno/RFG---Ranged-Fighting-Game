@@ -624,7 +624,7 @@ text = "Voltar"
 
 [node name="LeftPlayer" type="CharacterBody2D" parent="." unique_id=1571489207]
 position = Vector2(210, 672)
-collision_mask = 19
+collision_mask = 51
 script = ExtResource("3_2lq0l")
 
 [node name="Body" type="Polygon2D" parent="LeftPlayer" unique_id=37644554]
@@ -683,7 +683,7 @@ polygon = PackedVector2Array(0, -38, 32, -30, 34, 0, 32, 30, 0, 38)
 
 [node name="RightPlayer" type="CharacterBody2D" parent="." unique_id=60473321]
 position = Vector2(1710, 672)
-collision_mask = 19
+collision_mask = 51
 script = ExtResource("5_archer")
 player_id = 2
 

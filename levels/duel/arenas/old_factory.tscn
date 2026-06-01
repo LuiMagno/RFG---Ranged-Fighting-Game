@@ -36,7 +36,7 @@ color = Color(0.85, 0.62, 0.12, 0.55)
 
 [node name="FloorL" type="StaticBody2D" parent="."]
 position = Vector2(380, 822)
-collision_layer = 16
+collision_layer = 32
 collision_mask = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FloorL"]
@@ -52,7 +52,7 @@ color = Color(0.32, 0.3, 0.28, 1)
 
 [node name="FloorR" type="StaticBody2D" parent="."]
 position = Vector2(1540, 822)
-collision_layer = 16
+collision_layer = 32
 collision_mask = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="FloorR"]

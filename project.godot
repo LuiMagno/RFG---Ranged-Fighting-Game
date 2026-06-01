@@ -74,3 +74,4 @@ p1_down={
 [layer_names]
 
 2d_physics/layer5="ArenaPlatforms"
+2d_physics/layer6="ArenaFloor"
