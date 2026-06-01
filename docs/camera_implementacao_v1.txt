@@ -137,15 +137,14 @@ actualizado — viewport continua 1920×864, câmera centrada.
   - KO por timeout ou pit sem zerar HP
 
 ================================================================================
-8b. PÓS-v1 — KO DE ROUND (implementado)
+8b. PÓS-v1 — ver camera_implementacao_v2.txt
 ================================================================================
 
-  camera_ko_round_config.gd + presets/ko_round_default.tres
-  CameraSystem.play_ko_round_sequence(victim, winner, impact_style)
-  request_slow_motion, request_focus, request_zoom (mínimo)
-  Game._finish_vs_round_ko → sequência → banner
-  Treino: RunConfig.ko_camera_impact_style + menu ui/training_menu
-  Treino: matar boneco → mesma sequência + respawn (sem banner Vs)
+  KO de round, intro Vs, ULT câmera, hit leve, clutch, letterbox, shake
+  direcional/ambiente, etc. — documentação completa em:
+
+  docs/camera_implementacao_v2.txt
+  (sessão agente transcript d49aa44a-f88e-46de-be37-f7ff6fbd8eb3)
 
 ================================================================================
 9. COMO ADICIONAR FEEDBACK A OUTRA SKILL / PERSONAGEM

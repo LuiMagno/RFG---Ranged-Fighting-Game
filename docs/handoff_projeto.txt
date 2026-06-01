@@ -135,10 +135,13 @@ Resumo de kits (detalhe em docs/personagens/*.md):
   - Fim de partida Vs: vs_match_end_menu.gd.
 
 4.7 Câmera (levels/duel/camera/)
-  - Camera2D fixa (960, 432); efeitos só via CameraSystem (grupo "camera_system").
-  - v1: shake + hit stop + flash no Feixe do Esqueleto (presets .tres).
-  - Integração centralizada em game.gd; Arrow.set_shot_flags para tag esqueleto_feixe.
-  - Ver docs/sistema_camera.md e docs/camera_implementacao_v1.txt.
+  - Camera2D fixa (960, 432); viewport 1920×864 (não 1080p).
+  - CameraSystem: shake (direcional + ambiente), hit stop, slow mo, flash, focus,
+    zoom, letterbox, clutch overlay, sequências KO / intro Vs / ULT SUPER.
+  - Eventos: Feixe, hit leve genérico, KO round (A/B/C), intro match P1→P2,
+    ROUND 2/3, ULT chuva (armagem+anim vs efeito), clutch HP<15%.
+  - Integração só em game.gd; shot_flags na Arrow (ex.: esqueleto_feixe).
+  - Ver docs/sistema_camera.md, camera_implementacao_v1.txt, camera_implementacao_v2.txt.
 
 ================================================================================
 5. INPUT E CONTROLES
@@ -279,7 +282,8 @@ docs/ tem .gdignore — não importado pelo editor Godot.
 ================================================================================
 
   docs/handoff_projeto.txt           Visão geral (este ficheiro)
-  docs/camera_implementacao_v1.txt   Câmera v1 implementada (Feixe Esqueleto)
+  docs/camera_implementacao_v1.txt   Câmera v1 (Feixe Esqueleto)
+  docs/camera_implementacao_v2.txt   Câmera v2 (KO, intro Vs, ULT, FX pacote)
   docs/sistema_camera.md             Arquitectura CameraSystem + API
   docs/staging_stages.txt            Palcos, layers, pits, checklist novo stage
   docs/esqueleto_personagem_base.md  Referência de balanceamento + política
@@ -324,8 +328,8 @@ Testes manuais sugeridos:
     esqueleto_player.gd é autoritativo.
   - README.md menciona Area2D para flecha; código usa CharacterBody2D (arrow.gd).
   - ground_pound (_start_ground_pound_dash) é WIP/experimental (vy fixo 2000).
-  - Câmera v1: só Feixe Esqueleto; KO/hit genérico ainda sem feedback — ver
-    docs/camera_implementacao_v1.txt.
+  - Câmera: ver docs/camera_implementacao_v2.txt (KO, intro Vs, ULT, hit leve,
+    clutch, letterbox). Pit/timeout/granada global ainda sem preset dedicado.
   - Vs: 3 rounds to win, 60 s/round; training dummy atira se training_dummy_shoot.
   - Export preset presente (export_presets.cfg) para builds futuras.
 

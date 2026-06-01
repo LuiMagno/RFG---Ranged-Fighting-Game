@@ -2,7 +2,7 @@
 
 **Handoff geral do projeto (agentes / onboarding):** [handoff_projeto.txt](../handoff_projeto.txt)
 
-**Câmera:** [sistema_camera.md](../sistema_camera.md) · [camera_implementacao_v1.txt](../camera_implementacao_v1.txt)
+**Câmera:** [sistema_camera.md](../sistema_camera.md) · [v1](../camera_implementacao_v1.txt) · [v2 mudanças recentes](../camera_implementacao_v2.txt)
 
 Sistemas comuns do duelo (arena, dash, pulo, colisões, fluxo por frame): **[sistemas_core_arena_e_movimento.md](../sistemas_core_arena_e_movimento.md)**.
 

@@ -27,7 +27,7 @@ Organização alinhada ao guia Godot em `docs/project_organization.rst` (`snake_
 
 Documentação de onboarding / handoff completo: **`docs/handoff_projeto.txt`**
 
-Sistema de câmera: **`docs/sistema_camera.md`** · implementação v1: **`docs/camera_implementacao_v1.txt`**
+Sistema de câmera: **`docs/sistema_camera.md`** · v1 Feixe: **`docs/camera_implementacao_v1.txt`** · v2 (KO, intro Vs, ULT, FX): **`docs/camera_implementacao_v2.txt`**
 
 - `project.godot`: configurações do projeto + Input Map
 - `docs/.gdignore`: a pasta `docs/` não é importada pelo editor

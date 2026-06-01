@@ -1,6 +1,6 @@
 # Sistema de Câmera — Arquitetura Oficial
 
-**Implementação v1 (o que já está no código):** [camera_implementacao_v1.txt](camera_implementacao_v1.txt)
+**Implementação v1 (Feixe):** [camera_implementacao_v1.txt](camera_implementacao_v1.txt) · **Mudanças recentes (v2):** [camera_implementacao_v2.txt](camera_implementacao_v2.txt)
 
 Documento de design e referência de implementação. Alinhado a Godot **4.6**, viewport **1920 × 864** (proporção **2,22 : 1**), cena de duelo `levels/duel/main.tscn` e coordenação em `levels/duel/game.gd`.
 

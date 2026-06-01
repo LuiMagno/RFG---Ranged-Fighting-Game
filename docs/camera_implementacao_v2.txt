@@ -1,0 +1,273 @@
+================================================================================
+SISTEMA DE CÂMERA — MUDANÇAS RECENTES (v2)
+================================================================================
+Sessão: agente "Sistema de Câmera" (Cursor)
+Transcript: d49aa44a-f88e-46de-be37-f7ff6fbd8eb3
+
+Documentação de arquitectura: docs/sistema_camera.md
+Baseline v1 (Feixe): docs/camera_implementacao_v1.txt
+
+================================================================================
+1. RESUMO DA SESSÃO
+================================================================================
+
+A partir da v1 (só Feixe: shake/hit stop/flash), a sessão expandiu o CameraSystem
+para cinemáticas temporárias (focus, zoom, slow motion), sequências de KO e Vs,
+ULT do Esqueleto, e um pacote de polish de combate (hit leve, clutch, letterbox,
+shake direcional/ambiente).
+
+Viewport do jogo: 1920×864 (NÃO 1920×1080). Centro da câmera: (960, 432).
+
+================================================================================
+2. CRONOLOGIA (O QUE FOI FEITO)
+================================================================================
+
+2.1 Confirmação v1
+  - Validou que Feixe fire/hit, reset em round/exit, sem Camera2D em characters/.
+
+2.2 KO de round (Vs + teste no treino)
+  - play_ko_round_sequence: foco vítima → foco vencedor → banner de round.
+  - Estilos A/B/C (RunConfig.ko_camera_impact_style) no menu Treinamento.
+  - camera_ko_round_config.gd + presets/ko_round_default.tres (tuning intenso).
+  - Golpe letal com Feixe NÃO aplica esqueleto_feixe_hit (KO substitui).
+  - APIs novas: request_slow_motion, request_focus, request_zoom,
+    play_ko_round_sequence.
+
+2.3 Tuning KO mais intenso
+  - Zoom vítima 1.32 / vencedor 1.24; slow ~0.12× / 0.85 s; holds maiores.
+
+2.4 ULT Esqueleto — câmera SUPER (Chuva de ossos)
+  - play_ult_super_focus_sequence: 2,2 s reais com hit stop global.
+  - Fases em ~45% pan + 30% hold + 25% return (exports no esqueleto_player).
+  - Transição CUBIC EASE_IN_OUT; preset esqueleto_ult_chuva_arm.tres.
+  - Nomenclatura em 3 fases (ver §4).
+
+2.5 ULT — regras de input por fase
+  - Acionamento + animação: AMBOS parados (input + stall).
+  - Efeito (chuva): AMBOS livres (skills e movimento).
+  - Game: _begin_ult_armagem_animacao / enter_ult_efeito_phase.
+
+2.6 Intro de partida Vs (só início do match)
+  - P1 foco + nome grande → P2 → "QUE COMECE A BATALHA!!!"
+  - VsIntroLayer em main.tscn; estilos A/B/C (RunConfig.vs_intro_style).
+  - Hit stop durante intro; letterbox.
+
+2.7 Intro curta rounds 2 e 3
+  - Banner "ROUND N" ~0,5 s; sem refazer P1/P2.
+  - rematch_vs_after_post_game repõe _vs_match_intro_done para intro longa.
+
+2.8 Pacote FX v2
+  - hit_light.tres + hook em _on_arrow_hit_player (flecha genérica).
+  - Clutch HP < 15%: ClutchOverlay + ambient shake ~2,5 px.
+  - Chuva (efeito): set_ambient_shake contínuo (sem shake por osso).
+  - Letterbox em intro Vs, intro curta e KO.
+  - Shake direcional (viés ~60% para direction / velocity).
+
+================================================================================
+3. FICHEIROS PRINCIPAIS
+================================================================================
+
+levels/duel/camera/
+  camera_system.gd          — API completa + KO + ULT focus + ambient/letterbox/clutch
+  camera_system.tscn        — FlashOverlay, SuperHighlight, ClutchOverlay, LetterboxOverlay
+  camera_effect_preset.gd   — + shake_direction (opcional)
+  camera_ko_round_config.gd
+  camera_cinematic_sequence.gd  (stub)
+  presets/
+    esqueleto_feixe_fire.tres
+    esqueleto_feixe_hit.tres
+    ko_round_default.tres
+    esqueleto_ult_chuva_arm.tres
+    hit_light.tres
+
+levels/duel/
+  game.gd                   — Todos os hooks de integração
+  main.tscn                 — VsIntroLayer, CameraRig
+
+core/run_config.gd
+  KoCameraImpactStyle { SLOW_MOTION, HIT_STOP, HYBRID }
+  VsIntroStyle { A_FAST, B_MEDIUM, C_CINEMATIC }
+
+ui/training_menu.*
+  OptionButton "Câmera KO (impacto)" A/B/C
+  OptionButton "Intro Vs" A/B/C
+
+characters/esqueleto_player.gd
+  ULT: fase_armagem_animacao_s, frações pan/hold/return SUPER
+  is_ult_em_armagem_ou_animacao() / is_ult_efeito_chuva_ativo()
+
+================================================================================
+4. ULT CHUVA DE OSSOS — NOMENCLATURA (3 FASES)
+================================================================================
+
+| Fase | Nome no código/doc | Duração (padrão) | Jogadores |
+|------|--------------------|------------------|-----------|
+| 1 | Acionamento | instantâneo | Parados (início) |
+| 2 | Armagem + animação | 2,2 s (fase_armagem_animacao_s) | Ambos parados |
+| 3 | Efeito (chuva) | 3,0 s (duracao_s) | Ambos livres |
+
+Export: esqueleto_skill_ult_chuva_ossos_fase_armagem_animacao_s
+         (antes fase_super_s)
+
+Helpers:
+  is_ult_em_armagem_ou_animacao()  — bloqueia outras skills no Esqueleto
+  is_ult_efeito_chuva_ativo()      — fase da chuva
+  enter_ult_efeito_phase()         — Game chama ao fim da câmera SUPER
+
+Game:
+  _begin_ult_armagem_animacao / _end_ult_armagem_animacao
+  is_ult_super_focus_active() — alias (pausa/HUD)
+
+================================================================================
+5. KO DE ROUND
+================================================================================
+
+Gatilho: Game._finish_vs_round_ko (Vs, HP = 0)
+Treino: matar boneco → mesma sequência + respawn (sem banner)
+
+Fluxo:
+  1. input off, _vs_resolving_round
+  2. await play_ko_round_sequence(victim, winner, ko_camera_impact_style)
+  3. banner "Jogador N vence o round!"
+  4. reset em _start_vs_round()
+
+Estilos (menu Treinamento → Câmera KO):
+  A — Slow motion:  time_scale ~0.12, ~0.85 s real
+  B — Hit stop:     time_scale 0, ~0.10 s
+  C — Híbrido:      hit stop ~0.08 s → slow ~0.15× ~0.50 s
+
+Tuning (ko_round_default.tres):
+  victim_zoom 1.32, winner_zoom 1.24
+  impact shake 24 px / 0.20 s, flash intensity 0.4
+
+Pan: zoom + position clampados (arena = viewport 1920×864).
+
+================================================================================
+6. INTRO Vs
+================================================================================
+
+6.1 Intro longa (só 1ª partida do match)
+  _play_vs_match_intro() — flag _vs_match_intro_done
+  P1 nome+accent → P2 → "QUE COMECE A BATALHA!!!" (~0.75 s)
+  request_hit_stop cobre tempo total; letterbox on
+  Ritmos vs_intro_style: A rápido / B médio / C cinemático (zoom ~1.18–1.28)
+
+6.2 Intro curta (rounds 2 e 3)
+  _play_vs_round_short_intro(round_num) — banner "ROUND N", 0.5 s, letterbox
+
+6.3 Rematch
+  rematch_vs_after_post_game: _vs_match_intro_done = false → intro longa de novo
+
+================================================================================
+7. PACOTE FX v2 (COMBATE / POLISH)
+================================================================================
+
+7.1 Hit leve (presets/hit_light.tres)
+  shake 6 px / ~0.11 s, hit_stop 0.03 s, flash branco fraco
+  Game._on_arrow_hit_player + direction = arrow.velocity
+  EXCLUI flags: esqueleto_feixe, esqueleto_chuva_osso, spike_shot,
+                spike_volley, archer_split
+  EXCLUI: hp <= 0 (KO), _vs_resolving_round, training KO camera
+
+7.2 Clutch (HP < 15% max_hp)
+  Game._update_clutch_state em health_changed
+  set_clutch_overlay + set_ambient_shake(2.5)
+  Suprimido: KO sequence, interstitial, ult armagem/anim
+  Prioridade ambient: chuva > clutch > 0
+
+7.3 Chuva — fase efeito
+  _bone_rain_ambient_active + set_ambient_shake(intensidade export ~3.0)
+  Sem request_shake por spawn de osso
+
+7.4 Letterbox
+  set_letterbox(true/false) — barras ~72 px em CameraFxLayer
+  Activo: intro longa, intro ROUND N, play_ko_round_sequence
+  reset_to_default() limpa letterbox
+
+7.5 Shake direcional
+  request_shake / request_apply_preset(..., direction)
+  Viés _SHAKE_DIRECTION_BIAS ~0.6
+  KO: winner→victim no impacto; hit leve: arrow.velocity
+
+================================================================================
+8. API CameraSystem (ESTADO ACTUAL)
+================================================================================
+
+IMPLEMENTADO:
+  request_shake, request_hit_stop, request_slow_motion, request_flash
+  request_apply_preset(preset, direction)
+  request_focus, request_focus_point, request_zoom
+  request_focus_hold_return
+  play_ko_round_sequence
+  play_ult_super_focus_sequence (play_ult_super_focus_hold = compat)
+  set_ambient_shake, set_letterbox, set_clutch_overlay
+  show_super_highlight / hide_super_highlight / set_super_focus_active
+  cancel_overlays, cancel_dominant_effect, reset_to_default
+  is_ko_sequence_running
+
+STUBS:
+  request_cinematic, HitStopScope.PARTIAL
+
+================================================================================
+9. MENU DE TREINO (TUNING SEM CÓDIGO)
+================================================================================
+
+  Câmera KO (impacto)     → RunConfig.ko_camera_impact_style (vale no Vs)
+  Intro Vs               → RunConfig.vs_intro_style (vale no Vs)
+
+Valores persistem ao iniciar treino; Vs lê o mesmo RunConfig ao entrar no duelo
+(configurar no treino antes de ir ao Vs se quiser testar estilos).
+
+================================================================================
+10. FORA DO ESCOPO (AINDA)
+================================================================================
+
+  - Hit stop PARTIAL (só vítima)
+  - request_cinematic genérico
+  - KO por timeout / pit sem zerar HP
+  - Granada / explosão global
+  - Match win (3º round) com sequência extra
+  - Skip intro (Start/B)
+  - Intro em todo round (hoje: longa só match start; curta rounds 2–3)
+
+================================================================================
+11. CHECKLIST DE TESTE
+================================================================================
+
+Ver secção equivalente na conversa do agente ou testar:
+
+  [ ] Hit leve pistoleiro/arqueiro + direção do shake
+  [ ] Feixe / chuva / spike / split sem hit leve
+  [ ] Intro Vs round 1 + QUE COMECE A BATALHA + letterbox
+  [ ] ROUND 2 / ROUND 3 (~0.5 s) sem P1/P2
+  [ ] Rematch repõe intro longa
+  [ ] Clutch < 15% HP; some ao curar
+  [ ] ULT: parados na animação; livres na chuva
+  [ ] KO Vs + letterbox + estilos A/B/C no treino
+  [ ] reset_to_default sem letterbox/time_scale preso
+
+================================================================================
+12. COMMITS SUGERIDOS (CONVERSÃO)
+================================================================================
+
+feat(camera): sequência KO de round com focus na vítima/vencedor, slow motion
+              e estilos A/B/C no menu de treino
+
+feat(camera): hit leve genérico, shake direcional e ambiente, letterbox e clutch,
+              intro curta nos rounds 2–3, tremor na chuva de ossos, letterbox/KO
+
+(Pode unificar num único commit se ainda não commitou.)
+
+================================================================================
+13. ÍNDICE DE DOCS
+================================================================================
+
+  docs/sistema_camera.md           Arquitectura + tabelas de eventos (actualizado v2)
+  docs/camera_implementacao_v1.txt Feixe piloto v1
+  docs/camera_implementacao_v2.txt Este ficheiro
+  docs/esqueleto_personagem_base.md ULT fases + exports
+  docs/handoff_projeto.txt           Secção 4.7 câmera
+
+================================================================================
+FIM
+================================================================================
