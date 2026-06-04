@@ -78,8 +78,33 @@ static func fill_input_scheme_option(ob: OptionButton) -> void:
 
 static func fill_joy_device_option(ob: OptionButton) -> void:
 	ob.clear()
-	for i in 8:
-		ob.add_item("Controle nº %d" % i, i)
+	var pads: PackedInt32Array = Input.get_connected_joypads()
+	if pads.is_empty():
+		for i in 8:
+			ob.add_item("Controle nº %d" % i, i)
+		return
+	var sorted: Array = []
+	for d in pads:
+		sorted.append(int(d))
+	sorted.sort()
+	for d in sorted:
+		ob.add_item("Controle nº %d" % d, d)
+
+
+## Seleciona pelo índice SDL (`item` id), não pelo índice da linha no OptionButton.
+static func select_joy_device_option(ob: OptionButton, device_id: int) -> void:
+	for i in ob.item_count:
+		if ob.get_item_id(i) == device_id:
+			ob.select(i)
+			return
+	if ob.item_count > 0:
+		ob.select(0)
+
+
+static func get_joy_device_option_id(ob: OptionButton) -> int:
+	if ob.item_count <= 0:
+		return 0
+	return ob.get_item_id(ob.selected)
 
 
 ## Índice = Player.CharacterKind (0..4). Usado no HUD do Vs.

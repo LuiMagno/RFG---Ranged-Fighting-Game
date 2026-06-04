@@ -102,7 +102,7 @@ func _sync_settings_controls() -> void:
 	var imax := maxi(_opt_p1_class.item_count - 1, 0)
 	_opt_p1_class.select(clampi(RunConfig.p1_character, 0, imax))
 	_opt_p1_scheme.select(clampi(int(RunConfig.p1_input_scheme), 0, maxi(_opt_p1_scheme.item_count - 1, 0)))
-	_opt_p1_device.select(clampi(RunConfig.p1_joy_device, 0, maxi(_opt_p1_device.item_count - 1, 0)))
+	MenuThemeUtil.select_joy_device_option(_opt_p1_device, RunConfig.p1_joy_device)
 	_opt_p1_device.visible = RunConfig.p1_input_scheme == RunConfig.InputScheme.GAMEPAD
 	_chk_dummy.set_pressed_no_signal(RunConfig.training_dummy_shoot)
 
@@ -120,7 +120,8 @@ func _on_p1_scheme_selected(index: int) -> void:
 
 
 func _on_p1_device_selected(index: int) -> void:
-	RunConfig.p1_joy_device = index
+	RunConfig.p1_joy_device = _opt_p1_device.get_item_id(index)
+	RunConfig.clamp_joy_devices_for_local_multiplayer()
 	_push_input_map_to_game()
 
 

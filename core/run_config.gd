@@ -103,6 +103,25 @@ func ensure_valid_input_scheme_pair() -> void:
 		p2_input_scheme = InputScheme.GAMEPAD
 
 
+## Ajusta índices SDL (`p1_joy_device` / `p2_joy_device`) aos comandos ligados e evita os dois jogadores no mesmo device.
+func clamp_joy_devices_for_local_multiplayer() -> void:
+	var pads: Array = Input.get_connected_joypads()
+	if pads.is_empty():
+		return
+	if p1_input_scheme == InputScheme.GAMEPAD and not (p1_joy_device in pads):
+		p1_joy_device = int(pads[0])
+	if p2_input_scheme == InputScheme.GAMEPAD and not (p2_joy_device in pads):
+		p2_joy_device = int(pads[pads.size() - 1]) if pads.size() > 1 else int(pads[0])
+	if p1_input_scheme != InputScheme.GAMEPAD or p2_input_scheme != InputScheme.GAMEPAD:
+		return
+	if p1_joy_device == p2_joy_device and pads.size() > 1:
+		for d in pads:
+			var di := int(d)
+			if di != p1_joy_device:
+				p2_joy_device = di
+				break
+
+
 ## Garante `ui_*` com teclado + qualquer comando (device -1) para navegação nos menus.
 func ensure_ui_gamepad_navigation() -> void:
 	if _ui_gamepad_navigation_ready:

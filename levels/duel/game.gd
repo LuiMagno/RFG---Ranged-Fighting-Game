@@ -809,6 +809,7 @@ func _ensure_input_map() -> void:
 	# Some environments/projects fail to import InputMap from project.godot on first load.
 	# To keep this prototype runnable, we ensure required actions exist at runtime.
 	RunConfig.ensure_valid_input_scheme_pair()
+	RunConfig.clamp_joy_devices_for_local_multiplayer()
 	_ensure_move_vertical_actions("p1")
 	_ensure_move_vertical_actions("p2")
 	_ensure_ground_pound_action_exists("p1")
@@ -840,8 +841,8 @@ func _ensure_input_map() -> void:
 	if RunConfig.p2_input_scheme == RunConfig.InputScheme.KEYBOARD_MOUSE:
 		_ensure_p2_keyboard_mouse_shared_layout()
 
-	_strip_joypad_events_from_actions(_player_action_names("p1"))
-	_strip_joypad_events_from_actions(_player_action_names("p2"))
+	_strip_all_joypad_events_for_player_prefix("p1")
+	_strip_all_joypad_events_for_player_prefix("p2")
 	if RunConfig.p1_input_scheme == RunConfig.InputScheme.GAMEPAD:
 		_strip_keyboard_events_from_actions(_player_action_names("p1"))
 		_strip_mouse_button_from_action("p1_shoot", MOUSE_BUTTON_LEFT)
@@ -965,6 +966,15 @@ func _strip_joypad_events_from_actions(action_names: Array) -> void:
 			InputMap.action_erase_event(an, ev)
 
 
+## Remove qualquer evento de comando em ações `p1_*` / `p2_*` (inclui legado `device: -1` do project.godot).
+func _strip_all_joypad_events_for_player_prefix(prefix: String) -> void:
+	var needle := prefix + "_"
+	for action_name in InputMap.get_actions():
+		var an := String(action_name)
+		if an.begins_with(needle):
+			_strip_joypad_events_from_actions([an])
+
+
 func _joy_btn(dev: int, button: JoyButton) -> InputEventJoypadButton:
 	var j := InputEventJoypadButton.new()
 	j.device = dev
@@ -981,6 +991,7 @@ func _joy_motion(dev: int, axis: JoyAxis, axis_value: float) -> InputEventJoypad
 
 
 func _add_gamepad_mappings_for_player(prefix: String, device: int) -> void:
+	# Layout idêntico para qualquer índice SDL (0, 1, …): cada evento usa `device` explícito.
 	var p := prefix + "_"
 	# Movimento: stick esquerdo + D-pad horizontal (doc: get_axis em left/right).
 	InputMap.action_add_event(p + "left", _joy_motion(device, JOY_AXIS_LEFT_X, -1.0))

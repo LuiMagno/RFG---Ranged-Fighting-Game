@@ -36,7 +36,7 @@ func _ready() -> void:
 	var smax := maxi(opt_stage.item_count - 1, 0)
 	opt_stage.select(clampi(int(RunConfig.stage), 0, smax))
 	opt_p1_scheme.select(clampi(int(RunConfig.p1_input_scheme), 0, maxi(opt_p1_scheme.item_count - 1, 0)))
-	opt_p1_device.select(clampi(RunConfig.p1_joy_device, 0, maxi(opt_p1_device.item_count - 1, 0)))
+	MenuThemeUtil.select_joy_device_option(opt_p1_device, RunConfig.p1_joy_device)
 	opt_ko_camera_impact.select(clampi(int(RunConfig.ko_camera_impact_style), 0, maxi(opt_ko_camera_impact.item_count - 1, 0)))
 	opt_vs_intro.select(clampi(int(RunConfig.vs_intro_style), 0, maxi(opt_vs_intro.item_count - 1, 0)))
 	_refresh_p1_device_visible()
@@ -86,7 +86,7 @@ func _on_p1_scheme_selected(index: int) -> void:
 
 
 func _on_p1_device_selected(index: int) -> void:
-	RunConfig.p1_joy_device = index
+	RunConfig.p1_joy_device = opt_p1_device.get_item_id(index)
 
 
 func _on_ko_camera_impact_selected(index: int) -> void:
@@ -104,7 +104,8 @@ func _on_start_pressed() -> void:
 	RunConfig.p1_character = opt_p1_class.selected
 	RunConfig.stage = opt_stage.selected as RunConfig.Stage
 	RunConfig.p1_input_scheme = opt_p1_scheme.selected as RunConfig.InputScheme
-	RunConfig.p1_joy_device = opt_p1_device.selected
+	RunConfig.p1_joy_device = MenuThemeUtil.get_joy_device_option_id(opt_p1_device)
+	RunConfig.clamp_joy_devices_for_local_multiplayer()
 	RunConfig.mode = RunConfig.Mode.TRAINING
 	RunConfig.training_dummy_shoot = chk_dummy_shoot.button_pressed
 	RunConfig.training_dummy_interval = 3.0

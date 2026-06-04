@@ -32,9 +32,10 @@ signal ult_status_changed(active: bool, time_left: float, super_phase: bool)
 @export_range(0.0, 0.25, 0.01) var dash_min_gap_seconds: float = 0.06
 ## Se true: só permite **1 dash no ar** por sequência aérea (reset ao tocar o chão).
 @export var limit_air_dash_to_one: bool = true
-## Corrida pós-dash: quando o dash termina, manter “pra frente” dentro desta janela ativa sprint.
+## Corrida pós-dash: quando o dash termina, segurar “pra frente” **de forma contínua** na janela ativa sprint.
 @export var post_dash_sprint_enabled: bool = true
 @export_range(0.0, 0.5, 0.01) var post_dash_sprint_window_seconds: float = 0.18
+@export_range(0.0, 0.5, 0.01) var post_dash_sprint_hold_seconds: float = 0.12
 @export_range(1.05, 1.75, 0.01) var sprint_speed_multiplier: float = 1.55
 ## Multiplicador de cor no corpo / arco enquanto a corrida está ativa (sobre `modulate` original).
 @export var sprint_visual_body_mult: Color = Color(1.2, 1.05, 0.72, 1.0)
@@ -164,6 +165,7 @@ var _forward_only_hold_s: float = 0.0
 var _wall_jump_used_this_airborne: bool = false
 var _air_dash_used_this_airborne: bool = false
 var _post_dash_sprint_window_left: float = 0.0
+var _post_dash_forward_hold_s: float = 0.0
 var _wall_jump_flash_left: float = 0.0
 var _wall_jump_move_grace_left: float = 0.0
 var _wall_jump_free_axis_sign: float = 0.0
@@ -404,8 +406,8 @@ func _physics_process(delta: float) -> void:
 	if _frozen_left <= 0.0:
 		_update_double_tap_forward_movement()
 		_update_sprint_from_forward_hold(delta)
-		_update_post_dash_sprint()
-		if sprint_mechanic_enabled and _sprint_active and not _is_holding_forward_only():
+		_update_post_dash_sprint(delta)
+		if _sprint_active and not _is_holding_forward_only():
 			_interrupt_sprint()
 
 	if _control_lock_left > 0.0 and _dash_time_left > 0.0:
@@ -879,19 +881,29 @@ func _interrupt_sprint() -> void:
 	_sprint_active = false
 	_forward_only_hold_s = 0.0
 	_post_dash_sprint_window_left = 0.0
+	_post_dash_forward_hold_s = 0.0
 
 
-func _update_post_dash_sprint() -> void:
+func _update_post_dash_sprint(delta: float) -> void:
 	if not post_dash_sprint_enabled:
 		return
 	if not input_enabled:
 		return
 	if _dash_time_left > 0.0 or _hover_float_left > 0.0 or _control_lock_left > 0.0:
+		_post_dash_forward_hold_s = 0.0
 		return
 	if _post_dash_sprint_window_left <= 0.0:
+		_post_dash_forward_hold_s = 0.0
 		return
+	var hold_need := post_dash_sprint_hold_seconds
+	if hold_need <= 0.0:
+		hold_need = sprint_forward_hold_seconds
 	if _is_holding_forward_only():
-		_sprint_active = true
+		_post_dash_forward_hold_s += delta
+		if _post_dash_forward_hold_s >= hold_need:
+			_sprint_active = true
+	else:
+		_post_dash_forward_hold_s = 0.0
 
 
 func _update_sprint_from_forward_hold(delta: float) -> void:

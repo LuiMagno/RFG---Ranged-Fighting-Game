@@ -51,8 +51,8 @@ func _ready() -> void:
 func _sync_input_controls_from_run_config() -> void:
 	opt_p1_scheme.select(clampi(int(RunConfig.p1_input_scheme), 0, maxi(opt_p1_scheme.item_count - 1, 0)))
 	opt_p2_scheme.select(clampi(int(RunConfig.p2_input_scheme), 0, maxi(opt_p2_scheme.item_count - 1, 0)))
-	opt_p1_device.select(clampi(RunConfig.p1_joy_device, 0, maxi(opt_p1_device.item_count - 1, 0)))
-	opt_p2_device.select(clampi(RunConfig.p2_joy_device, 0, maxi(opt_p2_device.item_count - 1, 0)))
+	MenuThemeUtil.select_joy_device_option(opt_p1_device, RunConfig.p1_joy_device)
+	MenuThemeUtil.select_joy_device_option(opt_p2_device, RunConfig.p2_joy_device)
 	_refresh_device_controls_enabled()
 
 
@@ -74,7 +74,7 @@ func _on_p1_scheme_selected(index: int) -> void:
 
 
 func _on_p1_device_selected(index: int) -> void:
-	RunConfig.p1_joy_device = index
+	RunConfig.p1_joy_device = opt_p1_device.get_item_id(index)
 
 
 func _on_p2_scheme_selected(index: int) -> void:
@@ -84,7 +84,7 @@ func _on_p2_scheme_selected(index: int) -> void:
 
 
 func _on_p2_device_selected(index: int) -> void:
-	RunConfig.p2_joy_device = index
+	RunConfig.p2_joy_device = opt_p2_device.get_item_id(index)
 
 
 func _on_back_pressed() -> void:
@@ -98,7 +98,8 @@ func _on_start_pressed() -> void:
 	RunConfig.p1_input_scheme = opt_p1_scheme.selected as RunConfig.InputScheme
 	RunConfig.p2_input_scheme = opt_p2_scheme.selected as RunConfig.InputScheme
 	RunConfig.ensure_valid_input_scheme_pair()
-	RunConfig.p1_joy_device = opt_p1_device.selected
-	RunConfig.p2_joy_device = opt_p2_device.selected
+	RunConfig.p1_joy_device = MenuThemeUtil.get_joy_device_option_id(opt_p1_device)
+	RunConfig.p2_joy_device = MenuThemeUtil.get_joy_device_option_id(opt_p2_device)
+	RunConfig.clamp_joy_devices_for_local_multiplayer()
 	RunConfig.mode = RunConfig.Mode.VS_PLAYER
 	get_tree().change_scene_to_file("res://levels/duel/main.tscn")

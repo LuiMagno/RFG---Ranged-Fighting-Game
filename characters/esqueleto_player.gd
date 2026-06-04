@@ -12,6 +12,15 @@ class_name EsqueletoPlayer
 ## Tiro base: mínimo 1 s entre disparos após soltar o carregamento (`MIN_SHOOT_COOLDOWN_S`).
 
 const MIN_SHOOT_COOLDOWN_S := 1.0
+const ESQUELETO_SPRITE_FRAMES_PATH := "res://art/skeleton/esqueleto_sprite_frames.tres"
+## Alinha os pés ao retângulo de colisão (~40×90); sprite base 32×32.
+const BODY_SPRITE_OFFSET := Vector2(0, 12)
+const BODY_SPRITE_SCALE := Vector2(2.8, 2.8)
+const BODY_MOVE_SPEED_THRESHOLD := 18.0
+## Parado / ULT parado; no ar usa `BODY_JUMP_ANIM`.
+const BODY_IDLE_ANIM := "idle_smoking"
+const BODY_DASH_ANIM := "dash"
+const BODY_JUMP_ANIM := "jump"
 
 ## Skill Esqueleto — Feixe (`*_grenade`)
 @export var esqueleto_skill_feixe_recarga_s: float = 4.25
@@ -61,6 +70,12 @@ var _esqueleto_chuva_ossos_ativa := false
 var _esqueleto_ult_armagem_animacao_restante_s := 0.0
 var _esqueleto_chuva_ossos_tempo_restante_s := 0.0
 
+var _body_sprite: AnimatedSprite2D
+var _orig_sprite_modulate: Color = Color.WHITE
+## Bloqueia troca para idle/walk enquanto hurt/attack/death/dash/jump não terminam.
+var _sprite_action_lock := ""
+var _esqueleto_was_on_floor := true
+
 
 func is_esqueleto() -> bool:
 	return true
@@ -69,6 +84,25 @@ func is_esqueleto() -> bool:
 func _ready() -> void:
 	shoot_cooldown = maxf(MIN_SHOOT_COOLDOWN_S, shoot_cooldown)
 	super._ready()
+	_setup_esqueleto_body_sprite()
+
+
+func _physics_process(delta: float) -> void:
+	super._physics_process(delta)
+	_sync_esqueleto_body_sprite(delta)
+
+
+func take_damage(amount: int) -> void:
+	var was_alive := hp > 0
+	super.take_damage(amount)
+	if was_alive and hp <= 0:
+		_esqueleto_play_action_once("death")
+
+
+func apply_knockback(knockback: Vector2) -> void:
+	super.apply_knockback(knockback)
+	if hp > 0 and _sprite_action_lock != "death":
+		_esqueleto_play_action_once("hurt")
 
 
 func _extra_timer_tick(delta: float) -> void:
@@ -108,6 +142,12 @@ func _dash_blocked_by_grenade_skill() -> bool:
 
 func uses_dash_action_button() -> bool:
 	return true
+
+
+func start_dash_with_direction(dir_sign: float) -> void:
+	super.start_dash_with_direction(dir_sign)
+	if _dash_time_left > 0.0 and hp > 0:
+		_esqueleto_begin_dash_sprite()
 
 
 func _special_uses_left() -> int:
@@ -245,6 +285,7 @@ func _disparar_feixe() -> void:
 		"flags": {"esqueleto_feixe": true},
 	}]
 	shots_requested.emit(self, shots)
+	_esqueleto_play_action_once("attack")
 	var f := esqueleto_skill_feixe_recoil_forca
 	var pitch := deg_to_rad(esqueleto_skill_feixe_recoil_angulo_acima_horizontal_graus)
 	var back_x_sign := -signf(dir.x) if absf(dir.x) > 0.02 else (-1.0 if player_id == 1 else 1.0)
@@ -324,6 +365,7 @@ func _process_combat(delta: float) -> void:
 			var v0 := _compute_launch_velocity(speed)
 			shoot_requested.emit(self, muzzle.global_position, v0, {})
 			_apply_recoil(v0, recoil_normal)
+			_esqueleto_play_action_once("attack")
 			_cooldown_left = shoot_cooldown
 			_hide_charge_trajectory_ui()
 	else:
@@ -346,5 +388,253 @@ func _extra_reset_for_vs_round() -> void:
 	self.modulate = Color(1, 1, 1)
 	_last_forward_tap_time_s = -100.0
 	_last_back_tap_time_s = -100.0
+	_esqueleto_was_on_floor = true
 	special_buff_changed.emit(false, 0, 0.0)
 	ult_status_changed.emit(false, 0.0, false)
+	_reset_esqueleto_sprite_after_round()
+
+
+func _setup_esqueleto_body_sprite() -> void:
+	_body_sprite = get_node_or_null("BodySprite") as AnimatedSprite2D
+	if _body_sprite == null:
+		return
+	if not ResourceLoader.exists(ESQUELETO_SPRITE_FRAMES_PATH):
+		push_warning("Esqueleto: recurso não encontrado: %s" % ESQUELETO_SPRITE_FRAMES_PATH)
+		_show_esqueleto_polygon_fallback()
+		return
+	var frames := load(ESQUELETO_SPRITE_FRAMES_PATH) as SpriteFrames
+	if frames == null or _esqueleto_pick_locomotion_anim(frames) == "":
+		push_warning(
+			"Esqueleto: falha ao carregar SpriteFrames em %s — confira os PNG em art/skeleton/."
+			% ESQUELETO_SPRITE_FRAMES_PATH
+		)
+		_show_esqueleto_polygon_fallback()
+		return
+	_body_sprite.sprite_frames = frames
+	_body_sprite.visible = true
+	_body_sprite.offset = BODY_SPRITE_OFFSET
+	_body_sprite.scale = BODY_SPRITE_SCALE
+	_body_sprite.flip_h = _esqueleto_default_sprite_flip_h()
+	_orig_sprite_modulate = _body_sprite.modulate
+	if _body_visual != null:
+		_body_visual.visible = false
+	if _bow_visual != null:
+		_bow_visual.visible = false
+	if not _body_sprite.animation_finished.is_connected(_on_esqueleto_sprite_animation_finished):
+		_body_sprite.animation_finished.connect(_on_esqueleto_sprite_animation_finished)
+	_sprite_action_lock = ""
+	_body_sprite.play(_resolve_esqueleto_anim_name(frames, BODY_IDLE_ANIM))
+
+
+func _show_esqueleto_polygon_fallback() -> void:
+	if _body_sprite != null:
+		_body_sprite.visible = false
+	if _body_visual != null:
+		_body_visual.visible = true
+
+
+func _reset_esqueleto_sprite_after_round() -> void:
+	_sprite_action_lock = ""
+	if _body_sprite == null or not _body_sprite.visible or _body_sprite.sprite_frames == null:
+		return
+	_body_sprite.play(_resolve_esqueleto_anim_name(_body_sprite.sprite_frames, BODY_IDLE_ANIM))
+
+
+func _esqueleto_anim_has_frames(frames: SpriteFrames, anim_name: String) -> bool:
+	return frames.has_animation(anim_name) and frames.get_frame_count(anim_name) > 0
+
+
+func _resolve_esqueleto_anim_name(frames: SpriteFrames, preferred: String) -> String:
+	if _esqueleto_anim_has_frames(frames, preferred):
+		return preferred
+	var aliases: Dictionary = {
+		"walk": ["run", "new_animation"],
+		"jump": ["jump2"],
+		"idle_smoking": ["idle"],
+		"idle": ["idle_smoking"],
+		"death": ["dead"],
+		"attack": ["atack"],
+	}
+	for alt: String in aliases.get(preferred, []):
+		if _esqueleto_anim_has_frames(frames, alt):
+			return alt
+	for anim_name: String in frames.get_animation_names():
+		if anim_name != "default" and _esqueleto_anim_has_frames(frames, anim_name):
+			return anim_name
+	return preferred
+
+
+func _esqueleto_pick_locomotion_anim(frames: SpriteFrames) -> String:
+	for key: String in [BODY_IDLE_ANIM, "walk"]:
+		var name := _resolve_esqueleto_anim_name(frames, key)
+		if _esqueleto_anim_has_frames(frames, name):
+			return name
+	return ""
+
+
+func _esqueleto_play_action_once(action_key: String) -> void:
+	if _body_sprite == null or not _body_sprite.visible or _body_sprite.sprite_frames == null:
+		return
+	if _sprite_action_lock == "death":
+		return
+	if hp <= 0 and action_key != "death":
+		return
+	if action_key == "hurt" and _sprite_action_lock == "attack":
+		return
+	if action_key == "attack" and _sprite_action_lock == "hurt":
+		_sprite_action_lock = ""
+	var anim := _resolve_esqueleto_anim_name(_body_sprite.sprite_frames, action_key)
+	if not _esqueleto_anim_has_frames(_body_sprite.sprite_frames, anim):
+		return
+	_sprite_action_lock = action_key
+	_body_sprite.play(anim)
+
+
+func _on_esqueleto_sprite_animation_finished() -> void:
+	if _sprite_action_lock == "death":
+		return
+	if _sprite_action_lock == "dash":
+		if _dash_time_left > 0.0 and _body_sprite.sprite_frames != null:
+			var dash_anim := _resolve_esqueleto_anim_name(_body_sprite.sprite_frames, BODY_DASH_ANIM)
+			_body_sprite.play(dash_anim)
+		else:
+			_sprite_action_lock = ""
+		return
+	if _sprite_action_lock == "jump":
+		if not is_on_floor():
+			_esqueleto_hold_jump_last_frame()
+		return
+	if _sprite_action_lock in ["hurt", "attack"]:
+		_sprite_action_lock = ""
+		if not is_on_floor():
+			_esqueleto_hold_jump_last_frame()
+		return
+
+
+func _esqueleto_default_sprite_flip_h() -> bool:
+	return player_id == 2
+
+
+func _esqueleto_dash_sprite_flip_h() -> bool:
+	var forward_sign := 1.0 if player_id == 1 else -1.0
+	return absf(_dash_dir_sign - forward_sign) > 0.001
+
+
+func _esqueleto_begin_dash_sprite() -> void:
+	if _body_sprite == null or not _body_sprite.visible or _body_sprite.sprite_frames == null:
+		return
+	if _sprite_action_lock == "death":
+		return
+	var anim := _resolve_esqueleto_anim_name(_body_sprite.sprite_frames, BODY_DASH_ANIM)
+	if not _esqueleto_anim_has_frames(_body_sprite.sprite_frames, anim):
+		return
+	_sprite_action_lock = "dash"
+	_body_sprite.flip_h = _esqueleto_dash_sprite_flip_h()
+	_body_sprite.speed_scale = 1.0
+	_body_sprite.play(anim)
+
+
+func _esqueleto_end_dash_sprite_if_needed() -> void:
+	if _sprite_action_lock != "dash":
+		return
+	if _dash_time_left > 0.0:
+		return
+	_sprite_action_lock = ""
+	if _body_sprite != null:
+		_body_sprite.flip_h = _esqueleto_default_sprite_flip_h()
+	if not is_on_floor():
+		_esqueleto_hold_jump_last_frame()
+
+
+func _esqueleto_begin_jump_sprite() -> void:
+	if _body_sprite == null or not _body_sprite.visible or _body_sprite.sprite_frames == null:
+		return
+	if _sprite_action_lock in ["death", "dash", "hurt", "attack"]:
+		return
+	var anim := _resolve_esqueleto_anim_name(_body_sprite.sprite_frames, BODY_JUMP_ANIM)
+	if not _esqueleto_anim_has_frames(_body_sprite.sprite_frames, anim):
+		return
+	_sprite_action_lock = "jump"
+	_body_sprite.flip_h = _esqueleto_default_sprite_flip_h()
+	_body_sprite.speed_scale = 1.0
+	_body_sprite.play(anim)
+
+
+func _esqueleto_hold_jump_last_frame() -> void:
+	if _body_sprite == null or not _body_sprite.visible or _body_sprite.sprite_frames == null:
+		return
+	var anim := _resolve_esqueleto_anim_name(_body_sprite.sprite_frames, BODY_JUMP_ANIM)
+	if not _esqueleto_anim_has_frames(_body_sprite.sprite_frames, anim):
+		return
+	_sprite_action_lock = "jump"
+	_body_sprite.flip_h = _esqueleto_default_sprite_flip_h()
+	_body_sprite.play(anim)
+	_body_sprite.frame = _body_sprite.sprite_frames.get_frame_count(anim) - 1
+	_body_sprite.pause()
+
+
+func _esqueleto_update_jump_sprite_state() -> void:
+	if is_on_floor():
+		if _sprite_action_lock == "jump":
+			_sprite_action_lock = ""
+		_esqueleto_was_on_floor = true
+		return
+	if _esqueleto_was_on_floor:
+		_esqueleto_was_on_floor = false
+		_esqueleto_begin_jump_sprite()
+	elif _jump_just_pressed():
+		_esqueleto_begin_jump_sprite()
+
+
+func _esqueleto_locomotion_anim() -> String:
+	if is_ult_em_armagem_ou_animacao():
+		return BODY_IDLE_ANIM
+	if is_on_floor() and absf(velocity.x) > BODY_MOVE_SPEED_THRESHOLD:
+		return "walk"
+	return BODY_IDLE_ANIM
+
+
+func _sync_esqueleto_body_sprite(_delta: float) -> void:
+	if _body_sprite == null or not _body_sprite.visible or _body_sprite.sprite_frames == null:
+		return
+	_esqueleto_end_dash_sprite_if_needed()
+	_esqueleto_update_jump_sprite_state()
+	var frames := _body_sprite.sprite_frames
+	if hp <= 0:
+		if _sprite_action_lock != "death":
+			_esqueleto_play_action_once("death")
+		_apply_esqueleto_sprite_modulate()
+		return
+	if _sprite_action_lock == "dash":
+		var dash_anim := _resolve_esqueleto_anim_name(frames, BODY_DASH_ANIM)
+		if _body_sprite.animation != dash_anim or not _body_sprite.is_playing():
+			_body_sprite.play(dash_anim)
+		_body_sprite.flip_h = _esqueleto_dash_sprite_flip_h()
+		_body_sprite.speed_scale = 1.0
+		_apply_esqueleto_sprite_modulate()
+		return
+	if _sprite_action_lock == "jump":
+		_apply_esqueleto_sprite_modulate()
+		return
+	if _sprite_action_lock != "":
+		_apply_esqueleto_sprite_modulate()
+		return
+	var want := _resolve_esqueleto_anim_name(frames, _esqueleto_locomotion_anim())
+	if not _esqueleto_anim_has_frames(frames, want):
+		return
+	if _body_sprite.animation != want or not _body_sprite.is_playing():
+		_body_sprite.play(want)
+	var walk_name := _resolve_esqueleto_anim_name(frames, "walk")
+	_body_sprite.speed_scale = 1.28 if want == walk_name and _is_sprint_speed_boost_active() else 1.0
+	_apply_esqueleto_sprite_modulate()
+
+
+func _apply_esqueleto_sprite_modulate() -> void:
+	if _body_sprite == null:
+		return
+	if _frozen_left > 0.0:
+		_body_sprite.modulate = Color(0.75, 0.9, 1.0, 1.0)
+	elif _is_sprint_speed_boost_active():
+		_body_sprite.modulate = _orig_sprite_modulate * sprint_visual_body_mult
+	else:
+		_body_sprite.modulate = _orig_sprite_modulate
