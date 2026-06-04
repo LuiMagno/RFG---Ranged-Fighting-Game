@@ -1592,7 +1592,7 @@ func _run_esqueleto_bone_rain(owner: Player) -> void:
 			_spawn_bone_rain_projectile(
 				owner,
 				Vector2(x, BONE_RAIN_SPAWN_Y),
-				Vector2(0.0, ep.esqueleto_skill_ult_chuva_ossos_velocidade_queda),
+				Vector2(0.0, ep.get_chuva_ossos_velocidade_queda()),
 				ep.esqueleto_skill_ult_chuva_ossos_dano,
 			)
 		await get_tree().create_timer(interval, true, false, true).timeout

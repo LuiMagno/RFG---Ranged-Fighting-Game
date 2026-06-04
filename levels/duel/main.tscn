@@ -606,6 +606,26 @@ autowrap_mode = 3
 [node name="SepSettings" type="HSeparator" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=569332119]
 layout_mode = 2
 
+[node name="SectionEsqueleto" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=1982736401]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+theme_override_font_sizes/font_size = 13
+text = "Esqueleto"
+
+[node name="EsqueletoProjetilVelRow" type="HBoxContainer" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=1982736402]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="EsqueletoProjetilVelLabel" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/EsqueletoProjetilVelRow" unique_id=1982736403]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Velocidade projéteis"
+vertical_alignment = 1
+
+[node name="OptEsqueletoProjetilVel" type="OptionButton" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu/EsqueletoProjetilVelRow" unique_id=1982736404]
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="SettingsHint" type="Label" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=1304697792]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.65, 0.7, 0.78, 1)

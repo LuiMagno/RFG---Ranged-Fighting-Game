@@ -70,6 +70,29 @@ static func fill_stage_option(ob: OptionButton) -> void:
 	ob.add_item("Fábrica antiga", RunConfig.Stage.OLD_FACTORY)
 
 
+static func fill_esqueleto_projetil_velocidade_option(ob: OptionButton) -> void:
+	ob.clear()
+	ob.add_item("1.0× — Baseline", RunConfig.EsqueletoProjetilVelocidade.MUL_100)
+	ob.add_item("1.25× — +25%", RunConfig.EsqueletoProjetilVelocidade.MUL_125)
+	ob.add_item("1.5× — +50%", RunConfig.EsqueletoProjetilVelocidade.MUL_150)
+	ob.add_item("1.75× — +75%", RunConfig.EsqueletoProjetilVelocidade.MUL_175)
+
+
+static func select_esqueleto_projetil_velocidade_option(ob: OptionButton, preset: int) -> void:
+	for i in ob.item_count:
+		if ob.get_item_id(i) == preset:
+			ob.select(i)
+			return
+	ob.select(0)
+
+
+static func get_esqueleto_projetil_velocidade_option_id(ob: OptionButton) -> int:
+	var idx := ob.selected
+	if idx < 0 or idx >= ob.item_count:
+		return RunConfig.EsqueletoProjetilVelocidade.MUL_150
+	return ob.get_item_id(idx)
+
+
 static func fill_input_scheme_option(ob: OptionButton) -> void:
 	ob.clear()
 	ob.add_item("Teclado e mouse", RunConfig.InputScheme.KEYBOARD_MOUSE)

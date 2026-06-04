@@ -34,7 +34,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 
 [node name="MainPanel" type="Panel" parent="Center"]
-custom_minimum_size = Vector2(520, 560)
+custom_minimum_size = Vector2(520, 640)
 layout_mode = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center/MainPanel"]
@@ -172,6 +172,30 @@ text = "Intro Vs"
 vertical_alignment = 1
 
 [node name="OptVsIntro" type="OptionButton" parent="Center/MainPanel/VBox/TrainingBox/VsIntroRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EsqueletoBox" type="VBoxContainer" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="EsqueletoLabel" type="Label" parent="Center/MainPanel/VBox/EsqueletoBox"]
+layout_mode = 2
+text = "Esqueleto"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+
+[node name="ProjetilVelRow" type="HBoxContainer" parent="Center/MainPanel/VBox/EsqueletoBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ProjetilVelLabel" type="Label" parent="Center/MainPanel/VBox/EsqueletoBox/ProjetilVelRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Velocidade projéteis"
+vertical_alignment = 1
+
+[node name="OptEsqueletoProjetilVel" type="OptionButton" parent="Center/MainPanel/VBox/EsqueletoBox/ProjetilVelRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 

@@ -12,6 +12,9 @@ extends CanvasLayer
 @onready var _opt_p1_class: OptionButton = $Root/Center/Panel/SettingsMenu/ClassP1Row/OptP1Class
 @onready var _opt_p1_scheme: OptionButton = $Root/Center/Panel/SettingsMenu/InputP1Row/OptP1Scheme
 @onready var _opt_p1_device: OptionButton = $Root/Center/Panel/SettingsMenu/InputP1Row/OptP1Device
+@onready var _opt_esqueleto_projetil_vel: OptionButton = (
+	$Root/Center/Panel/SettingsMenu/EsqueletoProjetilVelRow/OptEsqueletoProjetilVel
+)
 @onready var _chk_dummy: CheckBox = $Root/Center/Panel/SettingsMenu/ChkDummyShoot
 @onready var _btn_back_settings: Button = $Root/Center/Panel/SettingsMenu/BtnBackSettings
 
@@ -30,6 +33,9 @@ func _ready() -> void:
 	MenuThemeUtil.fill_joy_device_option(_opt_p1_device)
 	MenuThemeUtil.style_option(_opt_p1_scheme)
 	MenuThemeUtil.style_option(_opt_p1_device)
+	MenuThemeUtil.fill_esqueleto_projetil_velocidade_option(_opt_esqueleto_projetil_vel)
+	MenuThemeUtil.style_option(_opt_esqueleto_projetil_vel)
+	_opt_esqueleto_projetil_vel.item_selected.connect(_on_esqueleto_projetil_vel_selected)
 	_opt_p1_scheme.item_selected.connect(_on_p1_scheme_selected)
 	_opt_p1_device.item_selected.connect(_on_p1_device_selected)
 	var imax := maxi(_opt_p1_class.item_count - 1, 0)
@@ -105,6 +111,9 @@ func _sync_settings_controls() -> void:
 	MenuThemeUtil.select_joy_device_option(_opt_p1_device, RunConfig.p1_joy_device)
 	_opt_p1_device.visible = RunConfig.p1_input_scheme == RunConfig.InputScheme.GAMEPAD
 	_chk_dummy.set_pressed_no_signal(RunConfig.training_dummy_shoot)
+	MenuThemeUtil.select_esqueleto_projetil_velocidade_option(
+		_opt_esqueleto_projetil_vel, int(RunConfig.esqueleto_projetil_velocidade)
+	)
 
 
 func _push_input_map_to_game() -> void:
@@ -135,6 +144,13 @@ func _on_p1_class_selected(index: int) -> void:
 
 func _on_dummy_toggled(pressed: bool) -> void:
 	RunConfig.training_dummy_shoot = pressed
+
+
+func _on_esqueleto_projetil_vel_selected(_index: int) -> void:
+	RunConfig.esqueleto_projetil_velocidade = (
+		MenuThemeUtil.get_esqueleto_projetil_velocidade_option_id(_opt_esqueleto_projetil_vel)
+		as RunConfig.EsqueletoProjetilVelocidade
+	)
 
 
 func _apply_panel_style() -> void:

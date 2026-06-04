@@ -4,12 +4,16 @@ class_name EsqueletoPlayer
 ## Baseline de duelo: tiro carregado (velocidade proporcional à carga), flecha sem gravidade no voo.
 ## Três skills + ULT do Esqueleto (mapeamento em `game.gd` / `project.godot`):
 ## - **Skill Esqueleto — Feixe:** ação `p*_grenade` (teclado **F**, controle **X**) — segura e solta para disparar o projétil grande.
-## - **Skill Esqueleto — Buff de velocidade do tiro carregado:** ação `p*_special` (teclado **G**, controle **Y**) — ativa um período em que o **tiro carregado** (RB / mouse) sai com velocidade maior.
+## - **Skill Esqueleto — Buff de velocidade:** ação `p*_special` (teclado **G**, controle **Y**) — tiro carregado (RB / mouse) e **feixe** saem mais rápidos enquanto o buff durar.
 ## - **Skill Esqueleto — ULT Chuva de ossos** (`p*_ult`: **R** / **LB**), em três fases:
 ##   1. **Acionamento** — tecla solta, inicia a ULT (ambos parados).
 ##   2. **Animação** — SUPER + câmera (~`esqueleto_skill_ult_chuva_ossos_fase_armagem_animacao_s`; ambos parados).
 ##   3. **Efeito** — chuva de ossos na metade inimiga (~`esqueleto_skill_ult_chuva_ossos_duracao_s`; ambos com movimento e skills livres).
 ## Tiro base: mínimo 1 s entre disparos após soltar o carregamento (`MIN_SHOOT_COOLDOWN_S`).
+## Velocidade de **viagem** dos projéteis (px/s). Treino: `RunConfig`; Vs: export abaixo. Tiro carregado, feixe e queda da ULT.
+@export_range(1.0, 2.0, 0.01) var esqueleto_velocidade_projeteis_mul: float = 1.5
+## Fração do bónus de velocidade aplicada à queda da ULT (0.5 → global 1.5× ⇒ chuva 1.25×).
+@export_range(0.0, 1.0, 0.05) var esqueleto_chuva_ossos_velocidade_viagem_peso: float = 0.5
 
 const MIN_SHOOT_COOLDOWN_S := 1.0
 const ESQUELETO_SPRITE_FRAMES_PATH := "res://art/skeleton/esqueleto_sprite_frames.tres"
@@ -34,7 +38,7 @@ const BODY_JUMP_ANIM := "jump"
 @export_range(5.0, 16.0, 0.5) var esqueleto_skill_feixe_recoil_angulo_acima_horizontal_graus: float = 10.0
 @export_range(500.0, 1200.0, 10.0) var esqueleto_skill_feixe_recoil_forca: float = 2000.0
 
-## Skill Esqueleto — Buff de velocidade do tiro carregado (`*_special`)
+## Skill Esqueleto — Buff de velocidade (`*_special`; tiro carregado + feixe)
 @export var esqueleto_skill_buff_velocidade_tiro_duracao_s: float = 4.0
 @export var esqueleto_skill_buff_velocidade_tiro_recarga_s: float = 10.0
 @export var esqueleto_skill_buff_velocidade_tiro_multiplicador: float = 2.0
@@ -85,6 +89,26 @@ func _ready() -> void:
 	shoot_cooldown = maxf(MIN_SHOOT_COOLDOWN_S, shoot_cooldown)
 	super._ready()
 	_setup_esqueleto_body_sprite()
+
+
+func get_projetil_velocidade_viagem_mul() -> float:
+	if RunConfig.mode == RunConfig.Mode.TRAINING:
+		return RunConfig.get_esqueleto_projetil_velocidade_mul()
+	return esqueleto_velocidade_projeteis_mul
+
+
+func get_chuva_ossos_velocidade_viagem_mul() -> float:
+	var g := get_projetil_velocidade_viagem_mul()
+	return 1.0 + (g - 1.0) * esqueleto_chuva_ossos_velocidade_viagem_peso
+
+
+func get_chuva_ossos_velocidade_queda() -> float:
+	return esqueleto_skill_ult_chuva_ossos_velocidade_queda * get_chuva_ossos_velocidade_viagem_mul()
+
+
+## Escala px/s no spawn (tiro carregado e feixe; ULT usa `get_chuva_ossos_velocidade_viagem_mul`).
+func _esqueleto_velocidade_viagem_projetil(speed: float) -> float:
+	return speed * get_projetil_velocidade_viagem_mul()
 
 
 func _physics_process(delta: float) -> void:
@@ -244,18 +268,26 @@ func _tentar_ativar_ult_chuva_ossos() -> void:
 	bone_rain_requested.emit(self)
 
 
+func _feixe_launch_speed(t: float) -> float:
+	var speed := _esqueleto_velocidade_viagem_projetil(
+		lerpf(
+			min_launch_speed * esqueleto_skill_feixe_velocidade_mul_min,
+			max_launch_speed * esqueleto_skill_feixe_velocidade_mul_max,
+			t
+		)
+	)
+	if _esqueleto_buff_velocidade_tiro_ativo:
+		speed *= esqueleto_skill_buff_velocidade_tiro_multiplicador
+	return speed
+
+
 func _refresh_feixe_preview() -> void:
 	var t := (
 		0.0
 		if esqueleto_skill_feixe_tempo_max_carga_s <= 0.0
 		else clampf(_feixe_tempo_carga_s / esqueleto_skill_feixe_tempo_max_carga_s, 0.0, 1.0)
 	)
-	var speed := lerpf(
-		min_launch_speed * esqueleto_skill_feixe_velocidade_mul_min,
-		max_launch_speed * esqueleto_skill_feixe_velocidade_mul_max,
-		t
-	)
-	_update_trajectory_preview(speed)
+	_update_trajectory_preview(_feixe_launch_speed(t))
 
 
 func _disparar_feixe() -> void:
@@ -264,11 +296,7 @@ func _disparar_feixe() -> void:
 		if esqueleto_skill_feixe_tempo_max_carga_s <= 0.0
 		else clampf(_feixe_tempo_carga_s / esqueleto_skill_feixe_tempo_max_carga_s, 0.0, 1.0)
 	)
-	var speed := lerpf(
-		min_launch_speed * esqueleto_skill_feixe_velocidade_mul_min,
-		max_launch_speed * esqueleto_skill_feixe_velocidade_mul_max,
-		t
-	)
+	var speed := _feixe_launch_speed(t)
 	var size := lerpf(esqueleto_skill_feixe_escala_min, esqueleto_skill_feixe_escala_max, t)
 	var vel := _compute_launch_velocity(speed)
 	if vel.length_squared() < 1.0:
@@ -347,19 +375,23 @@ func _process_combat(delta: float) -> void:
 			charge_bar.visible = true
 			charge_bar.value = 0.0
 			trajectory.visible = true
-			_update_trajectory_preview(min_launch_speed)
+			_update_trajectory_preview(_esqueleto_velocidade_viagem_projetil(min_launch_speed))
 
 		if _is_charging and _shoot_pressed():
 			_charge_time = minf(max_charge_time, _charge_time + delta)
 			var t_hold := 0.0 if max_charge_time <= 0.0 else (_charge_time / max_charge_time)
 			charge_bar.value = clampf(t_hold * 100.0, 0.0, 100.0)
-			var speed_hold := lerpf(min_launch_speed, max_launch_speed, t_hold)
+			var speed_hold := _esqueleto_velocidade_viagem_projetil(
+				lerpf(min_launch_speed, max_launch_speed, t_hold)
+			)
 			_update_trajectory_preview(speed_hold)
 
 		if _is_charging and _shoot_just_released():
 			_is_charging = false
 			var t := 0.0 if max_charge_time <= 0.0 else (_charge_time / max_charge_time)
-			var speed := lerpf(min_launch_speed, max_launch_speed, t)
+			var speed := _esqueleto_velocidade_viagem_projetil(
+				lerpf(min_launch_speed, max_launch_speed, t)
+			)
 			if _esqueleto_buff_velocidade_tiro_ativo:
 				speed *= esqueleto_skill_buff_velocidade_tiro_multiplicador
 			var v0 := _compute_launch_velocity(speed)
