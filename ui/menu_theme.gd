@@ -1,4 +1,4 @@
-extends RefCounted
+﻿extends RefCounted
 class_name MenuThemeUtil
 
 
@@ -67,15 +67,15 @@ static func fill_stage_option(ob: OptionButton) -> void:
 	ob.clear()
 	ob.add_item("Normal", RunConfig.Stage.NORMAL)
 	ob.add_item("Patamares + abismo", RunConfig.Stage.TIERED_ABYSS)
-	ob.add_item("Fábrica antiga", RunConfig.Stage.OLD_FACTORY)
+	ob.add_item("F├íbrica antiga", RunConfig.Stage.OLD_FACTORY)
 
 
 static func fill_esqueleto_projetil_velocidade_option(ob: OptionButton) -> void:
 	ob.clear()
-	ob.add_item("1.0× — Baseline", RunConfig.EsqueletoProjetilVelocidade.MUL_100)
-	ob.add_item("1.25× — +25%", RunConfig.EsqueletoProjetilVelocidade.MUL_125)
-	ob.add_item("1.5× — +50%", RunConfig.EsqueletoProjetilVelocidade.MUL_150)
-	ob.add_item("1.75× — +75%", RunConfig.EsqueletoProjetilVelocidade.MUL_175)
+	ob.add_item("1.0├ù ÔÇö Baseline", RunConfig.EsqueletoProjetilVelocidade.MUL_100)
+	ob.add_item("1.25├ù ÔÇö +25%", RunConfig.EsqueletoProjetilVelocidade.MUL_125)
+	ob.add_item("1.5├ù ÔÇö +50%", RunConfig.EsqueletoProjetilVelocidade.MUL_150)
+	ob.add_item("1.75├ù ÔÇö +75%", RunConfig.EsqueletoProjetilVelocidade.MUL_175)
 
 
 static func select_esqueleto_projetil_velocidade_option(ob: OptionButton, preset: int) -> void:
@@ -104,17 +104,17 @@ static func fill_joy_device_option(ob: OptionButton) -> void:
 	var pads: PackedInt32Array = Input.get_connected_joypads()
 	if pads.is_empty():
 		for i in 8:
-			ob.add_item("Controle nº %d" % i, i)
+			ob.add_item("Controle n┬║ %d" % i, i)
 		return
 	var sorted: Array = []
 	for d in pads:
 		sorted.append(int(d))
 	sorted.sort()
 	for d in sorted:
-		ob.add_item("Controle nº %d" % d, d)
+		ob.add_item("Controle n┬║ %d" % d, d)
 
 
-## Seleciona pelo índice SDL (`item` id), não pelo índice da linha no OptionButton.
+## Seleciona pelo ├¡ndice SDL (`item` id), n├úo pelo ├¡ndice da linha no OptionButton.
 static func select_joy_device_option(ob: OptionButton, device_id: int) -> void:
 	for i in ob.item_count:
 		if ob.get_item_id(i) == device_id:
@@ -130,7 +130,7 @@ static func get_joy_device_option_id(ob: OptionButton) -> int:
 	return ob.get_item_id(ob.selected)
 
 
-## Índice = Player.CharacterKind (0..4). Usado no HUD do Vs.
+## ├ìndice = Player.CharacterKind (0..4). Usado no HUD do Vs.
 static func vs_character_name(kind: int) -> String:
 	match clampi(kind, 0, 4):
 		0:
@@ -144,10 +144,10 @@ static func vs_character_name(kind: int) -> String:
 		4:
 			return "Ongma Epilef"
 		_:
-			return "—"
+			return "ÔÇö"
 
 
-## Cor de destaque por classe (legível sobre fundo escuro).
+## Cor de destaque por classe (leg├¡vel sobre fundo escuro).
 static func vs_character_accent_color(kind: int) -> Color:
 	match clampi(kind, 0, 4):
 		0:
@@ -162,3 +162,17 @@ static func vs_character_accent_color(kind: int) -> Color:
 			return Color(0.55, 0.78, 0.95)
 		_:
 			return Color(0.9, 0.92, 0.96, 1)
+
+
+static func fill_ko_camera_impact_option(ob: OptionButton) -> void:
+	ob.clear()
+	ob.add_item("A — Slow motion", RunConfig.KoCameraImpactStyle.SLOW_MOTION)
+	ob.add_item("B — Hit stop", RunConfig.KoCameraImpactStyle.HIT_STOP)
+	ob.add_item("C — Híbrido", RunConfig.KoCameraImpactStyle.HYBRID)
+
+
+static func fill_vs_intro_option(ob: OptionButton) -> void:
+	ob.clear()
+	ob.add_item("A — Rápido", RunConfig.VsIntroStyle.A_FAST)
+	ob.add_item("B — Médio", RunConfig.VsIntroStyle.B_MEDIUM)
+	ob.add_item("C — Cinemático", RunConfig.VsIntroStyle.C_CINEMATIC)

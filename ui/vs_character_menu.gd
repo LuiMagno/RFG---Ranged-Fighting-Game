@@ -88,7 +88,7 @@ func _on_p2_device_selected(index: int) -> void:
 
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://ui/menu.tscn")
+	get_tree().change_scene_to_file(MenuPaths.SCENE_MAIN_MENU)
 
 
 func _on_start_pressed() -> void:
@@ -102,4 +102,4 @@ func _on_start_pressed() -> void:
 	RunConfig.p2_joy_device = MenuThemeUtil.get_joy_device_option_id(opt_p2_device)
 	RunConfig.clamp_joy_devices_for_local_multiplayer()
 	RunConfig.mode = RunConfig.Mode.VS_PLAYER
-	get_tree().change_scene_to_file("res://levels/duel/main.tscn")
+	get_tree().change_scene_to_file(MenuPaths.SCENE_GAME)

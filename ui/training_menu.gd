@@ -4,10 +4,6 @@ extends Control
 @onready var opt_stage: OptionButton = $Center/MainPanel/VBox/StageRow/OptStage
 @onready var opt_p1_scheme: OptionButton = $Center/MainPanel/VBox/InputP1Row/OptP1Scheme
 @onready var opt_p1_device: OptionButton = $Center/MainPanel/VBox/InputP1Row/OptP1Device
-@onready var chk_dummy_shoot: CheckBox = $Center/MainPanel/VBox/TrainingBox/ChkDummyShoot
-@onready var opt_ko_camera_impact: OptionButton = $Center/MainPanel/VBox/TrainingBox/KoCameraRow/OptKoCameraImpact
-@onready var opt_vs_intro: OptionButton = $Center/MainPanel/VBox/TrainingBox/VsIntroRow/OptVsIntro
-@onready var opt_esqueleto_projetil_vel: OptionButton = $Center/MainPanel/VBox/EsqueletoBox/ProjetilVelRow/OptEsqueletoProjetilVel
 @onready var btn_back: Button = $Center/MainPanel/VBox/ButtonRow/BtnBack
 @onready var btn_start: Button = $Center/MainPanel/VBox/ButtonRow/BtnStart
 @onready var _main_panel: Panel = $Center/MainPanel
@@ -25,13 +21,6 @@ func _ready() -> void:
 	MenuThemeUtil.fill_joy_device_option(opt_p1_device)
 	MenuThemeUtil.style_option(opt_p1_scheme)
 	MenuThemeUtil.style_option(opt_p1_device)
-	MenuThemeUtil.style_checkbox(chk_dummy_shoot)
-	_fill_ko_camera_impact_option()
-	MenuThemeUtil.style_option(opt_ko_camera_impact)
-	_fill_vs_intro_option()
-	MenuThemeUtil.style_option(opt_vs_intro)
-	MenuThemeUtil.fill_esqueleto_projetil_velocidade_option(opt_esqueleto_projetil_vel)
-	MenuThemeUtil.style_option(opt_esqueleto_projetil_vel)
 	MenuThemeUtil.style_menu_button(btn_back, false)
 	MenuThemeUtil.style_menu_button(btn_start, true)
 	var imax := maxi(opt_p1_class.item_count - 1, 0)
@@ -40,43 +29,20 @@ func _ready() -> void:
 	opt_stage.select(clampi(int(RunConfig.stage), 0, smax))
 	opt_p1_scheme.select(clampi(int(RunConfig.p1_input_scheme), 0, maxi(opt_p1_scheme.item_count - 1, 0)))
 	MenuThemeUtil.select_joy_device_option(opt_p1_device, RunConfig.p1_joy_device)
-	opt_ko_camera_impact.select(clampi(int(RunConfig.ko_camera_impact_style), 0, maxi(opt_ko_camera_impact.item_count - 1, 0)))
-	opt_vs_intro.select(clampi(int(RunConfig.vs_intro_style), 0, maxi(opt_vs_intro.item_count - 1, 0)))
-	MenuThemeUtil.select_esqueleto_projetil_velocidade_option(
-		opt_esqueleto_projetil_vel, int(RunConfig.esqueleto_projetil_velocidade)
-	)
 	_refresh_p1_device_visible()
 	opt_stage.item_selected.connect(_on_stage_selected)
 	opt_p1_scheme.item_selected.connect(_on_p1_scheme_selected)
 	opt_p1_device.item_selected.connect(_on_p1_device_selected)
-	opt_ko_camera_impact.item_selected.connect(_on_ko_camera_impact_selected)
-	opt_vs_intro.item_selected.connect(_on_vs_intro_selected)
-	opt_esqueleto_projetil_vel.item_selected.connect(_on_esqueleto_projetil_vel_selected)
-	chk_dummy_shoot.button_pressed = RunConfig.training_dummy_shoot
 	btn_back.pressed.connect(_on_back_pressed)
 	btn_start.pressed.connect(_on_start_pressed)
 	btn_start.grab_focus()
 
 
-## Ao abrir este menu: atalho para testar (Esqueleto + controle 0 + boneco sem tiro automático).
+## Ao abrir este menu: atalho para testar (Esqueleto + controle 0).
 func _apply_training_menu_quick_test_defaults() -> void:
 	RunConfig.p1_character = Player.CharacterKind.ESQUELETO
 	RunConfig.p1_input_scheme = RunConfig.InputScheme.GAMEPAD
 	RunConfig.p1_joy_device = 0
-	RunConfig.training_dummy_shoot = false
-
-
-func _fill_ko_camera_impact_option() -> void:
-	opt_ko_camera_impact.clear()
-	opt_ko_camera_impact.add_item("A — Slow motion", RunConfig.KoCameraImpactStyle.SLOW_MOTION)
-	opt_ko_camera_impact.add_item("B — Hit stop", RunConfig.KoCameraImpactStyle.HIT_STOP)
-	opt_ko_camera_impact.add_item("C — Híbrido", RunConfig.KoCameraImpactStyle.HYBRID)
-
-func _fill_vs_intro_option() -> void:
-	opt_vs_intro.clear()
-	opt_vs_intro.add_item("A — Rápido", RunConfig.VsIntroStyle.A_FAST)
-	opt_vs_intro.add_item("B — Médio", RunConfig.VsIntroStyle.B_MEDIUM)
-	opt_vs_intro.add_item("C — Cinemático", RunConfig.VsIntroStyle.C_CINEMATIC)
 
 
 func _refresh_p1_device_visible() -> void:
@@ -96,22 +62,8 @@ func _on_p1_device_selected(index: int) -> void:
 	RunConfig.p1_joy_device = opt_p1_device.get_item_id(index)
 
 
-func _on_ko_camera_impact_selected(index: int) -> void:
-	RunConfig.ko_camera_impact_style = index as RunConfig.KoCameraImpactStyle
-
-func _on_vs_intro_selected(index: int) -> void:
-	RunConfig.vs_intro_style = index as RunConfig.VsIntroStyle
-
-
-func _on_esqueleto_projetil_vel_selected(_index: int) -> void:
-	RunConfig.esqueleto_projetil_velocidade = (
-		MenuThemeUtil.get_esqueleto_projetil_velocidade_option_id(opt_esqueleto_projetil_vel)
-		as RunConfig.EsqueletoProjetilVelocidade
-	)
-
-
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://ui/menu.tscn")
+	get_tree().change_scene_to_file(MenuPaths.SCENE_MAIN_MENU)
 
 
 func _on_start_pressed() -> void:
@@ -121,12 +73,5 @@ func _on_start_pressed() -> void:
 	RunConfig.p1_joy_device = MenuThemeUtil.get_joy_device_option_id(opt_p1_device)
 	RunConfig.clamp_joy_devices_for_local_multiplayer()
 	RunConfig.mode = RunConfig.Mode.TRAINING
-	RunConfig.training_dummy_shoot = chk_dummy_shoot.button_pressed
 	RunConfig.training_dummy_interval = 3.0
-	RunConfig.ko_camera_impact_style = opt_ko_camera_impact.selected as RunConfig.KoCameraImpactStyle
-	RunConfig.vs_intro_style = opt_vs_intro.selected as RunConfig.VsIntroStyle
-	RunConfig.esqueleto_projetil_velocidade = (
-		MenuThemeUtil.get_esqueleto_projetil_velocidade_option_id(opt_esqueleto_projetil_vel)
-		as RunConfig.EsqueletoProjetilVelocidade
-	)
-	get_tree().change_scene_to_file("res://levels/duel/main.tscn")
+	get_tree().change_scene_to_file(MenuPaths.SCENE_GAME)

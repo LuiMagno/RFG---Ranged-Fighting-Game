@@ -40,7 +40,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="MainPanel" type="Panel" parent="Center" unique_id=254045201]
-custom_minimum_size = Vector2(520, 380)
+custom_minimum_size = Vector2(520, 460)
 layout_mode = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center/MainPanel" unique_id=259024581]
@@ -82,6 +82,11 @@ text = "Vs Player"
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 text = "Treinamento"
+
+[node name="BtnTestOptions" type="Button" parent="Center/MainPanel/VBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Opções de Teste"
 
 [node name="BtnQuit" type="Button" parent="Center/MainPanel/VBox" unique_id=398682128]
 custom_minimum_size = Vector2(0, 44)

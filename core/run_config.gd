@@ -1,23 +1,23 @@
-extends Node
+﻿extends Node
 
-# Singleton em Project Settings → Autoload (nome: RunConfig).
-# Não use class_name RunConfig aqui — conflita com o autoload.
+# Singleton em Project Settings ÔåÆ Autoload (nome: RunConfig).
+# N├úo use class_name RunConfig aqui ÔÇö conflita com o autoload.
 
 enum Mode { VS_PLAYER, TRAINING }
 
 ## Palco da arena (`Game` aplica visual e, no futuro, regras por stage).
 enum Stage { NORMAL, TIERED_ABYSS, OLD_FACTORY }
 
-## Teclado e mouse vs controle (por jogador). O mapa em runtime é aplicado em `Game._ensure_input_map()`.
+## Teclado e mouse vs controle (por jogador). O mapa em runtime ├® aplicado em `Game._ensure_input_map()`.
 enum InputScheme { KEYBOARD_MOUSE, GAMEPAD }
 
-## Estilo de impacto da câmera no KO de round (testável no menu de treino).
+## Estilo de impacto da c├ómera no KO de round (test├ível no menu de treino).
 enum KoCameraImpactStyle { SLOW_MOTION, HIT_STOP, HYBRID }
 
-## Estilo da intro de partida no Vs (testável no menu de treino).
+## Estilo da intro de partida no Vs (test├ível no menu de treino).
 enum VsIntroStyle { A_FAST, B_MEDIUM, C_CINEMATIC }
 
-## Velocidade de viagem dos projéteis do Esqueleto no treino (tiro carregado, feixe, queda da ULT).
+## Velocidade de viagem dos proj├®teis do Esqueleto no treino (tiro carregado, feixe, queda da ULT).
 enum EsqueletoProjetilVelocidade { MUL_100, MUL_125, MUL_150, MUL_175 }
 
 var mode: Mode = Mode.VS_PLAYER
@@ -35,9 +35,9 @@ var p1_character: int = 0
 var p2_character: int = 1
 
 var p1_input_scheme: InputScheme = InputScheme.KEYBOARD_MOUSE
-## No Vs só um jogador pode usar teclado+mouse; o outro usa controle (padrão: P2 em controle).
+## No Vs s├│ um jogador pode usar teclado+mouse; o outro usa controle (padr├úo: P2 em controle).
 var p2_input_scheme: InputScheme = InputScheme.GAMEPAD
-## Índice SDL do comando (0 = primeiro ligado). Usado só quando o esquema desse jogador é GAMEPAD.
+## ├ìndice SDL do comando (0 = primeiro ligado). Usado s├│ quando o esquema desse jogador ├® GAMEPAD.
 var p1_joy_device: int = 0
 var p2_joy_device: int = 1
 
@@ -76,10 +76,10 @@ func get_shoot_hint_token_for_player(player_id: int) -> String:
 
 ## Linha de ajuda no menu principal (controles gerais).
 func get_main_menu_controls_hint() -> String:
-	return "Menus: cruz direcional ou analógico esquerdo • A ou Enter para confirmar • B para voltar • No Vs: Start ou Enter para pausar • No combate, escolha a entrada no Vs ou no Treino"
+	return "Menus: cruz direcional ou anal├│gico esquerdo ÔÇó A ou Enter para confirmar ÔÇó B para voltar ÔÇó No Vs: Start ou Enter para pausar ÔÇó No combate, escolha a entrada no Vs ou no Treino"
 
 
-## Nos menus, remove o clique esquerdo do mouse em `p1_shoot` / `p2_shoot` para os botões funcionarem.
+## Nos menus, remove o clique esquerdo do mouse em `p1_shoot` / `p2_shoot` para os bot├Áes funcionarem.
 func clear_p1_shoot_mouse_binding() -> void:
 	_clear_mouse_left_from_action("p1_shoot")
 
@@ -104,7 +104,7 @@ func _clear_mouse_left_from_action(action_name: StringName) -> void:
 		InputMap.action_erase_event(action_name, ev)
 
 
-## Só um jogador pode estar em `KEYBOARD_MOUSE` no Vs. `prefer_player_id` = quem acabou de escolher teclado+mouse (1 ou 2).
+## S├│ um jogador pode estar em `KEYBOARD_MOUSE` no Vs. `prefer_player_id` = quem acabou de escolher teclado+mouse (1 ou 2).
 func resolve_exclusive_keyboard_mouse(prefer_player_id: int) -> void:
 	if p1_input_scheme != InputScheme.KEYBOARD_MOUSE or p2_input_scheme != InputScheme.KEYBOARD_MOUSE:
 		return
@@ -114,13 +114,13 @@ func resolve_exclusive_keyboard_mouse(prefer_player_id: int) -> void:
 		p1_input_scheme = InputScheme.GAMEPAD
 
 
-## Garante estado válido antes de montar o InputMap (ex.: saves antigos com os dois em teclado+mouse).
+## Garante estado v├ílido antes de montar o InputMap (ex.: saves antigos com os dois em teclado+mouse).
 func ensure_valid_input_scheme_pair() -> void:
 	if p1_input_scheme == InputScheme.KEYBOARD_MOUSE and p2_input_scheme == InputScheme.KEYBOARD_MOUSE:
 		p2_input_scheme = InputScheme.GAMEPAD
 
 
-## Ajusta índices SDL (`p1_joy_device` / `p2_joy_device`) aos comandos ligados e evita os dois jogadores no mesmo device.
+## Ajusta ├¡ndices SDL (`p1_joy_device` / `p2_joy_device`) aos comandos ligados e evita os dois jogadores no mesmo device.
 func clamp_joy_devices_for_local_multiplayer() -> void:
 	var pads: Array = Input.get_connected_joypads()
 	if pads.is_empty():
@@ -139,7 +139,7 @@ func clamp_joy_devices_for_local_multiplayer() -> void:
 				break
 
 
-## Garante `ui_*` com teclado + qualquer comando (device -1) para navegação nos menus.
+## Garante `ui_*` com teclado + qualquer comando (device -1) para navega├º├úo nos menus.
 func ensure_ui_gamepad_navigation() -> void:
 	if _ui_gamepad_navigation_ready:
 		return
