@@ -80,6 +80,9 @@ func _process_flying(delta: float) -> void:
 	if collider is Player:
 		var pl := collider as Player
 		if pl != _owner:
+			if pl.should_pass_through_projectile(self):
+				add_collision_exception_with(pl)
+				return
 			pl.take_damage(flying_damage)
 			var dir_x := 1.0 if velocity.x < -0.01 else -1.0
 			pl.apply_knockback(Vector2(dir_x * 420.0, -160.0))
@@ -150,6 +153,8 @@ func _on_hurt_body_entered(body: Node2D) -> void:
 	if body is Player:
 		var p := body as Player
 		if p == _owner:
+			return
+		if p.should_pass_through_projectile(self):
 			return
 		p.take_damage(contact_damage)
 		var away := p.global_position - global_position

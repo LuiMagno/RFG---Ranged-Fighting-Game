@@ -1,0 +1,631 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/test_aim_options_menu.gd" id="1_aim"]
+
+[node name="TestAimOptionsMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_aim")
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0.05, 0.06, 0.09, 1)
+
+[node name="Vignette" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(0, 0, 0, 0.25)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MainPanel" type="Panel" parent="Center"]
+custom_minimum_size = Vector2(520, 820)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center/MainPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 22.0
+offset_top = 22.0
+offset_right = -22.0
+offset_bottom = -22.0
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+text = "Mira (teste)"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 30
+theme_override_colors/font_color = Color(0.88, 0.93, 1, 1)
+
+[node name="Subtitle" type="Label" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+text = "Modos e par�metros de mira experimental"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.55, 0.62, 0.75, 1)
+
+[node name="SepTop" type="HSeparator" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 680)
+horizontal_scroll_mode = 0
+
+[node name="AimBox" type="VBoxContainer" parent="Center/MainPanel/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="AimModeRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AimModeLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AimModeRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Modo de mira"
+vertical_alignment = 1
+
+[node name="OptAimMode" type="OptionButton" parent="Center/MainPanel/VBox/Scroll/AimBox/AimModeRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LockOnSep" type="HSeparator" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+
+[node name="LockOnSectionLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+text = "Opcoes do modo lock-on (so quando seleccionado acima)"
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.55, 0.62, 0.75, 1)
+
+[node name="ChkLockOnFaceDefault" type="CheckBox" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+text = "Iniciar partida com lock-on ligado"
+
+[node name="LblLockOnHint" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+text = "Desactivado � n�o dispon�vel na partida"
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.55, 0.62, 0.75, 1)
+
+[node name="AssistSep" type="HSeparator" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+
+[node name="AssistSectionLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+text = "AIM_ASSIST (teste) � overlay sobre o modo de mira"
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.55, 0.62, 0.75, 1)
+
+[node name="AssistLevelRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AssistLevelLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AssistLevelRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Assistencia"
+vertical_alignment = 1
+
+[node name="OptAimAssistLevel" type="OptionButton" parent="Center/MainPanel/VBox/Scroll/AimBox/AssistLevelRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="AssistAngleWindowRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AssistAngleWindowLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AssistAngleWindowRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Janela angular"
+vertical_alignment = 1
+
+[node name="HSliderAssistAngleWindow" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/AssistAngleWindowRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 5.0
+max_value = 45.0
+step = 1.0
+value = 20.0
+
+[node name="LblAssistAngleWindowVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AssistAngleWindowRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "20"
+horizontal_alignment = 2
+
+[node name="AssistStrengthRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AssistStrengthLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AssistStrengthRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Forca"
+vertical_alignment = 1
+
+[node name="HSliderAssistStrength" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/AssistStrengthRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 1.0
+step = 0.05
+value = 0.25
+
+[node name="LblAssistStrengthVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AssistStrengthRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "0.25"
+horizontal_alignment = 2
+
+[node name="AssistMaxCorrectionRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AssistMaxCorrectionLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AssistMaxCorrectionRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Correcao max."
+vertical_alignment = 1
+
+[node name="HSliderAssistMaxCorrection" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/AssistMaxCorrectionRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 3.0
+max_value = 25.0
+step = 1.0
+value = 12.0
+
+[node name="LblAssistMaxCorrectionVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AssistMaxCorrectionRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "12"
+horizontal_alignment = 2
+
+[node name="DeadzoneRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="DeadzoneLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/DeadzoneRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Deadzone"
+vertical_alignment = 1
+
+[node name="HSliderAimDeadzone" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/DeadzoneRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.2
+max_value = 0.35
+step = 0.01
+value = 0.25
+
+[node name="LblAimDeadzoneVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/DeadzoneRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "0.25"
+horizontal_alignment = 2
+
+[node name="UpperThresholdRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="UpperThresholdLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/UpperThresholdRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Limite superior"
+vertical_alignment = 1
+
+[node name="HSliderAimUpperThreshold" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/UpperThresholdRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 5.0
+max_value = 45.0
+step = 1.0
+value = 15.0
+
+[node name="LblAimUpperThresholdVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/UpperThresholdRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "15�"
+horizontal_alignment = 2
+
+[node name="LowerThresholdRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LowerThresholdLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/LowerThresholdRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Limite inferior"
+vertical_alignment = 1
+
+[node name="HSliderAimLowerThreshold" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/LowerThresholdRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = -45.0
+max_value = -5.0
+step = 1.0
+value = -15.0
+
+[node name="LblAimLowerThresholdVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/LowerThresholdRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "-15�"
+horizontal_alignment = 2
+
+[node name="UpThresholdRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="UpThresholdLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/UpThresholdRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Limite UP"
+vertical_alignment = 1
+
+[node name="HSliderAimUpThreshold" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/UpThresholdRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 45.0
+max_value = 85.0
+step = 1.0
+value = 60.0
+
+[node name="LblAimUpThresholdVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/UpThresholdRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "60�"
+horizontal_alignment = 2
+
+[node name="UpDiagonalThresholdRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="UpDiagonalThresholdLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/UpDiagonalThresholdRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Limite UP diagonal"
+vertical_alignment = 1
+
+[node name="HSliderAimUpDiagonalThreshold" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/UpDiagonalThresholdRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 15.0
+max_value = 75.0
+step = 1.0
+value = 30.0
+
+[node name="LblAimUpDiagonalThresholdVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/UpDiagonalThresholdRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "30�"
+horizontal_alignment = 2
+
+[node name="DownDiagonalThresholdRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="DownDiagonalThresholdLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/DownDiagonalThresholdRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Limite DOWN diagonal"
+vertical_alignment = 1
+
+[node name="HSliderAimDownDiagonalThreshold" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/DownDiagonalThresholdRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = -75.0
+max_value = -15.0
+step = 1.0
+value = -30.0
+
+[node name="LblAimDownDiagonalThresholdVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/DownDiagonalThresholdRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "-30�"
+horizontal_alignment = 2
+
+[node name="DownThresholdRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="DownThresholdLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/DownThresholdRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Limite DOWN"
+vertical_alignment = 1
+
+[node name="HSliderAimDownThreshold" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/DownThresholdRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = -85.0
+max_value = -45.0
+step = 1.0
+value = -60.0
+
+[node name="LblAimDownThresholdVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/DownThresholdRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "-60�"
+horizontal_alignment = 2
+
+[node name="AutoUpThresholdRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AutoUpThresholdLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoUpThresholdRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Auto � limite UP"
+vertical_alignment = 1
+
+[node name="HSliderAutoAimUpThreshold" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoUpThresholdRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 45.0
+max_value = 85.0
+step = 1.0
+value = 60.0
+
+[node name="LblAutoAimUpThresholdVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoUpThresholdRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "60�"
+horizontal_alignment = 2
+
+[node name="AutoUpDiagonalThresholdRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AutoUpDiagonalThresholdLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoUpDiagonalThresholdRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Auto � UP diagonal"
+vertical_alignment = 1
+
+[node name="HSliderAutoAimUpDiagonalThreshold" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoUpDiagonalThresholdRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 15.0
+max_value = 75.0
+step = 1.0
+value = 30.0
+
+[node name="LblAutoAimUpDiagonalThresholdVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoUpDiagonalThresholdRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "30�"
+horizontal_alignment = 2
+
+[node name="AutoForwardThresholdRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AutoForwardThresholdLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoForwardThresholdRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Auto � limite FORWARD"
+vertical_alignment = 1
+
+[node name="HSliderAutoAimForwardThreshold" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoForwardThresholdRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 5.0
+max_value = 45.0
+step = 1.0
+value = 15.0
+
+[node name="LblAutoAimForwardThresholdVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoForwardThresholdRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "15�"
+horizontal_alignment = 2
+
+[node name="AutoDownDiagonalThresholdRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AutoDownDiagonalThresholdLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoDownDiagonalThresholdRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Auto � DOWN diagonal"
+vertical_alignment = 1
+
+[node name="HSliderAutoAimDownDiagonalThreshold" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoDownDiagonalThresholdRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = -75.0
+max_value = -15.0
+step = 1.0
+value = -15.0
+
+[node name="LblAutoAimDownDiagonalThresholdVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoDownDiagonalThresholdRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "-15�"
+horizontal_alignment = 2
+
+[node name="AutoDownThresholdRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AutoDownThresholdLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoDownThresholdRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Auto � limite DOWN"
+vertical_alignment = 1
+
+[node name="HSliderAutoAimDownThreshold" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoDownThresholdRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = -85.0
+max_value = -45.0
+step = 1.0
+value = -60.0
+
+[node name="LblAutoAimDownThresholdVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/AutoDownThresholdRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "-60�"
+horizontal_alignment = 2
+
+[node name="HybridUpThresholdRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HybridUpThresholdLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/HybridUpThresholdRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Hybrid � limite UP (vertical)"
+vertical_alignment = 1
+
+[node name="HSliderHybridUpThreshold" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/HybridUpThresholdRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.05
+max_value = 0.95
+step = 0.01
+value = 0.35
+
+[node name="LblHybridUpThresholdVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/HybridUpThresholdRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "0.35"
+horizontal_alignment = 2
+
+[node name="HybridDownThresholdRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HybridDownThresholdLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/HybridDownThresholdRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Hybrid � limite DOWN (vertical)"
+vertical_alignment = 1
+
+[node name="HSliderHybridDownThreshold" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/HybridDownThresholdRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = -0.95
+max_value = -0.05
+step = 0.01
+value = -0.35
+
+[node name="LblHybridDownThresholdVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/HybridDownThresholdRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "-0.35"
+horizontal_alignment = 2
+
+[node name="SensitivityRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SensitivityLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/SensitivityRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Sensibilidade"
+vertical_alignment = 1
+
+[node name="HSliderAimSensitivity" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/SensitivityRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.5
+max_value = 2.0
+step = 0.05
+value = 1.0
+
+[node name="LblAimSensitivityVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/SensitivityRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "1.00"
+horizontal_alignment = 2
+
+[node name="SmoothingRow" type="HBoxContainer" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SmoothingLabel" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/SmoothingRow"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Suaviza��o"
+vertical_alignment = 1
+
+[node name="HSliderAimSmoothing" type="HSlider" parent="Center/MainPanel/VBox/Scroll/AimBox/SmoothingRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.03
+max_value = 0.35
+step = 0.01
+value = 0.1
+
+[node name="LblAimSmoothingVal" type="Label" parent="Center/MainPanel/VBox/Scroll/AimBox/SmoothingRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "0.10s"
+horizontal_alignment = 2
+
+[node name="ChkAimSmoothing" type="CheckBox" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+button_pressed = true
+text = "Suaviza��o activa"
+
+[node name="ChkAimDebug" type="CheckBox" parent="Center/MainPanel/VBox/Scroll/AimBox"]
+layout_mode = 2
+button_pressed = true
+text = "Debug de mira (vetor, �ngulo, linha)"
+
+[node name="SepMid" type="HSeparator" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+
+[node name="ButtonRow" type="HBoxContainer" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="BtnBack" type="Button" parent="Center/MainPanel/VBox/ButtonRow"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Voltar �s op��es"

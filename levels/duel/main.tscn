@@ -13,6 +13,7 @@
 [ext_resource type="Script" uid="uid://d2qtsb1i5ovs2" path="res://levels/duel/training_pause_menu_controller.gd" id="11_trpause"]
 [ext_resource type="Script" uid="uid://4ehcmjfnrgv1" path="res://levels/duel/vs_match_end_menu.gd" id="12_vs_end"]
 [ext_resource type="PackedScene" path="res://levels/duel/camera/camera_system.tscn" id="13_camera"]
+[ext_resource type="Script" path="res://characters/aim/aim_debug_overlay.gd" id="14_aimdbg"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_2"]
 size = Vector2(1920, 84)
@@ -647,37 +648,71 @@ position = Vector2(210, 672)
 collision_mask = 51
 script = ExtResource("3_2lq0l")
 
-[node name="Body" type="Polygon2D" parent="LeftPlayer" unique_id=37644554]
+[node name="FacingRoot" type="Node2D" parent="LeftPlayer"]
+
+[node name="Body" type="Polygon2D" parent="LeftPlayer/FacingRoot" unique_id=37644554]
 color = Color(0.25, 0.6, 1, 1)
 polygon = PackedVector2Array(-20, -45, 20, -45, 20, 45, -20, 45)
 
-[node name="BodySprite" type="AnimatedSprite2D" parent="LeftPlayer" unique_id=37644555]
+[node name="BodySprite" type="AnimatedSprite2D" parent="LeftPlayer/FacingRoot" unique_id=37644555]
 visible = false
 z_index = 2
 
-[node name="Bow" type="Polygon2D" parent="LeftPlayer" unique_id=448013143]
+[node name="Bow" type="Polygon2D" parent="LeftPlayer/FacingRoot" unique_id=448013143]
 z_index = 40
 position = Vector2(18, -10)
 color = Color(0.95, 0.95, 0.95, 1)
 polygon = PackedVector2Array(0, -3, 42, -3, 42, 3, 0, 3)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="LeftPlayer" unique_id=1278592894]
-shape = SubResource("RectangleShape2D_1")
-
-[node name="Muzzle" type="Marker2D" parent="LeftPlayer" unique_id=1095587038]
+[node name="Muzzle" type="Marker2D" parent="LeftPlayer/FacingRoot" unique_id=1095587038]
 position = Vector2(35, -10)
 
-[node name="OrbChargeVisual" type="Polygon2D" parent="LeftPlayer/Muzzle" unique_id=127917856]
+[node name="OrbChargeVisual" type="Polygon2D" parent="LeftPlayer/FacingRoot/Muzzle" unique_id=127917856]
 visible = false
 z_index = 41
 color = Color(0.72, 0.35, 1, 0.82)
 polygon = PackedVector2Array(-11, -11, 11, -11, 11, 11, -11, 11)
 
-[node name="MuzzleTop" type="Marker2D" parent="LeftPlayer" unique_id=503941261]
+[node name="MuzzleTop" type="Marker2D" parent="LeftPlayer/FacingRoot" unique_id=503941261]
 position = Vector2(35, -26)
 
-[node name="MuzzleBottom" type="Marker2D" parent="LeftPlayer" unique_id=1520852119]
+[node name="MuzzleBottom" type="Marker2D" parent="LeftPlayer/FacingRoot" unique_id=1520852119]
 position = Vector2(35, 6)
+
+[node name="ShieldVisual" type="Polygon2D" parent="LeftPlayer/FacingRoot" unique_id=2080697260]
+visible = false
+z_index = 38
+position = Vector2(24, -10)
+color = Color(0.35, 0.72, 1, 0.42)
+polygon = PackedVector2Array(0, -38, 32, -30, 34, 0, 32, 30, 0, 38)
+
+[node name="AimDebugOverlay" type="Node2D" parent="LeftPlayer/FacingRoot"]
+z_index = 50
+script = ExtResource("14_aimdbg")
+
+[node name="AimDebugLine" type="Line2D" parent="LeftPlayer/FacingRoot/AimDebugOverlay"]
+visible = false
+width = 3.0
+
+[node name="AimDebugRawLine" type="Line2D" parent="LeftPlayer/FacingRoot/AimDebugOverlay"]
+visible = false
+width = 2.0
+
+[node name="AimDebugLabel" type="Label" parent="LeftPlayer/FacingRoot/AimDebugOverlay"]
+visible = false
+
+[node name="LockOnDebugLabel" type="Label" parent="LeftPlayer/FacingRoot/AimDebugOverlay"]
+visible = false
+
+[node name="AimAssistTargetLine" type="Line2D" parent="LeftPlayer/FacingRoot/AimDebugOverlay"]
+visible = false
+width = 2.0
+
+[node name="AimAssistDebugLabel" type="Label" parent="LeftPlayer/FacingRoot/AimDebugOverlay"]
+visible = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LeftPlayer" unique_id=1278592894]
+shape = SubResource("RectangleShape2D_1")
 
 [node name="ChargeBar" type="ProgressBar" parent="LeftPlayer" unique_id=1082974158]
 visible = false
@@ -694,12 +729,13 @@ z_index = 45
 width = 2.0
 default_color = Color(0.45, 0.8, 1, 0.85)
 
-[node name="ShieldVisual" type="Polygon2D" parent="LeftPlayer" unique_id=2080697260]
+[node name="LockOnMarker" type="Node2D" parent="LeftPlayer"]
 visible = false
-z_index = 38
-position = Vector2(24, -10)
-color = Color(0.35, 0.72, 1, 0.42)
-polygon = PackedVector2Array(0, -38, 32, -30, 34, 0, 32, 30, 0, 38)
+z_index = 55
+
+[node name="MarkerShape" type="Polygon2D" parent="LeftPlayer/LockOnMarker"]
+color = Color(0.35, 0.95, 1, 0.9)
+polygon = PackedVector2Array(0, -8, 8, 0, 0, 8, -8, 0)
 
 [node name="RightPlayer" type="CharacterBody2D" parent="." unique_id=60473321]
 position = Vector2(1710, 672)
@@ -707,37 +743,73 @@ collision_mask = 51
 script = ExtResource("5_archer")
 player_id = 2
 
-[node name="Body" type="Polygon2D" parent="RightPlayer" unique_id=584743274]
+[node name="FacingRoot" type="Node2D" parent="RightPlayer"]
+
+[node name="Body" type="Polygon2D" parent="RightPlayer/FacingRoot" unique_id=584743274]
 color = Color(1, 0.45, 0.25, 1)
 polygon = PackedVector2Array(-20, -45, 20, -45, 20, 45, -20, 45)
 
-[node name="BodySprite" type="AnimatedSprite2D" parent="RightPlayer" unique_id=584743275]
+[node name="BodySprite" type="AnimatedSprite2D" parent="RightPlayer/FacingRoot" unique_id=584743275]
 visible = false
 z_index = 2
 
-[node name="Bow" type="Polygon2D" parent="RightPlayer" unique_id=743516786]
+[node name="Bow" type="Polygon2D" parent="RightPlayer/FacingRoot" unique_id=743516786]
 z_index = 40
 position = Vector2(-18, -10)
 color = Color(0.95, 0.95, 0.95, 1)
 polygon = PackedVector2Array(0, -3, 42, -3, 42, 3, 0, 3)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="RightPlayer" unique_id=315425023]
-shape = SubResource("RectangleShape2D_1")
-
-[node name="Muzzle" type="Marker2D" parent="RightPlayer" unique_id=2094961323]
+[node name="Muzzle" type="Marker2D" parent="RightPlayer/FacingRoot" unique_id=2094961323]
 position = Vector2(-35, -10)
 
-[node name="OrbChargeVisual" type="Polygon2D" parent="RightPlayer/Muzzle" unique_id=634172622]
+[node name="OrbChargeVisual" type="Polygon2D" parent="RightPlayer/FacingRoot/Muzzle" unique_id=634172622]
 visible = false
 z_index = 41
 color = Color(0.72, 0.35, 1, 0.82)
 polygon = PackedVector2Array(-11, -11, 11, -11, 11, 11, -11, 11)
 
-[node name="MuzzleTop" type="Marker2D" parent="RightPlayer" unique_id=503941262]
+[node name="MuzzleTop" type="Marker2D" parent="RightPlayer/FacingRoot" unique_id=503941262]
 position = Vector2(-35, -26)
 
-[node name="MuzzleBottom" type="Marker2D" parent="RightPlayer" unique_id=1520852120]
+[node name="MuzzleBottom" type="Marker2D" parent="RightPlayer/FacingRoot" unique_id=1520852120]
 position = Vector2(-35, 6)
+
+[node name="ShieldVisual" type="Polygon2D" parent="RightPlayer/FacingRoot" unique_id=1346894565]
+visible = false
+z_index = 38
+position = Vector2(-24, -10)
+scale = Vector2(-1, 1)
+color = Color(0.45, 0.95, 0.75, 0.42)
+polygon = PackedVector2Array(0, -38, 32, -30, 34, 0, 32, 30, 0, 38)
+
+[node name="AimDebugOverlay" type="Node2D" parent="RightPlayer/FacingRoot"]
+z_index = 50
+script = ExtResource("14_aimdbg")
+player_id = 2
+
+[node name="AimDebugLine" type="Line2D" parent="RightPlayer/FacingRoot/AimDebugOverlay"]
+visible = false
+width = 3.0
+
+[node name="AimDebugRawLine" type="Line2D" parent="RightPlayer/FacingRoot/AimDebugOverlay"]
+visible = false
+width = 2.0
+
+[node name="AimDebugLabel" type="Label" parent="RightPlayer/FacingRoot/AimDebugOverlay"]
+visible = false
+
+[node name="LockOnDebugLabel" type="Label" parent="RightPlayer/FacingRoot/AimDebugOverlay"]
+visible = false
+
+[node name="AimAssistTargetLine" type="Line2D" parent="RightPlayer/FacingRoot/AimDebugOverlay"]
+visible = false
+width = 2.0
+
+[node name="AimAssistDebugLabel" type="Label" parent="RightPlayer/FacingRoot/AimDebugOverlay"]
+visible = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="RightPlayer" unique_id=315425023]
+shape = SubResource("RectangleShape2D_1")
 
 [node name="ChargeBar" type="ProgressBar" parent="RightPlayer" unique_id=935895624]
 visible = false
@@ -754,10 +826,10 @@ z_index = 45
 width = 2.0
 default_color = Color(1, 0.7, 0.4, 0.85)
 
-[node name="ShieldVisual" type="Polygon2D" parent="RightPlayer" unique_id=1346894565]
+[node name="LockOnMarker" type="Node2D" parent="RightPlayer"]
 visible = false
-z_index = 38
-position = Vector2(-24, -10)
-scale = Vector2(-1, 1)
-color = Color(0.45, 0.95, 0.75, 0.42)
-polygon = PackedVector2Array(0, -38, 32, -30, 34, 0, 32, 30, 0, 38)
+z_index = 55
+
+[node name="MarkerShape" type="Polygon2D" parent="RightPlayer/LockOnMarker"]
+color = Color(1, 0.62, 0.28, 0.9)
+polygon = PackedVector2Array(0, -8, 8, 0, 0, 8, -8, 0)

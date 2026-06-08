@@ -213,5 +213,7 @@ func _on_body_entered(body: Node) -> void:
 	var pl := body as Player
 	if _owner != null and pl == _owner:
 		return
+	if pl.should_pass_through_projectile(self):
+		return
 	pl.take_damage(_damage_now())
 	queue_free()

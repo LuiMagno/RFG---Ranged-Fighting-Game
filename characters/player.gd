@@ -117,15 +117,18 @@ var _platform_drop_through_left: float = 0.0
 @export var recoil_decay: float = 2400.0
 ## Velocidade horizontal extra (px/s) somada a `dir * move_speed` no solo/ar; decai por frame (ex.: feixe — o assign de movimento não pode apagar o recuo).
 @export var knockback_carry_x_decay: float = 3200.0
-@onready var muzzle: Marker2D = $Muzzle
-@onready var muzzle_top: Marker2D = get_node_or_null("MuzzleTop")
-@onready var muzzle_bottom: Marker2D = get_node_or_null("MuzzleBottom")
+@onready var _facing_root: Node2D = get_node_or_null("FacingRoot") as Node2D
+@onready var muzzle: Marker2D = $FacingRoot/Muzzle
+@onready var muzzle_top: Marker2D = get_node_or_null("FacingRoot/MuzzleTop")
+@onready var muzzle_bottom: Marker2D = get_node_or_null("FacingRoot/MuzzleBottom")
 @onready var charge_bar: ProgressBar = $ChargeBar
-@onready var bow: Node2D = $Bow
+@onready var bow: Node2D = $FacingRoot/Bow
 @onready var trajectory: Line2D = $Trajectory
-@onready var shield_visual: Polygon2D = get_node_or_null("ShieldVisual") as Polygon2D
-@onready var _body_visual: CanvasItem = get_node_or_null("Body") as CanvasItem
+@onready var shield_visual: Polygon2D = get_node_or_null("FacingRoot/ShieldVisual") as Polygon2D
+@onready var _aim_debug: AimDebugOverlay = get_node_or_null("FacingRoot/AimDebugOverlay") as AimDebugOverlay
+@onready var _body_visual: CanvasItem = get_node_or_null("FacingRoot/Body") as CanvasItem
 @onready var _bow_visual: CanvasItem = bow as CanvasItem
+@onready var _lock_on_marker: Node2D = get_node_or_null("LockOnMarker") as Node2D
 
 
 
@@ -171,6 +174,31 @@ var _wall_jump_move_grace_left: float = 0.0
 var _wall_jump_free_axis_sign: float = 0.0
 ## Direção de mira no plano do jogo (normalizado). Mouse atualiza de imediato; controle com deadzone + smoothing.
 var _aim_direction: Vector2 = Vector2.RIGHT
+var _locomotion_aim_raw: Vector2 = Vector2.ZERO
+var _locomotion_aim_tuned: Vector2 = Vector2.ZERO
+var _three_way_raw: Vector2 = Vector2.ZERO
+var _three_way_slot: int = ThreeWayAimUtil.Direction.FORWARD
+var _three_way_raw_angle_deg: float = 0.0
+var _five_way_raw: Vector2 = Vector2.ZERO
+var _five_way_slot: int = FiveWayAimUtil.Direction.FORWARD
+var _five_way_raw_angle_deg: float = 0.0
+var _auto_aim_raw: Vector2 = Vector2.ZERO
+var _auto_aim_slot: int = FiveWayAimUtil.Direction.FORWARD
+var _auto_aim_raw_angle_deg: float = 0.0
+var _auto_aim_target: Player = null
+var _hybrid_manual_slot: int = ThreeWayAimUtil.Direction.FORWARD
+var _hybrid_manual_vertical: float = 0.0
+var _lock_on_face_active: bool = false
+var _lock_on_target: Player = null
+var _lock_on_face_sign: int = 1
+var _assist_player_dir: Vector2 = Vector2.ZERO
+var _assist_target_dir: Vector2 = Vector2.ZERO
+var _assist_final_dir: Vector2 = Vector2.ZERO
+var _assist_angular_diff_deg: float = 0.0
+var _assist_applied: bool = false
+var _assist_player_angle_deg: float = 0.0
+var _assist_target_angle_deg: float = 0.0
+var _assist_final_angle_deg: float = 0.0
 #verificar tempo de clique para baixo do fall slide.
 var _last_down_tap_time_s: float = -100.0
 
@@ -234,8 +262,6 @@ func _dash_dir_sign_from_dash_button() -> float:
 	var axis := _get_move_axis() if input_enabled else 0.0
 	if absf(axis) > 0.01:
 		return signf(axis)
-	if absf(_aim_direction.x) > 0.01:
-		return signf(_aim_direction.x)
 	return 1.0 if player_id == 1 else -1.0
 
 
@@ -249,6 +275,11 @@ func _get_dash_stats() -> Dictionary:
 	}
 
 
+## Se true, carregar tiro principal bloqueia dash em `_can_start_dash`. Esqueleto devolve false.
+func _shoot_charge_blocks_dash() -> bool:
+	return true
+
+
 func _can_start_dash() -> bool:
 	if not input_enabled:
 		return false
@@ -256,7 +287,7 @@ func _can_start_dash() -> bool:
 		return false
 	if limit_air_dash_to_one and (not is_on_floor()) and _air_dash_used_this_airborne:
 		return false
-	if _is_charging:
+	if _shoot_charge_blocks_dash() and _is_charging:
 		return false
 	if _dash_blocked_by_grenade_skill() and _is_grenade_charging_active():
 		return false
@@ -386,6 +417,9 @@ func _ready() -> void:
 	if _bow_visual != null:
 		_orig_bow_modulate = _bow_visual.modulate
 	_frozen_prev = false
+	_lock_on_face_active = (
+		RunConfig.is_lock_on_face_test() and RunConfig.test_lock_on_face_default
+	)
 	_ensure_sprint_indicator()
 	_reset_aim_direction_to_forward()
 	_sync_launch_angle_from_aim_direction()
@@ -422,6 +456,16 @@ func _physics_process(delta: float) -> void:
 		special_buff_changed.emit(is_active, _special_uses_left(), _special_buff_left)
 
 	_update_aim(delta)
+	if RunConfig.is_lock_on_face_test():
+		if _lock_on_toggle_just_pressed():
+			_lock_on_face_active = not _lock_on_face_active
+			if not _lock_on_face_active:
+				_reset_lock_on_visual()
+		if _frozen_left <= 0.0:
+			_update_lock_on_facing()
+	elif _lock_on_face_active or _lock_on_target != null:
+		_lock_on_face_active = false
+		_reset_lock_on_visual()
 	_update_shield(delta)
 	_update_sprint_indicator()
 
@@ -460,9 +504,12 @@ func _physics_process(delta: float) -> void:
 			var sp0 := _get_sprint_speed_mult()
 			velocity = Vector2(hv.x * move_speed * sp0, -hv.y * move_speed * sp0)
 		else:
-			var dir := 0.0 if not input_enabled else _get_move_axis()
 			var sp := _get_sprint_speed_mult()
-			velocity.x = dir * move_speed * sp + _carry_knockback_x
+			if RunConfig.is_free_aim_left_stick_test() and input_enabled:
+				velocity.x = _locomotion_aim_tuned.x * move_speed * sp + _carry_knockback_x
+			else:
+				var dir := 0.0 if not input_enabled else _get_move_axis()
+				velocity.x = dir * move_speed * sp + _carry_knockback_x
 			_carry_knockback_x = move_toward(_carry_knockback_x, 0.0, knockback_carry_x_decay * delta)
 	else:
 		if hovering:
@@ -813,19 +860,496 @@ func _update_aim_direction_gamepad(delta: float) -> void:
 		_aim_direction = target
 
 
+func _update_free_test_aim_direction_gamepad(delta: float) -> void:
+	var raw_stick := FreeAimUtil.read_gamepad_aim(player_id)
+	var tuned := FreeAimUtil.apply_gamepad_tuning(
+		raw_stick,
+		RunConfig.test_aim_deadzone,
+		RunConfig.test_aim_sensitivity,
+		RunConfig.get_test_aim_smoothing(),
+		delta,
+		_aim_direction
+	)
+	_aim_direction = FreeAimUtil.clamp_to_opponent_hemisphere(tuned, player_id)
+
+
+func _update_free_test_aim_from_locomotion_vector(delta: float) -> void:
+	var gamepad := RunConfig.is_player_using_gamepad(player_id)
+	_locomotion_aim_raw = FreeAimUtil.read_locomotion_aim_vector(player_id, gamepad)
+	var scaled := _locomotion_aim_raw * RunConfig.test_aim_sensitivity
+	if scaled.length_squared() > 1.0001:
+		scaled = scaled.limit_length(1.0)
+	if scaled.length() < RunConfig.test_aim_deadzone:
+		_locomotion_aim_tuned = Vector2.ZERO
+		return
+	var tuned := FreeAimUtil.apply_gamepad_tuning(
+		_locomotion_aim_raw,
+		RunConfig.test_aim_deadzone,
+		RunConfig.test_aim_sensitivity,
+		RunConfig.get_test_aim_smoothing(),
+		delta,
+		_aim_direction
+	)
+	_locomotion_aim_tuned = tuned
+	_aim_direction = FreeAimUtil.clamp_to_opponent_hemisphere(tuned, player_id)
+
+
+func _update_free_test_aim_direction_mouse() -> void:
+	_aim_direction = FreeAimUtil.read_mouse_aim(
+		muzzle.global_position, get_global_mouse_position(), player_id
+	)
+
+
+func _apply_three_way_quantize(raw: Vector2) -> void:
+	_three_way_raw = raw
+	if raw.length() >= RunConfig.test_aim_deadzone:
+		var clamped := FreeAimUtil.clamp_to_opponent_hemisphere(raw, player_id)
+		_three_way_raw_angle_deg = ThreeWayAimUtil.signed_aim_angle_deg(clamped, player_id)
+	var result := ThreeWayAimUtil.quantize(
+		raw,
+		player_id,
+		RunConfig.test_aim_deadzone,
+		RunConfig.test_aim_upper_angle_threshold,
+		RunConfig.test_aim_lower_angle_threshold,
+		_aim_direction
+	)
+	if result.get("in_deadzone", false):
+		return
+	_three_way_raw_angle_deg = result.get("raw_angle_deg", 0.0)
+	_three_way_slot = result.get("slot", ThreeWayAimUtil.Direction.FORWARD)
+	_aim_direction = result.get("direction", _aim_direction)
+
+
+func _update_three_way_test_aim_gamepad() -> void:
+	_apply_three_way_quantize(FreeAimUtil.read_gamepad_aim(player_id))
+
+
+func _update_three_way_test_aim_mouse() -> void:
+	var raw := get_global_mouse_position() - muzzle.global_position
+	if raw.length_squared() <= 0.0001:
+		return
+	_apply_three_way_quantize(raw)
+
+
+func _apply_five_way_quantize(raw: Vector2) -> void:
+	_five_way_raw = raw
+	if raw.length() >= RunConfig.test_aim_deadzone:
+		var clamped := FreeAimUtil.clamp_to_opponent_hemisphere(raw, player_id)
+		_five_way_raw_angle_deg = ThreeWayAimUtil.signed_aim_angle_deg(clamped, player_id)
+	var result := FiveWayAimUtil.quantize(
+		raw,
+		player_id,
+		RunConfig.test_aim_deadzone,
+		RunConfig.test_aim_up_threshold,
+		RunConfig.test_aim_up_diagonal_threshold,
+		RunConfig.test_aim_down_diagonal_threshold,
+		RunConfig.test_aim_down_threshold,
+		_aim_direction
+	)
+	if result.get("in_deadzone", false):
+		return
+	_five_way_raw_angle_deg = result.get("raw_angle_deg", 0.0)
+	_five_way_slot = result.get("slot", FiveWayAimUtil.Direction.FORWARD)
+	_aim_direction = result.get("direction", _aim_direction)
+
+
+func _update_five_way_test_aim_gamepad() -> void:
+	_apply_five_way_quantize(FreeAimUtil.read_gamepad_aim(player_id))
+
+
+func _update_five_way_test_aim_mouse() -> void:
+	var raw := get_global_mouse_position() - muzzle.global_position
+	if raw.length_squared() <= 0.0001:
+		return
+	_apply_five_way_quantize(raw)
+
+
+func _find_opponent_player() -> Player:
+	return AutoAimFiveWayUtil.find_valid_opponent(self)
+
+
+func _update_auto_aim_5_way_test() -> void:
+	var opponent := _find_opponent_player()
+	_auto_aim_target = opponent
+	if opponent == null:
+		_auto_aim_raw = Vector2.ZERO
+		_auto_aim_slot = FiveWayAimUtil.Direction.FORWARD
+		_auto_aim_raw_angle_deg = 0.0
+		_aim_direction = FiveWayAimUtil.direction_to_vector(FiveWayAimUtil.Direction.FORWARD, player_id)
+		return
+	var result := AutoAimFiveWayUtil.aim_at_target(
+		muzzle.global_position,
+		opponent.global_position,
+		player_id,
+		RunConfig.test_auto_aim_up_threshold,
+		RunConfig.test_auto_aim_up_diagonal_threshold,
+		RunConfig.test_auto_aim_forward_threshold,
+		RunConfig.test_auto_aim_down_diagonal_threshold,
+		RunConfig.test_auto_aim_down_threshold
+	)
+	_auto_aim_raw = result.get("raw_vector", Vector2.ZERO)
+	_auto_aim_raw_angle_deg = result.get("raw_angle_deg", 0.0)
+	_auto_aim_slot = result.get("slot", FiveWayAimUtil.Direction.FORWARD)
+	_aim_direction = result.get("direction", _aim_direction)
+
+
+func _update_auto_aim_360_test() -> void:
+	var opponent := _find_opponent_player()
+	_auto_aim_target = opponent
+	if opponent == null:
+		_auto_aim_raw = Vector2.ZERO
+		_auto_aim_raw_angle_deg = 0.0
+		_aim_direction = FreeAimUtil.forward_for_player(player_id)
+		return
+	var result := AutoAim360Util.aim_at_target(
+		muzzle.global_position,
+		opponent.global_position,
+		player_id
+	)
+	_auto_aim_raw = result.get("raw_vector", Vector2.ZERO)
+	_auto_aim_raw_angle_deg = result.get("angle_deg", 0.0)
+	_aim_direction = result.get("direction", _aim_direction)
+
+
+func _hybrid_manual_sample() -> Dictionary:
+	return HybridManualAimUtil.sample(
+		player_id,
+		RunConfig.is_player_using_gamepad(player_id),
+		RunConfig.test_hybrid_manual_up_threshold,
+		RunConfig.test_hybrid_manual_down_threshold
+	)
+
+
+func _apply_hybrid_manual_sample(result: Dictionary) -> void:
+	_hybrid_manual_vertical = result.get("vertical", 0.0)
+	_hybrid_manual_slot = result.get("slot", ThreeWayAimUtil.Direction.FORWARD)
+	_aim_direction = result.get("direction", _aim_direction)
+
+
+func _update_hybrid_manual_preview() -> void:
+	_apply_hybrid_manual_sample(_hybrid_manual_sample())
+
+
+func _sync_launch_angle_unclamped_from_aim_direction() -> void:
+	if _aim_direction.length_squared() <= 0.0001:
+		return
+	var d := _aim_direction.normalized()
+	var forward := Vector2.RIGHT if player_id == 1 else Vector2.LEFT
+	var signed_from_axis := forward.angle_to(d)
+	launch_angle_degrees = -rad_to_deg(signed_from_axis) if player_id == 1 else rad_to_deg(signed_from_axis)
+
+
+func _resolve_sprite_flip_h() -> bool:
+	if (
+		RunConfig.is_lock_on_face_test()
+		and _lock_on_face_active
+		and _lock_on_target != null
+	):
+		return _lock_on_face_sign < 0
+	return player_id == 2
+
+
+func _lock_on_toggle_just_pressed() -> bool:
+	if not RunConfig.is_lock_on_face_test() or hp <= 0:
+		return false
+	var action := "p1_lock_on_toggle" if player_id == 1 else "p2_lock_on_toggle"
+	return Input.is_action_just_pressed(action)
+
+
+func _home_face_sign() -> int:
+	return 1 if player_id == 1 else -1
+
+
+func _apply_lock_on_facing_scale() -> void:
+	if _facing_root == null:
+		return
+	var home := _home_face_sign()
+	_facing_root.scale.x = float(_lock_on_face_sign) / float(home)
+
+
+func _reset_lock_on_visual() -> void:
+	_lock_on_target = null
+	if _facing_root != null:
+		_facing_root.scale.x = 1.0
+	_set_lock_on_marker_visible(false)
+	_refresh_lock_on_debug()
+
+
+func _resolve_lock_on_opponent() -> Player:
+	return LockOnFaceUtil.find_valid_opponent(self)
+
+
+func _update_lock_on_shot_aim() -> void:
+	var opponent := _resolve_lock_on_opponent()
+	_lock_on_target = opponent
+	if opponent == null:
+		_reset_aim_direction_to_forward()
+		return
+	var result := LockOnFaceUtil.aim_at_target(
+		muzzle.global_position,
+		opponent.global_position,
+		player_id
+	)
+	_aim_direction = result.get("direction", _aim_direction)
+
+
+func _update_lock_on_facing() -> void:
+	if _facing_root == null:
+		return
+	if not RunConfig.is_lock_on_face_test():
+		_reset_lock_on_visual()
+		return
+	if not _lock_on_face_active or not input_enabled or hp <= 0:
+		_reset_lock_on_visual()
+		return
+	if _lock_on_target == null or not is_instance_valid(_lock_on_target):
+		_lock_on_target = _resolve_lock_on_opponent()
+	if _lock_on_target == null:
+		_reset_lock_on_visual()
+		return
+	_lock_on_face_sign = LockOnFaceUtil.face_sign_from_target(
+		global_position, _lock_on_target.global_position
+	)
+	_apply_lock_on_facing_scale()
+	_update_lock_on_marker()
+	_refresh_lock_on_debug()
+
+
+func _set_lock_on_marker_visible(visible_state: bool) -> void:
+	if _lock_on_marker != null:
+		_lock_on_marker.visible = visible_state
+
+
+func _update_lock_on_marker() -> void:
+	if _lock_on_marker == null or _lock_on_target == null:
+		_set_lock_on_marker_visible(false)
+		return
+	_lock_on_marker.position = to_local(_lock_on_target.global_position + Vector2(0, -55))
+	_set_lock_on_marker_visible(true)
+
+
+func _refresh_lock_on_debug() -> void:
+	if _aim_debug == null:
+		return
+	var target_label := ""
+	if _lock_on_target != null and is_instance_valid(_lock_on_target):
+		target_label = "P%d" % _lock_on_target.player_id
+	var facing := ""
+	if _lock_on_target != null:
+		facing = LockOnFaceUtil.facing_label(_lock_on_face_sign)
+	_aim_debug.refresh_lock_on(_lock_on_face_active, target_label, facing)
+
+
+func _refresh_aim_debug() -> void:
+	if _aim_debug == null:
+		return
+	if RunConfig.is_right_stick_3_way_test():
+		var slot_name := ThreeWayAimUtil.direction_label(_three_way_slot as ThreeWayAimUtil.Direction)
+		_aim_debug.refresh(
+			muzzle.position,
+			_aim_direction,
+			launch_angle_degrees,
+			_three_way_raw,
+			"RIGHT_STICK_3_WAY",
+			_three_way_raw_angle_deg,
+			slot_name
+		)
+		_refresh_aim_assist_overlay()
+		return
+	if RunConfig.is_right_stick_5_way_test():
+		var slot_name := FiveWayAimUtil.direction_label(_five_way_slot as FiveWayAimUtil.Direction)
+		_aim_debug.refresh(
+			muzzle.position,
+			_aim_direction,
+			launch_angle_degrees,
+			_five_way_raw,
+			"RIGHT_STICK_5_WAY",
+			_five_way_raw_angle_deg,
+			slot_name
+		)
+		_refresh_aim_assist_overlay()
+		return
+	if RunConfig.is_auto_aim_5_way_test():
+		var slot_name := FiveWayAimUtil.direction_label(_auto_aim_slot as FiveWayAimUtil.Direction)
+		var extra := ""
+		if _auto_aim_target != null and is_instance_valid(_auto_aim_target):
+			var tgt := to_local(_auto_aim_target.global_position)
+			extra = "target=(%.2f, %.2f)" % [tgt.x, tgt.y]
+		_aim_debug.refresh(
+			muzzle.position,
+			_aim_direction,
+			launch_angle_degrees,
+			_auto_aim_raw,
+			"AUTO_AIM_5_WAY",
+			_auto_aim_raw_angle_deg,
+			slot_name,
+			"Chosen Direction:",
+			extra
+		)
+		_refresh_aim_assist_overlay()
+		return
+	if RunConfig.is_auto_aim_360_test():
+		var target_label := "—"
+		if _auto_aim_target != null and is_instance_valid(_auto_aim_target):
+			target_label = "P%d" % _auto_aim_target.player_id
+		_aim_debug.refresh(
+			muzzle.position,
+			_aim_direction,
+			launch_angle_degrees,
+			_auto_aim_raw,
+			"AUTO_AIM_360",
+			_auto_aim_raw_angle_deg,
+			"",
+			"",
+			"",
+			true,
+			target_label
+		)
+		_refresh_aim_assist_overlay()
+		return
+	if RunConfig.is_lock_on_face_test() and _lock_on_face_active:
+		var raw := Vector2.ZERO
+		var target_label := "—"
+		if _lock_on_target != null and is_instance_valid(_lock_on_target):
+			raw = _lock_on_target.global_position - muzzle.global_position
+			target_label = "P%d" % _lock_on_target.player_id
+		_aim_debug.refresh(
+			muzzle.position,
+			_aim_direction,
+			launch_angle_degrees,
+			raw,
+			"LOCK_ON_FACE",
+			launch_angle_degrees,
+			"ON",
+			"Lock-On:",
+			"",
+			true,
+			target_label
+		)
+		_refresh_aim_assist_overlay()
+		return
+	if RunConfig.is_hybrid_manual_test():
+		var slot_name := ThreeWayAimUtil.direction_label(_hybrid_manual_slot as ThreeWayAimUtil.Direction)
+		_aim_debug.refresh(
+			muzzle.position,
+			_aim_direction,
+			launch_angle_degrees,
+			Vector2.ZERO,
+			"HYBRID_MANUAL",
+			launch_angle_degrees,
+			slot_name,
+			"Current Shot Direction:",
+			"vertical=%.2f" % _hybrid_manual_vertical
+		)
+		_refresh_aim_assist_overlay()
+		return
+	var raw := _locomotion_aim_raw if RunConfig.is_free_aim_left_stick_test() else Vector2.ZERO
+	_aim_debug.refresh(muzzle.position, _aim_direction, launch_angle_degrees, raw)
+	_refresh_aim_assist_overlay()
+
+
+func _refresh_aim_assist_overlay() -> void:
+	if _aim_debug == null:
+		return
+	if not RunConfig.is_aim_assist_test_active() or not RunConfig.test_aim_debug:
+		_aim_debug.hide_aim_assist()
+		return
+	if RunConfig.is_lock_on_face_test() and _lock_on_face_active:
+		_aim_debug.hide_aim_assist()
+		return
+	var base_vel := _compute_launch_velocity_base(1.0)
+	if base_vel.length_squared() <= 0.0001:
+		_aim_debug.hide_aim_assist()
+		return
+	var opponent := LockOnFaceUtil.find_valid_opponent(self)
+	if opponent == null:
+		_aim_debug.hide_aim_assist()
+		return
+	var result := AimAssistUtil.apply(
+		base_vel.normalized(),
+		muzzle.global_position,
+		opponent.global_position,
+		player_id,
+		RunConfig.test_aim_assist_angle_window,
+		RunConfig.get_test_aim_assist_strength(),
+		RunConfig.test_aim_assist_max_correction
+	)
+	_assist_player_dir = result.get("player_dir", base_vel.normalized())
+	_assist_target_dir = result.get("target_dir", Vector2.ZERO)
+	_assist_final_dir = result.get("final_dir", _assist_player_dir)
+	_assist_angular_diff_deg = result.get("angular_diff", 0.0)
+	_assist_applied = result.get("applied", false)
+	_assist_player_angle_deg = result.get("player_angle_deg", 0.0)
+	_assist_target_angle_deg = result.get("target_angle_deg", 0.0)
+	_assist_final_angle_deg = result.get("final_angle_deg", _assist_player_angle_deg)
+	_aim_debug.refresh_aim_assist(
+		muzzle.position,
+		MenuThemeUtil.get_test_aim_mode_debug_name(int(RunConfig.test_aim_mode)),
+		RunConfig.get_test_aim_assist_level_label(),
+		_assist_player_dir,
+		_assist_target_dir,
+		_assist_final_dir,
+		_assist_angular_diff_deg,
+		_assist_player_angle_deg,
+		_assist_target_angle_deg,
+		_assist_final_angle_deg,
+		_assist_applied
+	)
+
+
 func _update_aim(delta: float) -> void:
 	if _frozen_left > 0.0:
+		_refresh_aim_debug()
 		return
 	if not input_enabled:
 		_update_bow_visual()
+		_refresh_aim_debug()
 		return
-	if RunConfig.is_player_using_gamepad(player_id):
-		_update_aim_direction_gamepad(delta)
+	match RunConfig.test_aim_mode:
+		RunConfig.TestAimMode.FREE_AIM_RIGHT_STICK:
+			if RunConfig.is_player_using_gamepad(player_id):
+				_update_free_test_aim_direction_gamepad(delta)
+			else:
+				_update_free_test_aim_direction_mouse()
+		RunConfig.TestAimMode.FREE_AIM_LEFT_STICK:
+			_update_free_test_aim_from_locomotion_vector(delta)
+		RunConfig.TestAimMode.RIGHT_STICK_3_WAY:
+			if RunConfig.is_player_using_gamepad(player_id):
+				_update_three_way_test_aim_gamepad()
+			else:
+				_update_three_way_test_aim_mouse()
+		RunConfig.TestAimMode.RIGHT_STICK_5_WAY:
+			if RunConfig.is_player_using_gamepad(player_id):
+				_update_five_way_test_aim_gamepad()
+			else:
+				_update_five_way_test_aim_mouse()
+		RunConfig.TestAimMode.AUTO_AIM_5_WAY:
+			_update_auto_aim_5_way_test()
+		RunConfig.TestAimMode.AUTO_AIM_360:
+			_update_auto_aim_360_test()
+		RunConfig.TestAimMode.HYBRID_MANUAL:
+			_update_hybrid_manual_preview()
+		RunConfig.TestAimMode.LOCKED_HORIZONTAL:
+			_reset_aim_direction_to_forward()
+		RunConfig.TestAimMode.LOCK_ON_FACE:
+			if _lock_on_face_active:
+				_update_lock_on_shot_aim()
+			else:
+				_reset_aim_direction_to_forward()
+		_:
+			if RunConfig.is_player_using_gamepad(player_id):
+				_update_aim_direction_gamepad(delta)
+			else:
+				_update_aim_direction_mouse()
+	if RunConfig.is_auto_aim_360_test() or (
+		RunConfig.is_lock_on_face_test() and _lock_on_face_active
+	):
+		_sync_launch_angle_unclamped_from_aim_direction()
 	else:
-		_update_aim_direction_mouse()
-	_sync_launch_angle_from_aim_direction()
-	launch_angle_degrees = clampf(launch_angle_degrees, -aim_limit_deg, aim_limit_deg)
+		_sync_launch_angle_from_aim_direction()
+		launch_angle_degrees = clampf(launch_angle_degrees, -aim_limit_deg, aim_limit_deg)
 	_update_bow_visual()
+	_refresh_aim_debug()
 
 
 func _update_bow_visual() -> void:
@@ -959,7 +1483,7 @@ func _update_double_tap_forward_movement() -> void:
 			var back := -1.0 if player_id == 1 else 1.0
 			start_dash_with_direction(back)
 			_last_back_tap_time_s = -100.0
-	  
+
 	# --- DASH PARA BAIXO (Ground Pound) ---
 	if _down_action_just_pressed():
 		if not is_on_floor():
@@ -1125,13 +1649,68 @@ func _special_just_released() -> bool:
 
 
 func _compute_launch_velocity(speed: float) -> Vector2:
-	#var sign_x := 1.0 if player_id == 1 else -1.0
-	#var angle := deg_to_rad(launch_angle_degrees)
-	#var vx := cos(angle) * speed * sign_x
-	#var vy := -sin(angle) * speed
-	#return Vector2(vx, vy)
+	var launch_vel := _compute_launch_velocity_base(speed)
+	return _apply_aim_assist_to_velocity(launch_vel, speed)
+
+
+func _compute_launch_velocity_base(speed: float) -> Vector2:
+	if RunConfig.is_lock_on_face_test() and _lock_on_face_active:
+		var opponent := _resolve_lock_on_opponent()
+		if opponent != null:
+			var result := LockOnFaceUtil.aim_at_target(
+				muzzle.global_position,
+				opponent.global_position,
+				player_id
+			)
+			var dir: Vector2 = result.get("direction", Vector2.ZERO)
+			if dir.length_squared() > 0.0001:
+				return dir.normalized() * speed
+		var direction := Vector2.RIGHT if player_id == 1 else Vector2.LEFT
+		return direction * speed
+	if RunConfig.is_hybrid_manual_test():
+		_apply_hybrid_manual_sample(_hybrid_manual_sample())
+		_sync_launch_angle_from_aim_direction()
+		return FreeAimUtil.compute_shot_velocity(speed, launch_angle_degrees, player_id)
+	if RunConfig.is_auto_aim_360_test():
+		if _aim_direction.length_squared() <= 0.0001:
+			return FreeAimUtil.forward_for_player(player_id) * speed
+		return _aim_direction.normalized() * speed
+	if RunConfig.uses_angled_shot_test():
+		return FreeAimUtil.compute_shot_velocity(speed, launch_angle_degrees, player_id)
 	var direction := Vector2.RIGHT if player_id == 1 else Vector2.LEFT
 	return direction * speed
+
+
+func _apply_aim_assist_to_velocity(base_vel: Vector2, speed: float) -> Vector2:
+	if not RunConfig.is_aim_assist_test_active():
+		return base_vel
+	if RunConfig.is_lock_on_face_test() and _lock_on_face_active:
+		return base_vel
+	if base_vel.length_squared() <= 0.0001:
+		return base_vel
+	var opponent := LockOnFaceUtil.find_valid_opponent(self)
+	if opponent == null:
+		return base_vel
+	var result := AimAssistUtil.apply(
+		base_vel.normalized(),
+		muzzle.global_position,
+		opponent.global_position,
+		player_id,
+		RunConfig.test_aim_assist_angle_window,
+		RunConfig.get_test_aim_assist_strength(),
+		RunConfig.test_aim_assist_max_correction
+	)
+	_assist_player_dir = result.get("player_dir", base_vel.normalized())
+	_assist_target_dir = result.get("target_dir", Vector2.ZERO)
+	_assist_final_dir = result.get("final_dir", _assist_player_dir)
+	_assist_angular_diff_deg = result.get("angular_diff", 0.0)
+	_assist_applied = result.get("applied", false)
+	_assist_player_angle_deg = result.get("player_angle_deg", 0.0)
+	_assist_target_angle_deg = result.get("target_angle_deg", 0.0)
+	_assist_final_angle_deg = result.get("final_angle_deg", _assist_player_angle_deg)
+	if _assist_applied:
+		return _assist_final_dir * speed
+	return base_vel
 
 
 func _compute_launch_velocity_with_angle(speed: float, angle_deg: float) -> Vector2:
@@ -1220,6 +1799,11 @@ func _enforce_arena_half() -> void:
 		velocity.x = 0.0
 
 
+## Subclasses (ex.: Esqueleto no dash) podem devolver true para projéteis atravessarem sem dano nem destruição.
+func should_pass_through_projectile(_projectile: Node) -> bool:
+	return false
+
+
 func take_damage(amount: int) -> void:
 	_interrupt_sprint()
 	hp = maxi(0, hp - amount)
@@ -1268,6 +1852,8 @@ func prepare_for_vs_round_respawn(local_spawn: Vector2) -> void:
 		_shield_cd_left = 0.0
 	special_buff_changed.emit(false, 0, 0.0)
 	_reset_aim_direction_to_forward()
+	_locomotion_aim_raw = Vector2.ZERO
+	_locomotion_aim_tuned = Vector2.ZERO
 	_sync_launch_angle_from_aim_direction()
 	_extra_reset_for_vs_round()
 

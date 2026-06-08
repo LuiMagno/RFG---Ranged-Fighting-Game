@@ -637,7 +637,7 @@ func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
 					base_pad_move
 					+ " · X segure/solta feixe · Y buff de velocidade no tiro carregado · LB ULT (chuva de ossos)"
 					+ " · Tiro carregado: segure/solte RB"
-					+ " · B dash (direcção: stick esq. ou mira); duplo frente/trás não inicia dash"
+					+ " · B dash (direcção: stick esq.); duplo frente/trás não inicia dash"
 					+ " · D-pad ↓ / stick esq. ↓ (no ar): queda"
 				)
 			_:
@@ -656,7 +656,7 @@ func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
 			return (
 				base_kb_move
 				+ " · F segure/solta feixe · G buff de velocidade no tiro carregado · R chuva de ossos (ULT)"
-				+ " · Shift dash (direcção: A/D ou mira); duplo A/D não inicia dash"
+				+ " · Shift dash (direcção: A/D); duplo A/D não inicia dash"
 			)
 		_:
 			return base_kb
@@ -797,8 +797,7 @@ func _fire_training_dummy_shot() -> void:
 	if _ult_armagem_animacao_active:
 		return
 	# Simple straight shot from dummy toward player 1.
-	var from := right_player.get_node("Muzzle") as Marker2D
-	var origin := from.global_position
+	var origin := right_player.muzzle.global_position
 	var target := left_player.global_position + Vector2(0, -20)
 	var dir := (target - origin).normalized()
 	var speed := 900.0
@@ -814,6 +813,7 @@ func _ensure_input_map() -> void:
 	_ensure_move_vertical_actions("p2")
 	_ensure_ground_pound_action_exists("p1")
 	_ensure_ground_pound_action_exists("p2")
+	_ensure_lock_on_toggle_actions()
 	_add_action_if_missing("p1_left", KEY_A)
 	_add_action_if_missing("p1_right", KEY_D)
 	_add_action_if_missing("p1_jump", KEY_SPACE)
@@ -876,6 +876,7 @@ func _ensure_p2_action_shells_without_keys() -> void:
 		"p2_move_up",
 		"p2_move_down",
 		"p2_down",
+		"p2_lock_on_toggle",
 	]:
 		if not InputMap.has_action(n):
 			InputMap.add_action(n)
@@ -918,6 +919,15 @@ func _ensure_p2_keyboard_mouse_shared_layout() -> void:
 	_add_action_if_missing("p2_ult", KEY_R)
 	_ensure_dash_action("p2_dash", true)
 	_add_action_if_missing("p2_down", KEY_S)
+	_add_action_if_missing("p2_lock_on_toggle", KEY_O)
+
+
+func _ensure_lock_on_toggle_actions() -> void:
+	if not InputMap.has_action("p1_lock_on_toggle"):
+		InputMap.add_action("p1_lock_on_toggle")
+	_add_action_if_missing("p1_lock_on_toggle", KEY_L)
+	if not InputMap.has_action("p2_lock_on_toggle"):
+		InputMap.add_action("p2_lock_on_toggle")
 
 
 func _player_action_names(prefix: String) -> Array:
@@ -943,6 +953,7 @@ func _player_action_names(prefix: String) -> Array:
 		p + "move_up",
 		p + "move_down",
 		p + "down",
+		p + "lock_on_toggle",
 	]
 
 
@@ -1024,6 +1035,7 @@ func _add_gamepad_mappings_for_player(prefix: String, device: int) -> void:
 	InputMap.action_add_event(p + "grenade", _joy_btn(device, JOY_BUTTON_X))
 	InputMap.action_add_event(p + "mage_float", _joy_btn(device, JOY_BUTTON_RIGHT_STICK))
 	InputMap.action_add_event(p + "archer_spike", _joy_btn(device, JOY_BUTTON_LEFT_STICK))
+	InputMap.action_add_event(p + "lock_on_toggle", _joy_btn(device, JOY_BUTTON_BACK))
 
 
 func _ensure_dash_action(action_name: StringName, left_shift: bool) -> void:

@@ -180,7 +180,7 @@ func _extra_reset_for_vs_round() -> void:
 
 
 func _setup_mago_body_sprite() -> void:
-	_body_sprite = get_node_or_null("BodySprite") as AnimatedSprite2D
+	_body_sprite = get_node_or_null("FacingRoot/BodySprite") as AnimatedSprite2D
 	if _body_sprite == null:
 		return
 	if not ResourceLoader.exists(MAGO_SPRITE_FRAMES_PATH):
@@ -193,7 +193,7 @@ func _setup_mago_body_sprite() -> void:
 	_body_sprite.sprite_frames = frames
 	_body_sprite.visible = true
 	_body_sprite.offset = BODY_SPRITE_OFFSET
-	_body_sprite.flip_h = player_id == 2
+	_body_sprite.flip_h = _resolve_sprite_flip_h()
 	_orig_sprite_modulate = _body_sprite.modulate
 	if _body_visual != null:
 		_body_visual.visible = false
@@ -226,6 +226,7 @@ func _sync_mago_body_sprite() -> void:
 		want = "idle" if frames.has_animation("idle") else frames.get_animation_names()[0]
 	if _body_sprite.animation != want:
 		_body_sprite.play(want)
+	_body_sprite.flip_h = _resolve_sprite_flip_h()
 	if _frozen_left > 0.0:
 		_body_sprite.modulate = Color(0.75, 0.9, 1.0, 1.0)
 	elif _is_sprint_speed_boost_active():

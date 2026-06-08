@@ -3,6 +3,8 @@
 @onready var chk_dummy_shoot: CheckBox = $Center/MainPanel/VBox/TrainingBox/ChkDummyShoot
 @onready var opt_ko_camera_impact: OptionButton = $Center/MainPanel/VBox/VisualBox/KoCameraRow/OptKoCameraImpact
 @onready var opt_vs_intro: OptionButton = $Center/MainPanel/VBox/VisualBox/VsIntroRow/OptVsIntro
+@onready var btn_aim_options: Button = $Center/MainPanel/VBox/AimNavBox/BtnAimOptions
+@onready var lbl_aim_summary: Label = $Center/MainPanel/VBox/AimNavBox/LblAimSummary
 @onready var opt_esqueleto_projetil_vel: OptionButton = (
 	$Center/MainPanel/VBox/EsqueletoBox/ProjetilVelRow/OptEsqueletoProjetilVel
 )
@@ -18,6 +20,7 @@ func _ready() -> void:
 	MenuThemeUtil.style_option(opt_ko_camera_impact)
 	MenuThemeUtil.fill_vs_intro_option(opt_vs_intro)
 	MenuThemeUtil.style_option(opt_vs_intro)
+	MenuThemeUtil.style_menu_button(btn_aim_options, false)
 	MenuThemeUtil.fill_esqueleto_projetil_velocidade_option(opt_esqueleto_projetil_vel)
 	MenuThemeUtil.style_option(opt_esqueleto_projetil_vel)
 	MenuThemeUtil.style_menu_button(btn_back, true)
@@ -34,9 +37,15 @@ func _ready() -> void:
 	chk_dummy_shoot.toggled.connect(_on_dummy_shoot_toggled)
 	opt_ko_camera_impact.item_selected.connect(_on_ko_camera_impact_selected)
 	opt_vs_intro.item_selected.connect(_on_vs_intro_selected)
+	btn_aim_options.pressed.connect(_on_aim_options_pressed)
 	opt_esqueleto_projetil_vel.item_selected.connect(_on_esqueleto_projetil_vel_selected)
 	btn_back.pressed.connect(_on_back_pressed)
+	_refresh_aim_summary()
 	chk_dummy_shoot.grab_focus()
+
+
+func _refresh_aim_summary() -> void:
+	lbl_aim_summary.text = MenuThemeUtil.get_test_aim_summary_with_assist()
 
 
 func _on_dummy_shoot_toggled(pressed: bool) -> void:
@@ -49,6 +58,10 @@ func _on_ko_camera_impact_selected(index: int) -> void:
 
 func _on_vs_intro_selected(index: int) -> void:
 	RunConfig.vs_intro_style = index as RunConfig.VsIntroStyle
+
+
+func _on_aim_options_pressed() -> void:
+	get_tree().change_scene_to_file(MenuPaths.SCENE_TEST_AIM_OPTIONS)
 
 
 func _on_esqueleto_projetil_vel_selected(_index: int) -> void:

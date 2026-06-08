@@ -1,24 +1,37 @@
-﻿extends Node
+extends Node
 
-# Singleton em Project Settings ÔåÆ Autoload (nome: RunConfig).
-# N├úo use class_name RunConfig aqui ÔÇö conflita com o autoload.
+# Singleton em Project Settings → Autoload (nome: RunConfig).
+# Não use class_name RunConfig aqui — conflita com o autoload.
 
 enum Mode { VS_PLAYER, TRAINING }
 
 ## Palco da arena (`Game` aplica visual e, no futuro, regras por stage).
 enum Stage { NORMAL, TIERED_ABYSS, OLD_FACTORY }
 
-## Teclado e mouse vs controle (por jogador). O mapa em runtime ├® aplicado em `Game._ensure_input_map()`.
+## Teclado e mouse vs controle (por jogador). O mapa em runtime é aplicado em `Game._ensure_input_map()`.
 enum InputScheme { KEYBOARD_MOUSE, GAMEPAD }
 
-## Estilo de impacto da c├ómera no KO de round (test├ível no menu de treino).
+## Estilo de impacto da câmera no KO de round (testável no menu de treino).
 enum KoCameraImpactStyle { SLOW_MOTION, HIT_STOP, HYBRID }
 
-## Estilo da intro de partida no Vs (test├ível no menu de treino).
+## Estilo da intro de partida no Vs (testável no menu de treino).
 enum VsIntroStyle { A_FAST, B_MEDIUM, C_CINEMATIC }
 
-## Velocidade de viagem dos proj├®teis do Esqueleto no treino (tiro carregado, feixe, queda da ULT).
+## Velocidade de viagem dos projéteis do Esqueleto no treino (tiro carregado, feixe, queda da ULT).
 enum EsqueletoProjetilVelocidade { MUL_100, MUL_125, MUL_150, MUL_175 }
+
+## Modo de mira testável no hub (default LOCKED_HORIZONTAL).
+enum TestAimMode {
+	LOCKED_HORIZONTAL,
+	FREE_AIM_RIGHT_STICK,
+	FREE_AIM_LEFT_STICK,
+	RIGHT_STICK_3_WAY,
+	RIGHT_STICK_5_WAY,
+	AUTO_AIM_5_WAY,
+	AUTO_AIM_360,
+	HYBRID_MANUAL,
+	LOCK_ON_FACE,
+}
 
 var mode: Mode = Mode.VS_PLAYER
 
@@ -30,14 +43,42 @@ var ko_camera_impact_style: KoCameraImpactStyle = KoCameraImpactStyle.HYBRID
 var vs_intro_style: VsIntroStyle = VsIntroStyle.B_MEDIUM
 var esqueleto_projetil_velocidade: EsqueletoProjetilVelocidade = EsqueletoProjetilVelocidade.MUL_150
 
+var test_aim_mode: TestAimMode = TestAimMode.LOCKED_HORIZONTAL
+var test_aim_deadzone: float = 0.25
+var test_aim_sensitivity: float = 1.0
+var test_aim_smoothing: float = 0.10
+var test_aim_smoothing_enabled: bool = true
+var test_aim_upper_angle_threshold: float = 15.0
+var test_aim_lower_angle_threshold: float = -15.0
+var test_aim_up_threshold: float = 60.0
+var test_aim_up_diagonal_threshold: float = 30.0
+var test_aim_down_diagonal_threshold: float = -30.0
+var test_aim_down_threshold: float = -60.0
+var test_auto_aim_up_threshold: float = 60.0
+var test_auto_aim_up_diagonal_threshold: float = 30.0
+var test_auto_aim_forward_threshold: float = 15.0
+var test_auto_aim_down_diagonal_threshold: float = -15.0
+var test_auto_aim_down_threshold: float = -60.0
+var test_hybrid_manual_up_threshold: float = 0.35
+var test_hybrid_manual_down_threshold: float = -0.35
+var test_aim_debug: bool = true
+var test_lock_on_face_default: bool = false
+
+enum TestAimAssistLevel { OFF, LOW, HIGH }
+
+var test_aim_assist_level: TestAimAssistLevel = TestAimAssistLevel.OFF
+var test_aim_assist_angle_window: float = 20.0
+var test_aim_assist_strength: float = 0.25
+var test_aim_assist_max_correction: float = 12.0
+
 # Personagem: 0 = pistoleiro, 1 = arqueiro, 2 = mago, 3 = esqueleto, 4 = ongma epilef (teste). Ver Game._assign_player_script.
 var p1_character: int = 0
 var p2_character: int = 1
 
 var p1_input_scheme: InputScheme = InputScheme.KEYBOARD_MOUSE
-## No Vs s├│ um jogador pode usar teclado+mouse; o outro usa controle (padr├úo: P2 em controle).
+## No Vs só um jogador pode usar teclado+mouse; o outro usa controle (padrão: P2 em controle).
 var p2_input_scheme: InputScheme = InputScheme.GAMEPAD
-## ├ìndice SDL do comando (0 = primeiro ligado). Usado s├│ quando o esquema desse jogador ├® GAMEPAD.
+## Índice SDL do comando (0 = primeiro ligado). Usado só quando o esquema desse jogador é GAMEPAD.
 var p1_joy_device: int = 0
 var p2_joy_device: int = 1
 
@@ -52,6 +93,75 @@ func is_player_using_gamepad(player_id: int) -> bool:
 	if player_id == 1:
 		return p1_input_scheme == InputScheme.GAMEPAD
 	return p2_input_scheme == InputScheme.GAMEPAD
+
+
+func uses_angled_shot_test() -> bool:
+	return (
+		test_aim_mode != TestAimMode.LOCKED_HORIZONTAL
+		and test_aim_mode != TestAimMode.LOCK_ON_FACE
+	)
+
+
+func is_free_aim_right_stick_test() -> bool:
+	return test_aim_mode == TestAimMode.FREE_AIM_RIGHT_STICK
+
+
+func is_free_aim_left_stick_test() -> bool:
+	return test_aim_mode == TestAimMode.FREE_AIM_LEFT_STICK
+
+
+func is_right_stick_3_way_test() -> bool:
+	return test_aim_mode == TestAimMode.RIGHT_STICK_3_WAY
+
+
+func is_right_stick_5_way_test() -> bool:
+	return test_aim_mode == TestAimMode.RIGHT_STICK_5_WAY
+
+
+func is_quantized_right_stick_test() -> bool:
+	return is_right_stick_3_way_test() or is_right_stick_5_way_test()
+
+
+func is_auto_aim_5_way_test() -> bool:
+	return test_aim_mode == TestAimMode.AUTO_AIM_5_WAY
+
+
+func is_auto_aim_360_test() -> bool:
+	return test_aim_mode == TestAimMode.AUTO_AIM_360
+
+
+func is_hybrid_manual_test() -> bool:
+	return test_aim_mode == TestAimMode.HYBRID_MANUAL
+
+
+func is_lock_on_face_test() -> bool:
+	return test_aim_mode == TestAimMode.LOCK_ON_FACE
+
+
+func is_aim_assist_test_active() -> bool:
+	return test_aim_assist_level != TestAimAssistLevel.OFF
+
+
+func get_test_aim_assist_strength() -> float:
+	if not is_aim_assist_test_active():
+		return 0.0
+	return test_aim_assist_strength
+
+
+func get_test_aim_assist_level_label() -> String:
+	match test_aim_assist_level:
+		TestAimAssistLevel.LOW:
+			return "LOW"
+		TestAimAssistLevel.HIGH:
+			return "HIGH"
+		_:
+			return "OFF"
+
+
+func get_test_aim_smoothing() -> float:
+	if not test_aim_smoothing_enabled:
+		return 0.0
+	return test_aim_smoothing
 
 
 ## Palavra curta para textos de HUD (tiro / soltar).
@@ -76,10 +186,10 @@ func get_shoot_hint_token_for_player(player_id: int) -> String:
 
 ## Linha de ajuda no menu principal (controles gerais).
 func get_main_menu_controls_hint() -> String:
-	return "Menus: cruz direcional ou anal├│gico esquerdo ÔÇó A ou Enter para confirmar ÔÇó B para voltar ÔÇó No Vs: Start ou Enter para pausar ÔÇó No combate, escolha a entrada no Vs ou no Treino"
+	return "Menus: cruz direcional ou analógico esquerdo • A ou Enter para confirmar • B para voltar • Opções de Teste: ajustes globais antes do Vs ou Treino • No Vs: Start ou Enter para pausar • No combate, escolha a entrada no Vs ou no Treino"
 
 
-## Nos menus, remove o clique esquerdo do mouse em `p1_shoot` / `p2_shoot` para os bot├Áes funcionarem.
+## Nos menus, remove o clique esquerdo do mouse em `p1_shoot` / `p2_shoot` para os botões funcionarem.
 func clear_p1_shoot_mouse_binding() -> void:
 	_clear_mouse_left_from_action("p1_shoot")
 
@@ -104,7 +214,7 @@ func _clear_mouse_left_from_action(action_name: StringName) -> void:
 		InputMap.action_erase_event(action_name, ev)
 
 
-## S├│ um jogador pode estar em `KEYBOARD_MOUSE` no Vs. `prefer_player_id` = quem acabou de escolher teclado+mouse (1 ou 2).
+## Só um jogador pode estar em `KEYBOARD_MOUSE` no Vs. `prefer_player_id` = quem acabou de escolher teclado+mouse (1 ou 2).
 func resolve_exclusive_keyboard_mouse(prefer_player_id: int) -> void:
 	if p1_input_scheme != InputScheme.KEYBOARD_MOUSE or p2_input_scheme != InputScheme.KEYBOARD_MOUSE:
 		return
@@ -114,13 +224,13 @@ func resolve_exclusive_keyboard_mouse(prefer_player_id: int) -> void:
 		p1_input_scheme = InputScheme.GAMEPAD
 
 
-## Garante estado v├ílido antes de montar o InputMap (ex.: saves antigos com os dois em teclado+mouse).
+## Garante estado válido antes de montar o InputMap (ex.: saves antigos com os dois em teclado+mouse).
 func ensure_valid_input_scheme_pair() -> void:
 	if p1_input_scheme == InputScheme.KEYBOARD_MOUSE and p2_input_scheme == InputScheme.KEYBOARD_MOUSE:
 		p2_input_scheme = InputScheme.GAMEPAD
 
 
-## Ajusta ├¡ndices SDL (`p1_joy_device` / `p2_joy_device`) aos comandos ligados e evita os dois jogadores no mesmo device.
+## Ajusta índices SDL (`p1_joy_device` / `p2_joy_device`) aos comandos ligados e evita os dois jogadores no mesmo device.
 func clamp_joy_devices_for_local_multiplayer() -> void:
 	var pads: Array = Input.get_connected_joypads()
 	if pads.is_empty():
@@ -139,7 +249,7 @@ func clamp_joy_devices_for_local_multiplayer() -> void:
 				break
 
 
-## Garante `ui_*` com teclado + qualquer comando (device -1) para navega├º├úo nos menus.
+## Garante `ui_*` com teclado + qualquer comando (device -1) para navegação nos menus.
 func ensure_ui_gamepad_navigation() -> void:
 	if _ui_gamepad_navigation_ready:
 		return

@@ -1,29 +1,29 @@
-﻿================================================================================
-RFG ÔÇö ARCO: DUELO DE ARQUEIROS
-Handoff / vis├úo geral do projeto (para pessoas e agentes)
+================================================================================
+RFG — ARCO: DUELO DE ARQUEIROS
+Handoff / visão geral do projeto (para pessoas e agentes)
 ================================================================================
 Engine: Godot 4.6 (2D)
 Nome no editor: "Arco - Duelo de Arqueiros"
-Cena inicial: res://ui/start_game.tscn (qualquer tecla ÔåÆ menu)
-Viewport: 1920 ├ù 864 px. Camera2D fixa (960, 432) ÔÇö levels/duel/camera/; ver
+Cena inicial: res://ui/start_game.tscn (qualquer tecla → menu)
+Viewport: 1920 × 864 px. Camera2D fixa (960, 432) — levels/duel/camera/; ver
   docs/sistema_camera.md e docs/camera_implementacao_v1.txt
 Autoload: RunConfig (res://core/run_config.gd)
-├Ültima revis├úo deste handoff: alinhado ao c├│digo em characters/, levels/duel/,
+Última revisão deste handoff: alinhado ao código em characters/, levels/duel/,
   core/run_config.gd, ui/, projectiles/
 
 ================================================================================
-1. O QUE ├ë ESTE JOGO
+1. O QUE É ESTE JOGO
 ================================================================================
 
-Prot├│tipo de duelo 2D local (PvP ou treino) no g├®nero "ranged fighter":
-dois lutadores em metades opostas de uma arena atiram proj├®teis, usam skills
-e movimenta├º├úo de plataforma (pulo duplo, dash, wall jump, queda r├ípida no ar).
+Protótipo de duelo 2D local (PvP ou treino) no género "ranged fighter":
+dois lutadores em metades opostas de uma arena atiram projéteis, usam skills
+e movimentação de plataforma (pulo duplo, dash, wall jump, queda rápida no ar).
 
-Cada personagem tem um kit distinto (tiro carregado, granadas, m├¡ssil
-teleguiado, escudo, etc.), mas partilham a mesma base t├®cnica (Player) e a
-mesma cena f├¡sica (main.tscn). O script do lutador ├® trocado em runtime.
+Cada personagem tem um kit distinto (tiro carregado, granadas, míssil
+teleguiado, escudo, etc.), mas partilham a mesma base técnica (Player) e a
+mesma cena física (main.tscn). O script do lutador é trocado em runtime.
 
-Objetivo de combate: reduzir o HP do advers├írio (100 por defeito). No modo Vs,
+Objetivo de combate: reduzir o HP do adversário (100 por defeito). No modo Vs,
 vence quem ganhar 3 rounds (KO por HP ou timeout de 60 s por round).
 
 ================================================================================
@@ -31,18 +31,37 @@ vence quem ganhar 3 rounds (KO por HP ou timeout de 60 s por round).
 ================================================================================
 
 VS_PLAYER
-  - Dois humanos (teclado+mouse vs controle, ou ambos com esquemas configur├íveis).
-  - Menu: ui/vs_character_menu.tscn ÔÇö escolha de classe P1/P2, palco, input.
-  - Rounds: 60 s, primeiro a 3 vit├│rias; banner entre rounds; menu fim de partida.
+  - Dois humanos (teclado+mouse vs controle, ou ambos com esquemas configuráveis).
+  - Menu: ui/vs_character_menu.tscn — escolha de classe P1/P2, palco, input.
+  - Rounds: 60 s, primeiro a 3 vitórias; banner entre rounds; menu fim de partida.
 
 TRAINING
-  - P1 humano; P2 ├® boneco ├á direita (script pistoleiro por defeito no assign).
-  - Menu: ui/training_menu.tscn ÔÇö classe P1, palco, input, toggle tiro autom├ítico
-    do boneco (intervalo RunConfig.training_dummy_interval, default 3 s).
-  - Atalho ao abrir treino: Esqueleto + controle 0 + boneco sem tiro auto.
+  - P1 humano; P2 é boneco à direita (script pistoleiro por defeito no assign).
+  - Menu: ui/training_menu.tscn — classe P1, palco, input.
+  - Opções de treino/teste (boneco atira, câmera KO, intro Vs, velocidade Esqueleto,
+    modos de mira testáveis: LOCKED_HORIZONTAL (default), FREE_AIM_RIGHT_STICK (stick dir / mouse),
+    FREE_AIM_LEFT_STICK (stick esq. ou WASD unifica mov + tiro), RIGHT_STICK_3_WAY (stick dir
+    quantizado em 3 direções / mouse quantizado), RIGHT_STICK_5_WAY (stick dir quantizado em
+    5 direções UP/UP_FORWARD/FORWARD/DOWN_FORWARD/DOWN / mouse quantizado), AUTO_AIM_5_WAY
+    (mira automática ao adversário, 5 direções fixas, actualização contínua, sem input manual),
+    AUTO_AIM_360 (mira automática muzzle→adversário, vetor exacto normalizado, sem quantização
+    nem clamp angular, actualização contínua, sem input manual),
+    HYBRID_MANUAL (3 intenções UP_FORWARD/FORWARD/DOWN_FORWARD via vertical do stick esq./W-S,
+    amostragem no release do ataque, thresholds up/down configuráveis),
+    LOCK_ON_FACE (toggle in-game L/Select: OFF = tiro horizontal; ON = mira/disparo
+    muzzle→adversário + virar ao alvo; test_lock_on_face_default opcional no submenu);
+    AIM_ASSIST overlay (OFF/LOW/HIGH + janela angular, força, correcção máx.; combina com
+    qualquer modo de mira; correção parcial no disparo se alvo dentro da janela; default OFF);
+    sliders deadzone/sens/smooth, limites 3-way, 4 limites 5-way stick, 5 limites auto-aim,
+    2 limites hybrid manual,
+    toggle suavização, debug); submenu de mira: ui/test_aim_options_menu.tscn):
+    ui/test_options_menu.tscn (RunConfig; intervalo boneco RunConfig.training_dummy_interval, default 3 s).
+  - Atalho ao abrir treino: Esqueleto + controle 0.
 
 Fluxo de menus:
-  start_game.tscn ÔåÆ menu.tscn ÔåÆ Vs ou Treino ÔåÆ levels/duel/main.tscn (Game)
+  start_game.tscn → menu.tscn → Vs | Treino | Opções de Teste | Sair
+  Opções de Teste → menu.tscn
+  Vs / Treino (setup) → levels/duel/main.tscn (Game)
 
 ================================================================================
 3. PERSONAGENS (Player.CharacterKind)
@@ -52,27 +71,27 @@ ID  Nome              Script                         Papel
 --  ----------------  -----------------------------  ---------------------------
 0   Pistoleiro        pistoleiro_player.gd           Tiro reto, ricochete, cadeia
                                                       3 bocas, granada, escudo (4)
-1   Arqueiro          arqueiro_player.gd             Flecha bal├¡stica, split, espinhos,
+1   Arqueiro          arqueiro_player.gd             Flecha balística, split, espinhos,
                                                       escudo com reflect + cura
-2   Mago              mago_player.gd                 M├¡ssil teleguiado, gelo, levita├º├úo,
+2   Mago              mago_player.gd                 Míssil teleguiado, gelo, levitação,
                                                       orbe gravitacional
-3   Esqueleto         esqueleto_player.gd            BASELINE DE DESIGN ÔÇö tiro reto
+3   Esqueleto         esqueleto_player.gd            BASELINE DE DESIGN — tiro reto
                                                       carregado, feixe (F/X), buff velocidade
                                                       tiro (G/Y), dash por Shift/B
-4   Ongma Epilef      ongma_epilef_player.gd         Laborat├│rio: extends EsqueletoPlayer;
-                                                      overrides m├¡nimos para testar mec├ónicas
+4   Ongma Epilef      ongma_epilef_player.gd         Laboratório: extends EsqueletoPlayer;
+                                                      overrides mínimos para testar mecânicas
 
-Pol├¡tica de design (documentada em docs/esqueleto_personagem_base.md):
+Política de design (documentada em docs/esqueleto_personagem_base.md):
   - Novos personagens partem numericamente/conceptualmente do Esqueleto.
-  - C├│digo comum ÔåÆ player.gd; kit esqueleto ÔåÆ esqueleto_player.gd; testes ÔåÆ ongma.
-  - Fam├¡lia EsqueletoPlayer: Game trata flecha sem gravidade e HUD de buff com
+  - Código comum → player.gd; kit esqueleto → esqueleto_player.gd; testes → ongma.
+  - Família EsqueletoPlayer: Game trata flecha sem gravidade e HUD de buff com
     "owner_player is EsqueletoPlayer" (inclui Ongma).
 
 Resumo de kits (detalhe em docs/personagens/*.md):
 
   PISTOLEIRO
     - Tiro carregado; cadeia alterna MuzzleTop / MuzzleBottom / duplo tiro.
-    - G: buff 3 ataques especiais; F: granada instant├ónea ou detonar.
+    - G: buff 3 ataques especiais; F: granada instantânea ou detonar.
     - Flecha: g=0, 1 ricochete por defeito no spawn.
 
   ARQUEIRO
@@ -81,27 +100,27 @@ Resumo de kits (detalhe em docs/personagens/*.md):
     - Escudo: 3 cargas, reflect +6 HP.
 
   MAGO
-    - "Tiro": m├¡ssil teleguiado (360ÔÇô520 px/s, carga 0,85 s).
+    - "Tiro": míssil teleguiado (360–520 px/s, carga 0,85 s).
     - F: gelo; C: levitar; G segurar: orbe.
 
   ESQUELETO / ONGMA
-    - Tiro carregado; cooldown m├¡nimo 1 s ap├│s disparo.
-    - F/X: Feixe (proj├®til grande carregado, dano 36, escala vari├ível).
-    - G/Y: Buff ~4 s ÔÇö tiros carregados ├ù2 velocidade (CD ~10 s).
-    - Dash: tecla dedicada (Shift / B), n├úo duplo toque.
+    - Tiro carregado; cooldown mínimo 1 s após disparo.
+    - F/X: Feixe (projétil grande carregado, dano 36, escala variável).
+    - G/Y: Buff ~4 s — tiros carregados ×2 velocidade (CD ~10 s).
+    - Dash: tecla dedicada (Shift / B), não duplo toque.
     - Flecha: g=0, 0 ricochetes.
 
 ================================================================================
-4. ARQUITETURA DE C├ôDIGO
+4. ARQUITETURA DE CÓDIGO
 ================================================================================
 
-4.1 Padr├úo Template Method (Player + subclasses)
+4.1 Padrão Template Method (Player + subclasses)
   - player.gd (class_name Player, extends CharacterBody2D):
-      movimento, gravidade, dash, pulo, wall jump, sprint p├│s-dash, mira
+      movimento, gravidade, dash, pulo, wall jump, sprint pós-dash, mira
       (mouse ou stick direito), recoil, vida, sinais de combate, limites de arena.
   - Hooks vazios/overridable: _process_combat, _get_dash_stats (unificado na base),
       uses_dash_action_button, _preview_gravity_for_shot, is_*(), etc.
-  - Subclasses s├│ implementam o que difere.
+  - Subclasses só implementam o que difere.
 
 4.2 Game como coordenador (levels/duel/game.gd)
   - Conecta sinais shoot_requested / shots_requested / grenade / mage / etc.
@@ -111,18 +130,18 @@ Resumo de kits (detalhe em docs/personagens/*.md):
   - _apply_stage_from_run_config: Normal / Tiered Abyss / Old Factory.
 
 4.3 RunConfig (autoload)
-  - Persiste escolhas da sess├úo: mode, stage, p1/p2_character, input schemes,
+  - Persiste escolhas da sessão: mode, stage, p1/p2_character, input schemes,
     joy devices, flags de treino.
   - Helpers: resolve_exclusive_keyboard_mouse, clear_shoot_mouse_bindings_for_menu,
     get_shoot_hint_token_for_player ("mouse" ou "RB").
 
 4.4 Cena de duelo (levels/duel/main.tscn)
-  - LeftPlayer / RightPlayer: mesmo CharacterBody2D 40├ù90, script trocado via
+  - LeftPlayer / RightPlayer: mesmo CharacterBody2D 40×90, script trocado via
     Game._assign_player_script(set_script) em _enter_tree.
   - ArenaVariantRoot: instancia palcos variantes.
   - UI: HP, especiais, hints de skills, VsHud (timer, placar, nomes).
 
-4.5 Proj├®teis (projectiles/<nome>/)
+4.5 Projéteis (projectiles/<nome>/)
   - Cada um: .tscn + .gd na mesma pasta (snake_case).
   - Arrow (CharacterBody2D): gravidade manual, ricochete, dano, knockback.
   - HomingMissile extends Arrow; Grenade, GravityOrb, ArcherSpike, IceMissile,
@@ -134,13 +153,13 @@ Resumo de kits (detalhe em docs/personagens/*.md):
   - Pausa: pause_menu_controller.gd, training_pause_menu_controller.gd.
   - Fim de partida Vs: vs_match_end_menu.gd.
 
-4.7 C├ómera (levels/duel/camera/)
-  - Camera2D fixa (960, 432); viewport 1920├ù864 (n├úo 1080p).
+4.7 Câmera (levels/duel/camera/)
+  - Camera2D fixa (960, 432); viewport 1920×864 (não 1080p).
   - CameraSystem: shake (direcional + ambiente), hit stop, slow mo, flash, focus,
-    zoom, letterbox, clutch overlay, sequ├¬ncias KO / intro Vs / ULT SUPER.
-  - Eventos: Feixe, hit leve gen├®rico, KO round (A/B/C), intro match P1ÔåÆP2,
+    zoom, letterbox, clutch overlay, sequências KO / intro Vs / ULT SUPER.
+  - Eventos: Feixe, hit leve genérico, KO round (A/B/C), intro match P1→P2,
     ROUND 2/3, ULT chuva (armagem+anim vs efeito), clutch HP<15%.
-  - Integra├º├úo s├│ em game.gd; shot_flags na Arrow (ex.: esqueleto_feixe).
+  - Integração só em game.gd; shot_flags na Arrow (ex.: esqueleto_feixe).
   - Ver docs/sistema_camera.md, camera_implementacao_v1.txt, camera_implementacao_v2.txt.
 
 ================================================================================
@@ -153,21 +172,21 @@ Regra Vs: apenas UM jogador pode usar KEYBOARD_MOUSE; o outro GAMEPAD
 (RunConfig.resolve_exclusive_keyboard_mouse).
 
 Teclado+mouse (layout partilhado P1 ou P2 quando ambos usam KB+mouse no treino):
-  A/D mover | Espa├ºo pulo | W/S hover (mago flutua├º├úo) | Q escudo
-  Mouse: mira + tiro (bot├úo esquerdo em p*_shoot)
+  A/D mover | Espaço pulo | W/S hover (mago flutuação) | Q escudo
+  Mouse: mira + tiro (botão esquerdo em p*_shoot)
   Shift: p*_dash (Esqueleto/Ongma); duplo A/D dash nos outros
   F granada/feixe/gelo/espinhos | G especial | C levitar (mago)
-  S / p*_down no ar: ground pound (queda r├ípida, vy=2000)
+  S / p*_down no ar: ground pound (queda rápida, vy=2000)
 
 Controle (por jogador, device RunConfig.p1_joy_device / p2_joy_device):
-  Stick esq + D-pad: mover; duplo toque frente/tr├ís = dash (n├úo-esqueleto)
+  Stick esq + D-pad: mover; duplo toque frente/trás = dash (não-esqueleto)
   Stick dir: mira (aim_* com deadzone/smoothing em Player)
   A pulo | B dash (Esqueleto) | RB tiro | LB escudo | X feixe/gelo/granada
   Y especial/buff | L3 espinhos arqueiro | R3 levitar mago
-  RT/LT: hover up/down na flutua├º├úo
+  RT/LT: hover up/down na flutuação
 
-Esqueleto/Ongma: uses_dash_action_button() = true ÔåÆ dash s├│ por p*_dash.
-Outros: uses_dash_action_button() = false ÔåÆ dash por duplo toque horizontal;
+Esqueleto/Ongma: uses_dash_action_button() = true → dash só por p*_dash.
+Outros: uses_dash_action_button() = false → dash por duplo toque horizontal;
   input vertical durante a janela cancela o par.
 
 Menus: RunConfig.clear_shoot_mouse_bindings_for_menu() para cliques funcionarem.
@@ -175,36 +194,36 @@ Menus: RunConfig.clear_shoot_mouse_bindings_for_menu() para cliques funcionarem.
 Dicas no HUD: Game._skill_hint_lines() por personagem e esquema de input.
 
 ================================================================================
-6. MOVIMENTO E COMBATE (Player ÔÇö valores base actuais)
+6. MOVIMENTO E COMBATE (Player — valores base actuais)
 ================================================================================
 
-Refer├¬ncia completa: docs/sistemas_core_arena_e_movimento.md
+Referência completa: docs/sistemas_core_arena_e_movimento.md
 Stats Esqueleto: docs/esqueleto_personagem_base.md
 
 Movimento horizontal: move_speed 260 px/s
-Gravidade: 1800 px/s┬▓ | Pulo: jump_speed 700 | max_jumps 2
+Gravidade: 1800 px/s² | Pulo: jump_speed 700 | max_jumps 2
 
 Dash (UNIFICADO na base Player._get_dash_stats para todos):
   speed 620 | duration 0,2 s | cooldown 0,1 s | gravity_scale 0
-  - No ar: sem acelera├º├úo gravitacional; corta vy>0 durante dash (queda residual).
-  - limit_air_dash_to_one: 1 dash a├®reo por sequ├¬ncia at├® tocar ch├úo.
+  - No ar: sem aceleração gravitacional; corta vy>0 durante dash (queda residual).
+  - limit_air_dash_to_one: 1 dash aéreo por sequência até tocar chão.
   - dash_min_gap_seconds 0,06: anti-spam encadeado.
   - Pulo durante dash: impulso diagonal composto (dash_jump_* exports).
 
 Sprint:
   - sprint_mechanic_enabled = false (corrida por segurar frente desligada).
-  - post_dash_sprint_enabled = true: ap├│s dash, janela 0,18 s mantendo frente
-    activa sprint (├ù1,55) + indicador visual opcional.
+  - post_dash_sprint_enabled = true: após dash, janela 0,18 s mantendo frente
+    activa sprint (×1,55) + indicador visual opcional.
 
-Wall jump: detecta parede, impulso diagonal, 1├ù por voo, flash visual.
+Wall jump: detecta parede, impulso diagonal, 1× por voo, flash visual.
 
-Ground pound: p*_down no ar ÔåÆ velocity.y = 2000, zera vx.
+Ground pound: p*_down no ar → velocity.y = 2000, zera vx.
 
-Mira: ┬▒85┬░; mouse ou stick direito com deadzone/suaviza├º├úo (gamepad).
+Mira: ±85°; mouse ou stick direito com deadzone/suavização (gamepad).
 
 Recoil: recoil_normal 170, decay 2400; carry knockback horizontal separado.
 
-Arena: _enforce_arena_half ÔÇö padding 36 px; metade do ecr├ú por player_id;
+Arena: _enforce_arena_half — padding 36 px; metade do ecrã por player_id;
   half_gap_extra por palco (0 / 52 / 88).
 
 Congelamento (freeze_for), stun por knockback, escudo hold (subclasses).
@@ -213,28 +232,28 @@ Congelamento (freeze_for), stun por knockback, escudo hold (subclasses).
 7. PALCOS / STAGES (RunConfig.stage)
 ================================================================================
 
-Documenta├º├úo detalhada: docs/staging_stages.txt
+Documentação detalhada: docs/staging_stages.txt
 
 NORMAL
-  Ch├úo cont├¡nuo layer 1; spawns ~(210,672) e ~(1710,672).
+  Chão contínuo layer 1; spawns ~(210,672) e ~(1710,672).
 
 TIERED_ABYSS ("Patamares + abismo")
   Plataformas one-way layer 16 (ArenaPlatforms); fossos laterais;
   queda no pit: 30 HP, respawn no spawn do palco, CD 0,85 s.
 
-OLD_FACTORY ("F├íbrica antiga")
-  Duas ilhas de ch├úo + vale central; pit partilhado; half_gap_extra maior.
+OLD_FACTORY ("Fábrica antiga")
+  Duas ilhas de chão + vale central; pit partilhado; half_gap_extra maior.
 
-Proj├®teis: mask n├úo inclui layer 16 ÔåÆ atravessam plataformas de palco;
+Projéteis: mask não inclui layer 16 → atravessam plataformas de palco;
   jogadores collision_mask 19 (1+2+16).
 
 ================================================================================
-8. REGRAS DE SPAWN DE PROJ├ëTEIS (Game._spawn_one_arrow)
+8. REGRAS DE SPAWN DE PROJÉTEIS (Game._spawn_one_arrow)
 ================================================================================
 
-  - Mago ÔåÆ HomingMissile (g=0 for├ºado no setup).
-  - Pistoleiro ou EsqueletoPlayer ÔåÆ g=0 na flecha.
-  - Arqueiro ÔåÆ gravidade arrow.gravity_accel (1200).
+  - Mago → HomingMissile (g=0 forçado no setup).
+  - Pistoleiro ou EsqueletoPlayer → g=0 na flecha.
+  - Arqueiro → gravidade arrow.gravity_accel (1200).
   - Ricochetes default: pistoleiro b=1, resto b=0 (salvo override no payload).
   - ArcherSpike, Grenade, GravityOrb, IceMissile: sinais dedicados.
 
@@ -243,7 +262,7 @@ Proj├®teis: mask n├úo inclui layer 16 ÔåÆ atravessam plataformas de pal
 ================================================================================
 
 project.godot
-core/run_config.gd                 Autoload sess├úo
+core/run_config.gd                 Autoload sessão
 characters/
   player.gd                        Base
   pistoleiro_player.gd
@@ -268,67 +287,67 @@ ui/
 docs/
   handoff_projeto.txt              Este ficheiro
   staging_stages.txt               Palcos
-  esqueleto_personagem_base.md     Baseline num├®rico Esqueleto
+  esqueleto_personagem_base.md     Baseline numérico Esqueleto
   sistemas_core_arena_e_movimento.md
   comparativo_personagens_vs_esqueleto.md
   personagens/                     Fichas por lutador
-  project_organization.rst         Conven├º├Áes Godot do repo
+  project_organization.rst         Convenções Godot do repo
 art/                               Assets (ex.: sprites mago)
 
-docs/ tem .gdignore ÔÇö n├úo importado pelo editor Godot.
+docs/ tem .gdignore — não importado pelo editor Godot.
 
 ================================================================================
-10. DOCUMENTA├ç├âO EXISTENTE (├¡ndice)
+10. DOCUMENTAÇÃO EXISTENTE (índice)
 ================================================================================
 
-  docs/handoff_projeto.txt           Vis├úo geral (este ficheiro)
-  docs/camera_implementacao_v1.txt   C├ómera v1 (Feixe Esqueleto)
-  docs/camera_implementacao_v2.txt   C├ómera v2 (KO, intro Vs, ULT, FX pacote)
+  docs/handoff_projeto.txt           Visão geral (este ficheiro)
+  docs/camera_implementacao_v1.txt   Câmera v1 (Feixe Esqueleto)
+  docs/camera_implementacao_v2.txt   Câmera v2 (KO, intro Vs, ULT, FX pacote)
   docs/sistema_camera.md             Arquitectura CameraSystem + API
   docs/staging_stages.txt            Palcos, layers, pits, checklist novo stage
-  docs/esqueleto_personagem_base.md  Refer├¬ncia de balanceamento + pol├¡tica
+  docs/esqueleto_personagem_base.md  Referência de balanceamento + política
   docs/sistemas_core_arena_e_movimento.md  Arena, dash, pulo, fluxo frame
   docs/comparativo_personagens_vs_esqueleto.md
-  docs/personagens/README.md         ├ìndice fichas
+  docs/personagens/README.md         Índice fichas
   docs/personagens/{esqueleto,pistoleiro,arqueiro,mago,ongma_epilef}.md
-  README.md                          Como executar (pode estar ligeiramente atr├ís
-                                     do input actual ÔÇö preferir game.gd + este doc)
+  README.md                          Como executar (pode estar ligeiramente atrás
+                                     do input actual — preferir game.gd + este doc)
 
-Conven├º├Áes: snake_case pastas/ficheiros; PascalCase nodes; projectiles colocalizados.
+Convenções: snake_case pastas/ficheiros; PascalCase nodes; projectiles colocalizados.
 
 ================================================================================
 11. COMO EXECUTAR E DESENVOLVER
 ================================================================================
 
-1. Godot 4.x est├ível ÔåÆ Import ÔåÆ pasta com project.godot ÔåÆ F5.
-2. Vs: menu ÔåÆ Vs Player ÔåÆ classes, palco, input ÔåÆ Come├ºar.
-3. Treino: menu ÔåÆ Treinamento ÔåÆ op├º├Áes P1 ÔåÆ Come├ºar.
+1. Godot 4.x estável → Import → pasta com project.godot → F5.
+2. Vs: menu → Vs Player → classes, palco, input → Começar.
+3. Treino: menu → Treinamento → opções P1 → Começar.
 4. Alterar personagem default: RunConfig em menus ou exports na cena.
 5. Balanceamento Esqueleto: editar exports em esqueleto_player.gd + actualizar
    docs/esqueleto_personagem_base.md na mesma PR.
-6. Nova mec├ónica global: preferir hooks em player.gd; kit esqueleto s├│ se for
-   do arqu├®tipo; ongma_epilef para prototipar antes de subir.
+6. Nova mecânica global: preferir hooks em player.gd; kit esqueleto só se for
+   do arquétipo; ongma_epilef para prototipar antes de subir.
 
 Testes manuais sugeridos:
-  - Vs com cada par de classes ├ù palco Normal + Tiered + Factory
+  - Vs com cada par de classes × palco Normal + Tiered + Factory
   - Teclado+mouse P1 + gamepad P2
   - Respawn Vs, pit damage, timeout de round
-  - Ongma Epilef = paridade Esqueleto at├® haver overrides
+  - Ongma Epilef = paridade Esqueleto até haver overrides
 
 ================================================================================
 12. ESTADO ACTUAL E NOTAS PARA AGENTES
 ================================================================================
 
-  - Prot├│tipo jog├ível; balanceamento em evolu├º├úo cont├¡nua.
-  - Dash stats foram UNIFICADOS na classe Player (620/0,2/0,1/g0) ÔÇö subclasses
-    antigas que sobrescreviam _get_dash_stats podem j├í n├úo faz├¬-lo; confirmar
-    no grep antes de assumir diferen├ºas por personagem.
+  - Protótipo jogável; balanceamento em evolução contínua.
+  - Dash stats foram UNIFICADOS na classe Player (620/0,2/0,1/g0) — subclasses
+    antigas que sobrescreviam _get_dash_stats podem já não fazê-lo; confirmar
+    no grep antes de assumir diferenças por personagem.
   - Esqueleto deixou de ter skill "triplo 3 flechas"; actual = buff velocidade
-    tiro + feixe. HUD e docs antigos podem mencionar triplo ÔÇö c├│digo em
-    esqueleto_player.gd ├® autoritativo.
-  - README.md menciona Area2D para flecha; c├│digo usa CharacterBody2D (arrow.gd).
-  - ground_pound (_start_ground_pound_dash) ├® WIP/experimental (vy fixo 2000).
-  - C├ómera: ver docs/camera_implementacao_v2.txt (KO, intro Vs, ULT, hit leve,
+    tiro + feixe. HUD e docs antigos podem mencionar triplo — código em
+    esqueleto_player.gd é autoritativo.
+  - README.md menciona Area2D para flecha; código usa CharacterBody2D (arrow.gd).
+  - ground_pound (_start_ground_pound_dash) é WIP/experimental (vy fixo 2000).
+  - Câmera: ver docs/camera_implementacao_v2.txt (KO, intro Vs, ULT, hit leve,
     clutch, letterbox). Pit/timeout/granada global ainda sem preset dedicado.
   - Vs: 3 rounds to win, 60 s/round; training dummy atira se training_dummy_shoot.
   - Export preset presente (export_presets.cfg) para builds futuras.

@@ -118,6 +118,26 @@ vertical_alignment = 1
 layout_mode = 2
 size_flags_horizontal = 3
 
+[node name="AimNavBox" type="VBoxContainer" parent="Center/MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AimNavLabel" type="Label" parent="Center/MainPanel/VBox/AimNavBox"]
+layout_mode = 2
+text = "Mira (teste)"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+
+[node name="LblAimSummary" type="Label" parent="Center/MainPanel/VBox/AimNavBox"]
+layout_mode = 2
+text = "Modo actual: padrão — horizontal"
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.55, 0.62, 0.75, 1)
+
+[node name="BtnAimOptions" type="Button" parent="Center/MainPanel/VBox/AimNavBox"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Configurar modos de mira…"
 
 [node name="EsqueletoBox" type="VBoxContainer" parent="Center/MainPanel/VBox"]
 layout_mode = 2

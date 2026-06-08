@@ -23,7 +23,7 @@ Este ficheiro resume o **padrão de design** do Esqueleto e aponta para o baseli
 ## Features básicas (o que o jogador “sente”)
 
 - **Movimento:** solo e ar com `move_speed`, gravidade e pulo duplo (`Player`).
-- **Dash:** acção **`p*_dash`** (**Shift** teclado, **B** comando); direcção: movimento horizontal (A/D / stick) ou eixo X da mira se neutro. Números em `_get_dash_stats()` (620 px/s, 0,20 s, CD 0,1 s, `gravity_scale` 0). Os outros duelistas usam duplo toque frente/trás; o Esqueleto **não** inicia dash por duplo toque.
+- **Dash:** acção **`p*_dash`** (**Shift** teclado, **B** comando); direcção: movimento horizontal (A/D / stick), senão frente do jogador. Números em `_get_dash_stats()` (620 px/s, 0,20 s, CD 0,1 s, `gravity_scale` 0). Os outros duelistas usam duplo toque frente/trás; o Esqueleto **não** inicia dash por duplo toque.
 - **Anti-spam de dash:** `dash_min_gap_seconds` entre inícios de dash; no ar, por defeito **um** dash por “voo” até tocar **chão** ou **parede** (`limit_air_dash_to_one` + reset em parede).
 - **Pulo no dash:** impulso composto `(v_dash + v_jump) * dash_jump_impulse_mul` (exports `dash_jump_*`).
 - **Corrida:** a corrida por **só segurar frente** (`sprint_mechanic_enabled`) está **desligada** por defeito. A **corrida pós-dash** (`post_dash_sprint_*`) está ligada: após um dash **para a frente**, segurar frente na janela abre sprint com `sprint_speed_multiplier` > 1.

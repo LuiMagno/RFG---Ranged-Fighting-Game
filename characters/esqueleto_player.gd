@@ -62,6 +62,8 @@ const BODY_JUMP_ANIM := "jump"
 ## Tremor contínuo leve na fase efeito (Camera2D.offset ambiente; não usa shake_duracao_s).
 @export var esqueleto_skill_ult_chuva_ossos_shake_intensidade: float = 3.0
 @export var esqueleto_skill_ult_chuva_ossos_shake_duracao_s: float = 0.18
+## Invulnerabilidade no dash (só Esqueleto / Ongma): bloqueia dano e knockback; timer independente da duração do dash.
+@export_range(0.0, 0.5, 0.01) var esqueleto_dash_invuln_seconds: float = 0.12
 
 var _esqueleto_buff_velocidade_tiro_ativo := false
 var _esqueleto_buff_velocidade_tiro_tempo_restante_s := 0.0
@@ -79,6 +81,7 @@ var _orig_sprite_modulate: Color = Color.WHITE
 ## Bloqueia troca para idle/walk enquanto hurt/attack/death/dash/jump não terminam.
 var _sprite_action_lock := ""
 var _esqueleto_was_on_floor := true
+var _esqueleto_dash_invuln_left := 0.0
 
 
 func is_esqueleto() -> bool:
@@ -116,7 +119,13 @@ func _physics_process(delta: float) -> void:
 	_sync_esqueleto_body_sprite(delta)
 
 
+func should_pass_through_projectile(_projectile: Node) -> bool:
+	return _esqueleto_dash_invuln_left > 0.0
+
+
 func take_damage(amount: int) -> void:
+	if _esqueleto_dash_invuln_left > 0.0:
+		return
 	var was_alive := hp > 0
 	super.take_damage(amount)
 	if was_alive and hp <= 0:
@@ -124,12 +133,15 @@ func take_damage(amount: int) -> void:
 
 
 func apply_knockback(knockback: Vector2) -> void:
+	if _esqueleto_dash_invuln_left > 0.0:
+		return
 	super.apply_knockback(knockback)
 	if hp > 0 and _sprite_action_lock != "death":
 		_esqueleto_play_action_once("hurt")
 
 
 func _extra_timer_tick(delta: float) -> void:
+	_esqueleto_dash_invuln_left = maxf(0.0, _esqueleto_dash_invuln_left - delta)
 	_feixe_cd_restante_s = maxf(0.0, _feixe_cd_restante_s - delta)
 	_esqueleto_buff_velocidade_tiro_cd_restante_s = maxf(0.0, _esqueleto_buff_velocidade_tiro_cd_restante_s - delta)
 	_esqueleto_ult_cd_restante_s = maxf(0.0, _esqueleto_ult_cd_restante_s - delta)
@@ -164,12 +176,18 @@ func _dash_blocked_by_grenade_skill() -> bool:
 	return false
 
 
+func _shoot_charge_blocks_dash() -> bool:
+	return false
+
+
 func uses_dash_action_button() -> bool:
 	return true
 
 
 func start_dash_with_direction(dir_sign: float) -> void:
 	super.start_dash_with_direction(dir_sign)
+	if _dash_time_left > 0.0:
+		_esqueleto_dash_invuln_left = esqueleto_dash_invuln_seconds
 	if _dash_time_left > 0.0 and hp > 0:
 		_esqueleto_begin_dash_sprite()
 
@@ -421,13 +439,14 @@ func _extra_reset_for_vs_round() -> void:
 	_last_forward_tap_time_s = -100.0
 	_last_back_tap_time_s = -100.0
 	_esqueleto_was_on_floor = true
+	_esqueleto_dash_invuln_left = 0.0
 	special_buff_changed.emit(false, 0, 0.0)
 	ult_status_changed.emit(false, 0.0, false)
 	_reset_esqueleto_sprite_after_round()
 
 
 func _setup_esqueleto_body_sprite() -> void:
-	_body_sprite = get_node_or_null("BodySprite") as AnimatedSprite2D
+	_body_sprite = get_node_or_null("FacingRoot/BodySprite") as AnimatedSprite2D
 	if _body_sprite == null:
 		return
 	if not ResourceLoader.exists(ESQUELETO_SPRITE_FRAMES_PATH):
@@ -544,10 +563,12 @@ func _on_esqueleto_sprite_animation_finished() -> void:
 
 
 func _esqueleto_default_sprite_flip_h() -> bool:
-	return player_id == 2
+	return _resolve_sprite_flip_h()
 
 
 func _esqueleto_dash_sprite_flip_h() -> bool:
+	if RunConfig.is_lock_on_face_test() and _lock_on_face_active and _lock_on_target != null:
+		return _resolve_sprite_flip_h()
 	var forward_sign := 1.0 if player_id == 1 else -1.0
 	return absf(_dash_dir_sign - forward_sign) > 0.001
 

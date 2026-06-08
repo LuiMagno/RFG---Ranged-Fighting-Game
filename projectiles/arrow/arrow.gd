@@ -204,6 +204,9 @@ func _physics_process(delta: float) -> void:
 		if collider is Player:
 			var victim := collider as Player
 			if victim != _owner:
+				if victim.should_pass_through_projectile(self):
+					add_collision_exception_with(victim)
+					return
 				if victim.try_block_arrow_with_shield(self):
 					return
 				victim.take_damage(damage)

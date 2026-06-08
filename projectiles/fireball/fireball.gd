@@ -51,6 +51,9 @@ func _physics_process(delta: float) -> void:
 		if collider is Player:
 			var victim := collider as Player
 			if victim != _owner:
+				if victim.should_pass_through_projectile(self):
+					add_collision_exception_with(victim)
+					return
 				victim.take_damage(_damage)
 				var dir_x := 1.0 if velocity.x >= -0.01 else -1.0
 				victim.apply_knockback(Vector2(dir_x * knockback_x, -knockback_up))
