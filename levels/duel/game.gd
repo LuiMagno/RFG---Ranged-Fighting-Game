@@ -1139,6 +1139,7 @@ func _spawn_grenade(owner_player: Player, spawn_position: Vector2, throw_velocit
 	add_child(gr)
 	gr.global_position = spawn_position
 	gr.setup(owner_player, throw_velocity)
+	SfxManager.play("grenade_throw", spawn_position)
 	_active_grenades[owner_player] = gr
 	gr.tree_exiting.connect(_on_grenade_tree_exiting.bind(owner_player, gr))
 	if owner_player is PistoleiroPlayer:
@@ -1155,6 +1156,7 @@ func _spawn_ice_missile(owner_player: Player, spawn_position: Vector2, initial_v
 	add_child(im)
 	im.global_position = spawn_position
 	im.setup(owner_player, initial_velocity, 0.0, 0, 0, 1.0, false, 7.0)
+	SfxManager.play("shoot_ice", spawn_position)
 	_active_ice[owner_player] = im
 	im.tree_exiting.connect(_on_ice_tree_exiting.bind(owner_player, im))
 	if owner_player is MagoPlayer:
@@ -1196,6 +1198,7 @@ func _spawn_gravity_orb(owner_player: Player, spawn_position: Vector2, charge_t:
 	orb.global_position = spawn_position
 	orb.setup(owner_player, aim * 320.0)
 	orb.set_charge_t(charge_t)
+	SfxManager.play("shoot_orb", spawn_position)
 
 
 func _on_grenade_tree_exiting(owner_player: Player, gr: Grenade) -> void:
@@ -1242,6 +1245,7 @@ func _spawn_shots(owner_player: Player, shots: Array) -> void:
 		_spawn_one_arrow(owner_player, pos, vel, shot_flags, gravity, bounces, damage, size)
 	if feixe_fired:
 		_camera_apply_preset(CAM_ESQUELETO_FEIXE_FIRE)
+		SfxManager.play("shoot_feixe", owner_player.global_position)
 
 func _spawn_one_arrow(
 	owner_player: Player,
@@ -1263,6 +1267,7 @@ func _spawn_one_arrow(
 		add_child(sp)
 		sp.global_position = spawn_position
 		sp.setup(owner_player, initial_velocity)
+		SfxManager.play_shot(owner_player, spawn_position, shot_flags, false)
 		return
 
 	var want_homing := owner_player.is_mago()
@@ -1311,6 +1316,7 @@ func _spawn_one_arrow(
 		_archer_carriers[owner_player] = arrow
 		arrow.tree_exiting.connect(_on_archer_carrier_tree_exiting.bind(owner_player, arrow))
 	arrow.hit_player.connect(_on_arrow_hit_player.bind(arrow))
+	SfxManager.play_shot(owner_player, spawn_position, shot_flags, want_homing)
 
 func _spawn_p1_special(_owner_player: Player, _spawn_position: Vector2) -> void:
 	# Player handles special-buff state; this signal is kept for future UI/SFX hooks.
@@ -1359,6 +1365,7 @@ func _spawn_archer_spike_volley(owner_player: Player, at_pos: Vector2, cluster_v
 		add_child(sp)
 		sp.global_position = spawn_pt
 		sp.setup(owner_player, v)
+	SfxManager.play("shoot_spike", at_pos)
 
 
 func _spawn_archer_split_fragments(owner_player: Player, at_pos: Vector2, cluster_vel: Vector2) -> void:
@@ -1376,7 +1383,17 @@ func _spawn_archer_split_fragments(owner_player: Player, at_pos: Vector2, cluste
 		var dir := Vector2.RIGHT.rotated(base_ang + deg_to_rad(off))
 		var v := dir * speed
 		var spawn_pt := at_pos + dir * 8.0
-		_spawn_one_arrow(owner_player, spawn_pt, v, {}, child_gravity, b, -1, 1.0)
+		_spawn_one_arrow(
+			owner_player,
+			spawn_pt,
+			v,
+			{"archer_split_child": true},
+			child_gravity,
+			b,
+			-1,
+			1.0
+		)
+	SfxManager.play("shoot_bow", at_pos)
 
 
 ## (Old special burst removed)
@@ -1394,11 +1411,12 @@ func _shot_flags_skip_light_hit(flags: Dictionary) -> bool:
 func _on_arrow_hit_player(victim: Player, _damage: int, arrow: Arrow) -> void:
 	if arrow == null or victim == null:
 		return
-	if victim.hp <= 0:
-		return
 	if _vs_resolving_round or _training_ko_camera_active:
 		return
 	var flags := arrow.get_shot_flags()
+	SfxManager.play_arrow_hit(victim.global_position, _damage, flags)
+	if victim.hp <= 0:
+		return
 	if flags.get("esqueleto_feixe", false):
 		_camera_apply_preset(CAM_ESQUELETO_FEIXE_HIT, arrow.velocity)
 		return
@@ -1523,6 +1541,7 @@ func _on_bone_rain_requested(owner: Player) -> void:
 	var super_zoom := Vector2.ONE * ep.esqueleto_skill_ult_chuva_ossos_super_zoom
 	var opponent := _get_opponent_player(owner)
 	_bone_rain_running[owner] = true
+	SfxManager.play("ult_start", owner.global_position)
 	var gen := _bone_rain_gen_for(owner)
 	# Fases 1–2: acionamento + animação (câmera) — ambos parados.
 	_begin_ult_armagem_animacao(owner, opponent, armagem_anim_s)

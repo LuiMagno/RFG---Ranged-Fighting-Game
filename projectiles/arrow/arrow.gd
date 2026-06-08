@@ -231,6 +231,7 @@ func _physics_process(delta: float) -> void:
 			velocity = velocity.bounce(collision.get_normal()) * bounce_damping
 			# Nudge out of the collider to avoid immediate re-collision.
 			global_position += collision.get_normal() * 2.0
+			SfxManager.play("ricochet", global_position, 1.0, -4.0)
 		else:
 			queue_free()
 			return
@@ -244,6 +245,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _spawn_explosion(world_pos: Vector2) -> void:
+	SfxManager.play("explosion_small", world_pos)
 	var e := _explosion_scene.instantiate() as Node2D
 	get_tree().current_scene.add_child(e)
 	e.global_position = world_pos

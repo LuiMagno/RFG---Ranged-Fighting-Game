@@ -55,6 +55,7 @@ func _physics_process(delta: float) -> void:
 	if col:
 		velocity = velocity.bounce(col.get_normal()) * bounce_damping
 		global_position += col.get_normal() * 2.5
+		SfxManager.play("grenade_bounce", global_position, 1.0, -6.0)
 
 	if _manual_detonate_requested and _alive_s >= remote_detonate_arm_time:
 		_explode()
@@ -74,6 +75,7 @@ func _explode() -> void:
 		return
 	_exploded = true
 	var center := global_position
+	SfxManager.play("explosion", center)
 	for n in get_tree().get_nodes_in_group("players"):
 		if not (n is Player):
 			continue
@@ -85,6 +87,7 @@ func _explode() -> void:
 		if dist > explosion_radius + 28.0:
 			continue
 		pl.take_damage(explosion_damage)
+		SfxManager.play("hit_heavy", feet, 1.0, -4.0)
 		var away := feet - center
 		if away.length_squared() < 4.0:
 			away = Vector2.RIGHT * (1.0 if center.x < feet.x else -1.0)
