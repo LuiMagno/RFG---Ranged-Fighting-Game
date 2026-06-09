@@ -21,6 +21,7 @@ config/features=PackedStringArray("4.6")
 [autoload]
 
 RunConfig="*res://core/run_config.gd"
+SfxManager="*res://core/sfx_manager.gd"
 
 [display]
 

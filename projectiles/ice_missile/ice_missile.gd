@@ -40,6 +40,7 @@ func remote_detonate() -> void:
 
 
 func _spawn_field_and_die() -> void:
+	SfxManager.play("freeze", global_position)
 	var f := _field_scene.instantiate() as Node2D
 	if f != null:
 		get_tree().current_scene.add_child(f)

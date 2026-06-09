@@ -305,6 +305,7 @@ func start_dash_with_direction(dir_sign: float) -> void:
 	_dash_cd_left = maxf(_dash_cd_left, dash_min_gap_seconds)
 	if limit_air_dash_to_one and not is_on_floor():
 		_air_dash_used_this_airborne = true
+	SfxManager.play("dash", global_position)
 
 
 func _apply_jump_during_dash() -> void:
@@ -363,6 +364,7 @@ func try_block_arrow_with_shield(arrow: Arrow) -> bool:
 	if _shield_charges <= 0:
 		_shield_cd_left = _shield_reload_seconds()
 		shield_visual.visible = false
+	SfxManager.play("shield_block", global_position)
 	return true
 
 
@@ -557,6 +559,7 @@ func _physics_process(delta: float) -> void:
 			else:
 				velocity.y = -jump_speed
 				_jumps_left -= 1
+				SfxManager.play("jump", global_position, 1.0, -6.0)
 
 	# Dash com gravidade “zerada”: sem aceleração para baixo e sem continuar acumulando queda (vy > 0).
 	if _dash_time_left > 0.0 and not is_on_floor() and not hovering:
@@ -614,11 +617,14 @@ func freeze_for(seconds: float, use_ice_visual: bool = true) -> void:
 	if seconds <= 0.0:
 		return
 	_interrupt_sprint()
+	var was_frozen: bool = _frozen_left > 0.0
 	if _frozen_left <= 0.0:
 		_frozen_anchor_pos = global_position
 		_frozen_use_ice_visual = use_ice_visual
 	_frozen_left = maxf(_frozen_left, seconds)
 	velocity = Vector2.ZERO
+	if not was_frozen and use_ice_visual:
+		SfxManager.play("freeze", global_position)
 
 
 ## Travamento no lugar sem visual de gelo (ex.: adversário durante ULT de luta).
@@ -1767,6 +1773,7 @@ func get_enemy_half_x_range() -> Vector2:
 
 func apply_pit_fall_penalty(arena_local_spawn: Vector2, damage: int) -> void:
 	_interrupt_sprint()
+	SfxManager.play("pit_fall", global_position)
 	if damage > 0:
 		hp = maxi(0, hp - damage)
 		health_changed.emit(hp)
