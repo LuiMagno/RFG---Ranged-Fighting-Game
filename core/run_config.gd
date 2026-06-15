@@ -72,8 +72,14 @@ var test_aim_assist_strength: float = 0.25
 var test_aim_assist_max_correction: float = 12.0
 
 # Personagem: 0 = pistoleiro, 1 = arqueiro, 2 = mago, 3 = esqueleto, 4 = ongma epilef (teste). Ver Game._assign_player_script.
-var p1_character: int = 0
-var p2_character: int = 1
+## Roster temporário nos menus — só Esqueleto e Ongma; reactivar Pistoleiro/Arqueiro/Mago em PLAYABLE_CHARACTER_KINDS e fill_class_option.
+const PLAYABLE_CHARACTER_KINDS: Array[int] = [
+	Player.CharacterKind.ESQUELETO,
+	Player.CharacterKind.ONGMA_EPILEF,
+]
+
+var p1_character: int = Player.CharacterKind.ESQUELETO
+var p2_character: int = Player.CharacterKind.ONGMA_EPILEF
 
 var p1_input_scheme: InputScheme = InputScheme.KEYBOARD_MOUSE
 ## No Vs só um jogador pode usar teclado+mouse; o outro usa controle (padrão: P2 em controle).
@@ -82,11 +88,68 @@ var p2_input_scheme: InputScheme = InputScheme.GAMEPAD
 var p1_joy_device: int = 0
 var p2_joy_device: int = 1
 
+## Build modular do Esqueleto (skill_1, skill_2, basic_shot, dash, ult) por jogador.
+var p1_esqueleto_build: Dictionary = EsqueletoBuildCatalog.get_default_build()
+var p2_esqueleto_build: Dictionary = EsqueletoBuildCatalog.get_default_build()
+
 var _ui_gamepad_navigation_ready: bool = false
 
 
 func _ready() -> void:
 	ensure_ui_gamepad_navigation()
+	_ensure_esqueleto_builds_valid()
+	p1_character = clamp_character_kind(p1_character)
+	p2_character = clamp_character_kind(p2_character)
+
+
+## Garante kind válido para o roster actual (menus / saves antigos).
+func clamp_character_kind(kind: int) -> int:
+	if kind in PLAYABLE_CHARACTER_KINDS:
+		return kind
+	return Player.CharacterKind.ESQUELETO
+
+
+func is_character_playable(kind: int) -> bool:
+	return kind in PLAYABLE_CHARACTER_KINDS
+
+
+func is_esqueleto_character(kind: int) -> bool:
+	return kind == Player.CharacterKind.ESQUELETO
+
+
+func get_esqueleto_build(player_id: int) -> Dictionary:
+	var raw := p1_esqueleto_build if player_id == 1 else p2_esqueleto_build
+	return _normalize_esqueleto_build(raw)
+
+
+func set_esqueleto_build_slot(player_id: int, slot_key: StringName, skill_id: StringName) -> void:
+	var build := get_esqueleto_build(player_id)
+	build[slot_key] = EsqueletoBuildCatalog.resolve_skill_for_slot(slot_key, skill_id)
+	if player_id == 1:
+		p1_esqueleto_build = build
+	else:
+		p2_esqueleto_build = build
+
+
+func reset_esqueleto_build_to_defaults(player_id: int) -> void:
+	var defaults := EsqueletoBuildCatalog.get_default_build().duplicate()
+	if player_id == 1:
+		p1_esqueleto_build = defaults
+	else:
+		p2_esqueleto_build = defaults
+
+
+func _ensure_esqueleto_builds_valid() -> void:
+	p1_esqueleto_build = _normalize_esqueleto_build(p1_esqueleto_build)
+	p2_esqueleto_build = _normalize_esqueleto_build(p2_esqueleto_build)
+
+
+func _normalize_esqueleto_build(raw: Dictionary) -> Dictionary:
+	var out := EsqueletoBuildCatalog.get_default_build().duplicate()
+	for slot_key: StringName in EsqueletoBuildCatalog.ALL_SLOTS:
+		if raw.has(slot_key):
+			out[slot_key] = EsqueletoBuildCatalog.resolve_skill_for_slot(slot_key, raw[slot_key])
+	return out
 
 
 func is_player_using_gamepad(player_id: int) -> bool:

@@ -1,0 +1,88 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://projectiles/esqueleto_spectral_jaw/esqueleto_spectral_jaw.gd" id="1_jaw"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_bite"]
+size = Vector2(48, 56)
+
+[node name="EsqueletoSpectralJaw" type="Area2D"]
+collision_layer = 0
+collision_mask = 1
+monitoring = false
+monitorable = false
+script = ExtResource("1_jaw")
+
+[node name="VisualRoot" type="Node2D" parent="."]
+
+[node name="BiteHitbox" type="CollisionShape2D" parent="VisualRoot"]
+shape = SubResource("RectangleShape2D_bite")
+
+[node name="Glow" type="Polygon2D" parent="VisualRoot"]
+polygon = PackedVector2Array(-30, -30, 30, -30, 34, 28, -34, 28)
+color = Color(0.55, 0.35, 1.15, 0.38)
+
+[node name="MouthCavity" type="Polygon2D" parent="VisualRoot"]
+polygon = PackedVector2Array(-18, -10, 18, -10, 16, 14, -16, 14)
+color = Color(0.12, 0.05, 0.2, 0.92)
+
+[node name="UpperJaw" type="Polygon2D" parent="VisualRoot"]
+position = Vector2(0, -14)
+polygon = PackedVector2Array(-26, 8, -20, -2, -12, -8, 0, -10, 12, -8, 20, -2, 26, 8, 22, 12, -22, 12)
+color = Color(0.55, 0.35, 1.15, 0.9)
+
+[node name="UpperTooth1" type="Polygon2D" parent="VisualRoot"]
+position = Vector2(-16, 4)
+polygon = PackedVector2Array(-2, 0, 0, 9, 2, 0)
+color = Color(0.94, 0.92, 1, 0.98)
+
+[node name="UpperTooth2" type="Polygon2D" parent="VisualRoot"]
+position = Vector2(-8, 2)
+polygon = PackedVector2Array(-2, 0, 0, 10, 2, 0)
+color = Color(0.94, 0.92, 1, 0.98)
+
+[node name="UpperTooth3" type="Polygon2D" parent="VisualRoot"]
+position = Vector2(0, 1)
+polygon = PackedVector2Array(-2.5, 0, 0, 11, 2.5, 0)
+color = Color(0.94, 0.92, 1, 0.98)
+
+[node name="UpperTooth4" type="Polygon2D" parent="VisualRoot"]
+position = Vector2(8, 2)
+polygon = PackedVector2Array(-2, 0, 0, 10, 2, 0)
+color = Color(0.94, 0.92, 1, 0.98)
+
+[node name="UpperTooth5" type="Polygon2D" parent="VisualRoot"]
+position = Vector2(16, 4)
+polygon = PackedVector2Array(-2, 0, 0, 9, 2, 0)
+color = Color(0.94, 0.92, 1, 0.98)
+
+[node name="LowerJawPivot" type="Node2D" parent="VisualRoot"]
+position = Vector2(0, 12)
+
+[node name="LowerJaw" type="Polygon2D" parent="VisualRoot/LowerJawPivot"]
+polygon = PackedVector2Array(-24, -6, -16, 4, -8, 10, 0, 12, 8, 10, 16, 4, 24, -6, 20, -10, -20, -10)
+color = Color(0.55, 0.35, 1.15, 0.9)
+
+[node name="Tooth1" type="Polygon2D" parent="VisualRoot/LowerJawPivot"]
+position = Vector2(-14, -8)
+polygon = PackedVector2Array(-2, 0, 0, -9, 2, 0)
+color = Color(0.94, 0.92, 1, 0.98)
+
+[node name="Tooth2" type="Polygon2D" parent="VisualRoot/LowerJawPivot"]
+position = Vector2(-7, -10)
+polygon = PackedVector2Array(-2, 0, 0, -10, 2, 0)
+color = Color(0.94, 0.92, 1, 0.98)
+
+[node name="Tooth3" type="Polygon2D" parent="VisualRoot/LowerJawPivot"]
+position = Vector2(0, -11)
+polygon = PackedVector2Array(-2.5, 0, 0, -11, 2.5, 0)
+color = Color(0.94, 0.92, 1, 0.98)
+
+[node name="Tooth4" type="Polygon2D" parent="VisualRoot/LowerJawPivot"]
+position = Vector2(7, -10)
+polygon = PackedVector2Array(-2, 0, 0, -10, 2, 0)
+color = Color(0.94, 0.92, 1, 0.98)
+
+[node name="Tooth5" type="Polygon2D" parent="VisualRoot/LowerJawPivot"]
+position = Vector2(14, -8)
+polygon = PackedVector2Array(-2, 0, 0, -9, 2, 0)
+color = Color(0.94, 0.92, 1, 0.98)

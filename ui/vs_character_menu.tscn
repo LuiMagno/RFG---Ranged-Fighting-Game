@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://ui/vs_character_menu.gd" id="1_vs"]
+[ext_resource type="PackedScene" path="res://ui/components/esqueleto_build_side_panel.tscn" id="2_build"]
 
 [node name="VsCharacterMenu" type="Control"]
 layout_mode = 1
@@ -27,17 +28,24 @@ anchor_bottom = 1.0
 mouse_filter = 2
 color = Color(0, 0, 0, 0.25)
 
-[node name="Center" type="CenterContainer" parent="."]
+[node name="CenterHost" type="CenterContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="MainPanel" type="Panel" parent="Center"]
+[node name="MenuCluster" type="HBoxContainer" parent="CenterHost"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="MainPanel" type="Panel" parent="CenterHost/MenuCluster"]
 custom_minimum_size = Vector2(560, 600)
 layout_mode = 2
 
-[node name="VBox" type="VBoxContainer" parent="Center/MainPanel"]
+[node name="VBox" type="VBoxContainer" parent="CenterHost/MenuCluster/MainPanel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -48,134 +56,137 @@ offset_right = -22.0
 offset_bottom = -22.0
 theme_override_constants/separation = 14
 
-[node name="Title" type="Label" parent="Center/MainPanel/VBox"]
+[node name="Title" type="Label" parent="CenterHost/MenuCluster/MainPanel/VBox"]
 layout_mode = 2
 text = "Vs Player"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 30
 theme_override_colors/font_color = Color(0.88, 0.93, 1, 1)
 
-[node name="Subtitle" type="Label" parent="Center/MainPanel/VBox"]
+[node name="Subtitle" type="Label" parent="CenterHost/MenuCluster/MainPanel/VBox"]
 layout_mode = 2
 text = "Escolha o personagem de cada jogador"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.55, 0.62, 0.75, 1)
 
-[node name="SepTop" type="HSeparator" parent="Center/MainPanel/VBox"]
+[node name="SepTop" type="HSeparator" parent="CenterHost/MenuCluster/MainPanel/VBox"]
 layout_mode = 2
 
-[node name="SectionClasses" type="Label" parent="Center/MainPanel/VBox"]
+[node name="SectionClasses" type="Label" parent="CenterHost/MenuCluster/MainPanel/VBox"]
 layout_mode = 2
 text = "Classes"
 theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
 
-[node name="ClassP1Row" type="HBoxContainer" parent="Center/MainPanel/VBox"]
+[node name="ClassP1Row" type="HBoxContainer" parent="CenterHost/MenuCluster/MainPanel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="ClassP1Label" type="Label" parent="Center/MainPanel/VBox/ClassP1Row"]
+[node name="ClassP1Label" type="Label" parent="CenterHost/MenuCluster/MainPanel/VBox/ClassP1Row"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 text = "Jogador 1 (esq.)"
 vertical_alignment = 1
 
-[node name="OptP1Class" type="OptionButton" parent="Center/MainPanel/VBox/ClassP1Row"]
+[node name="OptP1Class" type="OptionButton" parent="CenterHost/MenuCluster/MainPanel/VBox/ClassP1Row"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="ClassP2Row" type="HBoxContainer" parent="Center/MainPanel/VBox"]
+[node name="ClassP2Row" type="HBoxContainer" parent="CenterHost/MenuCluster/MainPanel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="ClassP2Label" type="Label" parent="Center/MainPanel/VBox/ClassP2Row"]
+[node name="ClassP2Label" type="Label" parent="CenterHost/MenuCluster/MainPanel/VBox/ClassP2Row"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 text = "Jogador 2 (dir.)"
 vertical_alignment = 1
 
-[node name="OptP2Class" type="OptionButton" parent="Center/MainPanel/VBox/ClassP2Row"]
+[node name="OptP2Class" type="OptionButton" parent="CenterHost/MenuCluster/MainPanel/VBox/ClassP2Row"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SectionStage" type="Label" parent="Center/MainPanel/VBox"]
+[node name="SectionStage" type="Label" parent="CenterHost/MenuCluster/MainPanel/VBox"]
 layout_mode = 2
 text = "Palco"
 theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
 
-[node name="StageRow" type="HBoxContainer" parent="Center/MainPanel/VBox"]
+[node name="StageRow" type="HBoxContainer" parent="CenterHost/MenuCluster/MainPanel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="StageLabel" type="Label" parent="Center/MainPanel/VBox/StageRow"]
+[node name="StageLabel" type="Label" parent="CenterHost/MenuCluster/MainPanel/VBox/StageRow"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 text = "Arena / stage"
 vertical_alignment = 1
 
-[node name="OptStage" type="OptionButton" parent="Center/MainPanel/VBox/StageRow"]
+[node name="OptStage" type="OptionButton" parent="CenterHost/MenuCluster/MainPanel/VBox/StageRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SectionInput" type="Label" parent="Center/MainPanel/VBox"]
+[node name="SectionInput" type="Label" parent="CenterHost/MenuCluster/MainPanel/VBox"]
 layout_mode = 2
 text = "Controles"
 theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
 
-[node name="InputP1Row" type="HBoxContainer" parent="Center/MainPanel/VBox"]
+[node name="InputP1Row" type="HBoxContainer" parent="CenterHost/MenuCluster/MainPanel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="InputP1Label" type="Label" parent="Center/MainPanel/VBox/InputP1Row"]
+[node name="InputP1Label" type="Label" parent="CenterHost/MenuCluster/MainPanel/VBox/InputP1Row"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 text = "P1 — Entrada"
 vertical_alignment = 1
 
-[node name="OptP1Scheme" type="OptionButton" parent="Center/MainPanel/VBox/InputP1Row"]
+[node name="OptP1Scheme" type="OptionButton" parent="CenterHost/MenuCluster/MainPanel/VBox/InputP1Row"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="OptP1Device" type="OptionButton" parent="Center/MainPanel/VBox/InputP1Row"]
+[node name="OptP1Device" type="OptionButton" parent="CenterHost/MenuCluster/MainPanel/VBox/InputP1Row"]
 custom_minimum_size = Vector2(170, 0)
 layout_mode = 2
 
-[node name="InputP2Row" type="HBoxContainer" parent="Center/MainPanel/VBox"]
+[node name="InputP2Row" type="HBoxContainer" parent="CenterHost/MenuCluster/MainPanel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="InputP2Label" type="Label" parent="Center/MainPanel/VBox/InputP2Row"]
+[node name="InputP2Label" type="Label" parent="CenterHost/MenuCluster/MainPanel/VBox/InputP2Row"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 text = "P2 — Entrada"
 vertical_alignment = 1
 
-[node name="OptP2Scheme" type="OptionButton" parent="Center/MainPanel/VBox/InputP2Row"]
+[node name="OptP2Scheme" type="OptionButton" parent="CenterHost/MenuCluster/MainPanel/VBox/InputP2Row"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="OptP2Device" type="OptionButton" parent="Center/MainPanel/VBox/InputP2Row"]
+[node name="OptP2Device" type="OptionButton" parent="CenterHost/MenuCluster/MainPanel/VBox/InputP2Row"]
 custom_minimum_size = Vector2(170, 0)
 layout_mode = 2
 
-[node name="SepMid" type="HSeparator" parent="Center/MainPanel/VBox"]
+[node name="SepMid" type="HSeparator" parent="CenterHost/MenuCluster/MainPanel/VBox"]
 layout_mode = 2
 
-[node name="ButtonRow" type="HBoxContainer" parent="Center/MainPanel/VBox"]
+[node name="ButtonRow" type="HBoxContainer" parent="CenterHost/MenuCluster/MainPanel/VBox"]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="BtnBack" type="Button" parent="Center/MainPanel/VBox/ButtonRow"]
+[node name="BtnBack" type="Button" parent="CenterHost/MenuCluster/MainPanel/VBox/ButtonRow"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Voltar"
 
-[node name="BtnStart" type="Button" parent="Center/MainPanel/VBox/ButtonRow"]
+[node name="BtnStart" type="Button" parent="CenterHost/MenuCluster/MainPanel/VBox/ButtonRow"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Começar"
+
+[node name="EsqueletoBuildSidePanel" parent="CenterHost/MenuCluster" instance=ExtResource("2_build")]
+layout_mode = 2

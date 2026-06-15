@@ -1,4 +1,4 @@
-﻿[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=2 format=3]
 
 [ext_resource type="Script" path="res://ui/test_options_menu.gd" id="1_test"]
 
@@ -50,14 +50,14 @@ theme_override_constants/separation = 14
 
 [node name="Title" type="Label" parent="Center/MainPanel/VBox"]
 layout_mode = 2
-text = "OpÃ§Ãµes de Teste"
+text = "Opções de Teste"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 30
 theme_override_colors/font_color = Color(0.88, 0.93, 1, 1)
 
 [node name="Subtitle" type="Label" parent="Center/MainPanel/VBox"]
 layout_mode = 2
-text = "Aplicam-se ao prÃ³ximo Vs ou Treino"
+text = "Aplicam-se ao próximo Vs ou Treino"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.55, 0.62, 0.75, 1)
@@ -97,7 +97,7 @@ theme_override_constants/separation = 12
 [node name="KoCameraLabel" type="Label" parent="Center/MainPanel/VBox/VisualBox/KoCameraRow"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-text = "CÃ¢mera KO (impacto)"
+text = "Câmera KO (impacto)"
 vertical_alignment = 1
 
 [node name="OptKoCameraImpact" type="OptionButton" parent="Center/MainPanel/VBox/VisualBox/KoCameraRow"]
@@ -137,7 +137,7 @@ theme_override_colors/font_color = Color(0.55, 0.62, 0.75, 1)
 [node name="BtnAimOptions" type="Button" parent="Center/MainPanel/VBox/AimNavBox"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
-text = "Configurar modos de mira…"
+text = "Configurar modos de mira..."
 
 [node name="EsqueletoBox" type="VBoxContainer" parent="Center/MainPanel/VBox"]
 layout_mode = 2
@@ -156,7 +156,7 @@ theme_override_constants/separation = 12
 [node name="ProjetilVelLabel" type="Label" parent="Center/MainPanel/VBox/EsqueletoBox/ProjetilVelRow"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-text = "Velocidade projÃ©teis"
+text = "Velocidade projéteis"
 vertical_alignment = 1
 
 [node name="OptEsqueletoProjetilVel" type="OptionButton" parent="Center/MainPanel/VBox/EsqueletoBox/ProjetilVelRow"]

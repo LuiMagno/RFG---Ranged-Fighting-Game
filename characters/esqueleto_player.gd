@@ -14,6 +14,10 @@ class_name EsqueletoPlayer
 @export_range(1.0, 2.0, 0.01) var esqueleto_velocidade_projeteis_mul: float = 1.5
 ## Fração do bónus de velocidade aplicada à queda da ULT (0.5 → global 1.5× ⇒ chuva 1.25×).
 @export_range(0.0, 1.0, 0.05) var esqueleto_chuva_ossos_velocidade_viagem_peso: float = 0.5
+## Escala visual do feixe (tiro carregado e chuva ULT usam `esqueleto_tiro_carregado_chuva_tamanho_mul`).
+@export_range(0.5, 3.0, 0.05) var esqueleto_projetil_tamanho_mul: float = 1.2
+## Tiro carregado e ossos da ULT (+20% extra sobre o ajuste global anterior → 1,44× vs. original).
+@export_range(0.5, 3.0, 0.05) var esqueleto_tiro_carregado_chuva_tamanho_mul: float = 1.44
 
 const MIN_SHOOT_COOLDOWN_S := 1.0
 const ESQUELETO_SPRITE_FRAMES_PATH := "res://art/skeleton/esqueleto_sprite_frames.tres"
@@ -32,16 +36,94 @@ const BODY_JUMP_ANIM := "jump"
 @export var esqueleto_skill_feixe_escala_min: float = 1.85
 @export var esqueleto_skill_feixe_escala_max: float = 3.45
 @export var esqueleto_skill_feixe_dano: int = 36
+## Integridade do feixe no choque flecha×flecha (por defeito = dano; 36 aguenta 1 tiro normal de 20).
+@export var esqueleto_skill_feixe_clash_integridade: int = 36
 @export var esqueleto_skill_feixe_velocidade_mul_min: float = 1.05
 @export var esqueleto_skill_feixe_velocidade_mul_max: float = 1.42
 ## Recoil do feixe: horizontal em `add_carry_knockback_x` (sobrevive ao `velocity.x = dir*speed` no próximo frame); vertical **uma vez** em `velocity` — arco baixo pela gravidade.
 @export_range(5.0, 16.0, 0.5) var esqueleto_skill_feixe_recoil_angulo_acima_horizontal_graus: float = 10.0
 @export_range(500.0, 1200.0, 10.0) var esqueleto_skill_feixe_recoil_forca: float = 2000.0
 
+## Skill Esqueleto — Vaso carnívoro (Skill 1 F/X; arco carregado → planta no chão)
+@export var esqueleto_skill_vaso_recarga_s: float = 8.0
+@export var esqueleto_skill_vaso_tempo_max_carga_s: float = 0.75
+@export var esqueleto_skill_vaso_vel_min: float = 280.0
+@export var esqueleto_skill_vaso_vel_max: float = 920.0
+@export var esqueleto_skill_vaso_gravity: float = 1500.0
+@export_range(10.0, 60.0, 1.0) var esqueleto_skill_vaso_lob_angulo_graus: float = 38.0
+@export var esqueleto_skill_vaso_planta_duracao_s: float = 10.0
+@export var esqueleto_skill_vaso_planta_raio_mordida: float = 104.0
+@export var esqueleto_skill_vaso_planta_dano_mordida: int = 8
+@export var esqueleto_skill_vaso_planta_intervalo_mordida_s: float = 0.55
+@export var esqueleto_skill_vaso_putrefacao_cargas: int = 1
+@export var esqueleto_skill_vaso_putrefacao_duracao_s: float = 4.0
+@export var esqueleto_skill_vaso_putrefacao_dano_por_carga: int = 2
+@export var esqueleto_skill_vaso_putrefacao_intervalo_tick_s: float = 0.6
+
+## Skill Esqueleto — Torreta (Skill 1 F/X ou Skill 2 G/Y, conforme build)
+@export var esqueleto_skill_torreta_recarga_s: float = 10.0
+@export var esqueleto_skill_torreta_disparos: int = 5
+@export var esqueleto_skill_torreta_dano_tiro: int = 20
+@export var esqueleto_skill_torreta_intervalo_disparo_s: float = 2.5
+@export var esqueleto_skill_torreta_vida: int = 30
+@export var esqueleto_skill_torreta_offset_spawn_x: float = 24.0
+@export var esqueleto_skill_torreta_sentinela_vida: int = 20
+@export var esqueleto_skill_torreta_sentinela_disparos: int = 10
+@export var esqueleto_skill_torreta_sentinela_dano_tiro: int = 11
+@export var esqueleto_skill_torreta_sentinela_intervalo_disparo_s: float = 1.15
+@export var esqueleto_skill_torreta_sentinela_walk_speed: float = 95.0
+@export var esqueleto_skill_torreta_sentinela_alcance_seguir: float = 380.0
+@export var esqueleto_skill_torreta_sentinela_distancia_ideal: float = 185.0
+@export var esqueleto_skill_torreta_evolution_recarga_s: float = 4.0
+@export var esqueleto_skill_torreta_foguete_carga_s: float = 0.3
+@export var esqueleto_skill_torreta_foguete_dano_base: int = 36
+@export var esqueleto_skill_torreta_foguete_raio: float = 150.0
+@export var esqueleto_skill_torreta_foguete_knockback_x: float = 520.0
+@export var esqueleto_skill_torreta_foguete_knockback_up: float = 260.0
+@export var esqueleto_skill_torreta_foguete_aceleracao: float = 1850.0
+@export var esqueleto_skill_torreta_foguete_vel_max: float = 920.0
+@export var esqueleto_skill_torreta_foguete_tracking_graus_s: float = 95.0
+@export var esqueleto_skill_torreta_foguete_ricochetes: int = 1
+@export var esqueleto_skill_torreta_foguete_bonus_dano_por_tiro: int = 4
+@export_range(0.05, 0.35, 0.01) var esqueleto_skill_torreta_foguete_bonus_vel_por_tiro: float = 0.1
+@export var esqueleto_skill_torreta_foguete_sobrecarga_vel_inimigo: float = 220.0
+
+## Skill Esqueleto — Zumbi (Skill 1 F/X ou Skill 2 G/Y; re-activar explode)
+@export var esqueleto_skill_zumbi_recarga_s: float = 12.0
+@export var esqueleto_skill_zumbi_walk_speed: float = 160.0
+@export var esqueleto_skill_zumbi_grab_radius: float = 48.0
+@export_range(0.15, 1.0, 0.05) var esqueleto_skill_zumbi_slow_mul: float = 0.55
+@export var esqueleto_skill_zumbi_vida: int = 25
+@export var esqueleto_skill_zumbi_explosion_radius: float = 160.0
+@export var esqueleto_skill_zumbi_explosion_dano: int = 22
+@export var esqueleto_skill_zumbi_explosion_knockback_x: float = 420.0
+@export var esqueleto_skill_zumbi_explosion_knockback_up: float = 180.0
+@export var esqueleto_skill_zumbi_offset_spawn_x: float = 24.0
+
+## Skill Esqueleto — Mandíbula espectral (Skill 1 F/X ou Skill 2 G/Y; alvo inimigo + podridão)
+@export var esqueleto_skill_mandibula_recarga_s: float = 10.0
+@export var esqueleto_skill_mandibula_dano_mordida: int = 22
+@export var esqueleto_skill_mandibula_podridao_dano_tick: int = 5
+@export var esqueleto_skill_mandibula_podridao_duracao_s: float = 3.0
+@export var esqueleto_skill_mandibula_podridao_intervalo_tick_s: float = 0.5
+@export var esqueleto_skill_mandibula_emergencia_s: float = 0.7
+@export var esqueleto_skill_mandibula_perseguicao_s: float = 2.5
+@export var esqueleto_skill_mandibula_velocidade_perseguicao: float = 200.0
+@export var esqueleto_skill_mandibula_knockback_x: float = 300.0
+@export var esqueleto_skill_mandibula_knockback_up: float = 150.0
+@export_range(0.15, 1.0, 0.01) var esqueleto_skill_mandibula_podridao_slow_mul: float = 0.9
+
 ## Skill Esqueleto — Buff de velocidade (`*_special`; tiro carregado + feixe)
 @export var esqueleto_skill_buff_velocidade_tiro_duracao_s: float = 4.0
 @export var esqueleto_skill_buff_velocidade_tiro_recarga_s: float = 10.0
 @export var esqueleto_skill_buff_velocidade_tiro_multiplicador: float = 2.0
+
+## Skill Esqueleto — Auto mutilação (Skill 2 G/Y; buff com custo de HP)
+@export var esqueleto_skill_auto_mutilacao_custo_hp: int = 10
+@export var esqueleto_skill_auto_mutilacao_duracao_s: float = 4.0
+@export var esqueleto_skill_auto_mutilacao_recarga_s: float = 10.0
+@export_range(1.0, 2.5, 0.05) var esqueleto_skill_auto_mutilacao_vel_ataque_mul: float = 1.5
+@export_range(1.0, 2.0, 0.05) var esqueleto_skill_auto_mutilacao_vel_movimento_mul: float = 1.25
 
 ## Skill Esqueleto — ULT Chuva de ossos (`*_ult`: teclado R, controle LB)
 @export var esqueleto_skill_ult_chuva_ossos_recarga_s: float = 38.0
@@ -64,13 +146,29 @@ const BODY_JUMP_ANIM := "jump"
 @export var esqueleto_skill_ult_chuva_ossos_shake_duracao_s: float = 0.18
 ## Invulnerabilidade no dash (só Esqueleto / Ongma): bloqueia dano e knockback; timer independente da duração do dash.
 @export_range(0.0, 0.5, 0.01) var esqueleto_dash_invuln_seconds: float = 0.12
+## Dash no ar + segurar ↓: ângulo da diagonal (velocidade total = speed do dash).
+@export_range(0.0, 89.0, 1.0) var esqueleto_air_dash_down_angle_deg: float = 35.0
+## No ar sem dash: multiplicador de gravidade ao segurar ↓ (queda rápida).
+@export_range(1.0, 6.0, 0.1) var esqueleto_fast_fall_gravity_mul: float = 2.5
 
 var _esqueleto_buff_velocidade_tiro_ativo := false
 var _esqueleto_buff_velocidade_tiro_tempo_restante_s := 0.0
 var _esqueleto_buff_velocidade_tiro_cd_restante_s := 0.0
+var _auto_mutilacao_ativo := false
+var _auto_mutilacao_tempo_restante_s := 0.0
+var _auto_mutilacao_cd_restante_s := 0.0
 var _feixe_cd_restante_s := 0.0
 var _feixe_carregando := false
 var _feixe_tempo_carga_s := 0.0
+var _vaso_cd_restante_s := 0.0
+var _vaso_carregando := false
+var _vaso_tempo_carga_s := 0.0
+var _torreta_cd_restante_s := 0.0
+var _torreta_active := false
+var _torreta_evolution_cd_restante_s := 0.0
+var _zumbi_cd_restante_s := 0.0
+var _zumbi_active := false
+var _mandibula_cd_restante_s := 0.0
 var _esqueleto_ult_cd_restante_s := 0.0
 var _esqueleto_chuva_ossos_ativa := false
 var _esqueleto_ult_armagem_animacao_restante_s := 0.0
@@ -82,6 +180,7 @@ var _orig_sprite_modulate: Color = Color.WHITE
 var _sprite_action_lock := ""
 var _esqueleto_was_on_floor := true
 var _esqueleto_dash_invuln_left := 0.0
+var _build: Dictionary = EsqueletoBuildCatalog.get_default_build()
 
 
 func is_esqueleto() -> bool:
@@ -91,7 +190,17 @@ func is_esqueleto() -> bool:
 func _ready() -> void:
 	shoot_cooldown = maxf(MIN_SHOOT_COOLDOWN_S, shoot_cooldown)
 	super._ready()
+	apply_build_from_run_config()
 	_setup_esqueleto_body_sprite()
+
+
+func apply_build_from_run_config() -> void:
+	_build = RunConfig.get_esqueleto_build(player_id)
+
+
+func _build_skill(slot_key: StringName) -> StringName:
+	var skill_id: StringName = _build.get(slot_key, EsqueletoBuildCatalog.get_default_skill_for_slot(slot_key))
+	return EsqueletoBuildCatalog.resolve_skill_for_slot(slot_key, skill_id)
 
 
 func get_projetil_velocidade_viagem_mul() -> float:
@@ -110,6 +219,96 @@ func get_chuva_ossos_velocidade_queda() -> float:
 
 
 ## Escala px/s no spawn (tiro carregado e feixe; ULT usa `get_chuva_ossos_velocidade_viagem_mul`).
+func get_torreta_setup_config() -> Dictionary:
+	return {
+		"vida": esqueleto_skill_torreta_vida,
+		"disparos": esqueleto_skill_torreta_disparos,
+		"dano_tiro": esqueleto_skill_torreta_dano_tiro,
+		"intervalo_disparo_s": esqueleto_skill_torreta_intervalo_disparo_s,
+		"velocidade_tiro": _esqueleto_velocidade_viagem_projetil(min_launch_speed),
+	}
+
+
+func get_torreta_sentinel_setup_config() -> Dictionary:
+	return {
+		"vida": esqueleto_skill_torreta_sentinela_vida,
+		"disparos": esqueleto_skill_torreta_sentinela_disparos,
+		"dano_tiro": esqueleto_skill_torreta_sentinela_dano_tiro,
+		"intervalo_disparo_s": esqueleto_skill_torreta_sentinela_intervalo_disparo_s,
+		"velocidade_tiro": _esqueleto_velocidade_viagem_projetil(min_launch_speed),
+		"walk_speed": esqueleto_skill_torreta_sentinela_walk_speed,
+		"follow_range": esqueleto_skill_torreta_sentinela_alcance_seguir,
+		"preferred_distance": esqueleto_skill_torreta_sentinela_distancia_ideal,
+	}
+
+
+func get_torreta_rocket_setup_config() -> Dictionary:
+	return {
+		"charge_s": esqueleto_skill_torreta_foguete_carga_s,
+		"dano_base": esqueleto_skill_torreta_foguete_dano_base,
+		"raio": esqueleto_skill_torreta_foguete_raio,
+		"knockback_x": esqueleto_skill_torreta_foguete_knockback_x,
+		"knockback_up": esqueleto_skill_torreta_foguete_knockback_up,
+		"aceleracao": esqueleto_skill_torreta_foguete_aceleracao,
+		"vel_max": esqueleto_skill_torreta_foguete_vel_max,
+		"tracking_graus_s": esqueleto_skill_torreta_foguete_tracking_graus_s,
+		"ricochetes": esqueleto_skill_torreta_foguete_ricochetes,
+		"bonus_dano_por_tiro": esqueleto_skill_torreta_foguete_bonus_dano_por_tiro,
+		"bonus_vel_por_tiro": esqueleto_skill_torreta_foguete_bonus_vel_por_tiro,
+		"sobrecarga_vel_inimigo": esqueleto_skill_torreta_foguete_sobrecarga_vel_inimigo,
+	}
+
+
+func set_turret_active(active: bool) -> void:
+	_torreta_active = active
+
+
+func get_zumbi_setup_config() -> Dictionary:
+	return {
+		"vida": esqueleto_skill_zumbi_vida,
+		"walk_speed": esqueleto_skill_zumbi_walk_speed,
+		"grab_radius": esqueleto_skill_zumbi_grab_radius,
+		"slow_mul": esqueleto_skill_zumbi_slow_mul,
+		"explosion_radius": esqueleto_skill_zumbi_explosion_radius,
+		"explosion_damage": esqueleto_skill_zumbi_explosion_dano,
+		"explosion_knockback_x": esqueleto_skill_zumbi_explosion_knockback_x,
+		"explosion_knockback_up": esqueleto_skill_zumbi_explosion_knockback_up,
+	}
+
+
+func get_mandibula_setup_config() -> Dictionary:
+	return {
+		"bite_damage": esqueleto_skill_mandibula_dano_mordida,
+		"podridao_damage_per_tick": esqueleto_skill_mandibula_podridao_dano_tick,
+		"podridao_duration_s": esqueleto_skill_mandibula_podridao_duracao_s,
+		"podridao_tick_interval_s": esqueleto_skill_mandibula_podridao_intervalo_tick_s,
+		"emerge_s": esqueleto_skill_mandibula_emergencia_s,
+		"chase_duration_s": esqueleto_skill_mandibula_perseguicao_s,
+		"chase_speed": esqueleto_skill_mandibula_velocidade_perseguicao,
+		"knockback_x": esqueleto_skill_mandibula_knockback_x,
+		"knockback_up": esqueleto_skill_mandibula_knockback_up,
+		"podridao_slow_mul": esqueleto_skill_mandibula_podridao_slow_mul,
+	}
+
+
+func get_vaso_plant_setup_config() -> Dictionary:
+	return {
+		"gravity": esqueleto_skill_vaso_gravity,
+		"lifetime_s": esqueleto_skill_vaso_planta_duracao_s,
+		"bite_radius": esqueleto_skill_vaso_planta_raio_mordida,
+		"bite_damage": esqueleto_skill_vaso_planta_dano_mordida,
+		"bite_interval_s": esqueleto_skill_vaso_planta_intervalo_mordida_s,
+		"putrefacao_stacks_per_bite": esqueleto_skill_vaso_putrefacao_cargas,
+		"putrefacao_duration_s": esqueleto_skill_vaso_putrefacao_duracao_s,
+		"putrefacao_damage_per_stack": esqueleto_skill_vaso_putrefacao_dano_por_carga,
+		"putrefacao_tick_interval_s": esqueleto_skill_vaso_putrefacao_intervalo_tick_s,
+	}
+
+
+func set_zombie_active(active: bool) -> void:
+	_zumbi_active = active
+
+
 func _esqueleto_velocidade_viagem_projetil(speed: float) -> float:
 	return speed * get_projetil_velocidade_viagem_mul()
 
@@ -141,13 +340,21 @@ func apply_knockback(knockback: Vector2) -> void:
 
 
 func _extra_timer_tick(delta: float) -> void:
+	super._extra_timer_tick(delta)
 	_esqueleto_dash_invuln_left = maxf(0.0, _esqueleto_dash_invuln_left - delta)
 	_feixe_cd_restante_s = maxf(0.0, _feixe_cd_restante_s - delta)
+	_vaso_cd_restante_s = maxf(0.0, _vaso_cd_restante_s - delta)
+	_torreta_cd_restante_s = maxf(0.0, _torreta_cd_restante_s - delta)
+	_torreta_evolution_cd_restante_s = maxf(0.0, _torreta_evolution_cd_restante_s - delta)
+	_zumbi_cd_restante_s = maxf(0.0, _zumbi_cd_restante_s - delta)
+	_mandibula_cd_restante_s = maxf(0.0, _mandibula_cd_restante_s - delta)
 	_esqueleto_buff_velocidade_tiro_cd_restante_s = maxf(0.0, _esqueleto_buff_velocidade_tiro_cd_restante_s - delta)
+	_auto_mutilacao_cd_restante_s = maxf(0.0, _auto_mutilacao_cd_restante_s - delta)
 	_esqueleto_ult_cd_restante_s = maxf(0.0, _esqueleto_ult_cd_restante_s - delta)
 	if _esqueleto_chuva_ossos_ativa:
 		if _esqueleto_ult_armagem_animacao_restante_s > 0.0:
-			_esqueleto_ult_armagem_animacao_restante_s -= delta
+			if not is_stalled():
+				_esqueleto_ult_armagem_animacao_restante_s -= delta
 			if _esqueleto_ult_armagem_animacao_restante_s <= 0.0:
 				ult_status_changed.emit(true, _esqueleto_chuva_ossos_tempo_restante_s, false)
 			else:
@@ -162,14 +369,28 @@ func _extra_timer_tick(delta: float) -> void:
 		_esqueleto_buff_velocidade_tiro_tempo_restante_s -= delta
 		if _esqueleto_buff_velocidade_tiro_tempo_restante_s <= 0.0:
 			_esqueleto_buff_velocidade_tiro_ativo = false
-			self.modulate = Color(1, 1, 1)
-			special_buff_changed.emit(false, 0, 0.0)
+			_refresh_esqueleto_combat_modulate()
+			if not _auto_mutilacao_ativo:
+				special_buff_changed.emit(false, 0, 0.0)
 		else:
 			special_buff_changed.emit(true, 1, _esqueleto_buff_velocidade_tiro_tempo_restante_s)
+	if _auto_mutilacao_ativo:
+		_auto_mutilacao_tempo_restante_s -= delta
+		if _auto_mutilacao_tempo_restante_s <= 0.0:
+			_auto_mutilacao_ativo = false
+			_refresh_esqueleto_combat_modulate()
+			if not _esqueleto_buff_velocidade_tiro_ativo:
+				special_buff_changed.emit(false, 0, 0.0)
+		else:
+			special_buff_changed.emit(true, 1, _auto_mutilacao_tempo_restante_s)
 
 
 func _is_grenade_charging_active() -> bool:
-	return _feixe_carregando
+	return _feixe_carregando or _vaso_carregando
+
+
+func _esqueleto_skill1_charging() -> bool:
+	return _feixe_carregando or _vaso_carregando
 
 
 func _dash_blocked_by_grenade_skill() -> bool:
@@ -181,7 +402,24 @@ func _shoot_charge_blocks_dash() -> bool:
 
 
 func uses_dash_action_button() -> bool:
+	return _build_skill(EsqueletoBuildCatalog.SLOT_DASH) == EsqueletoBuildCatalog.SKILL_DASH_ACAO
+
+
+func _air_dash_hold_down_enabled() -> bool:
 	return true
+
+
+func _get_air_dash_diagonal_velocity(speed: float) -> Vector2:
+	var rad := deg_to_rad(esqueleto_air_dash_down_angle_deg)
+	return Vector2(_dash_dir_sign * speed * cos(rad), speed * sin(rad))
+
+
+func _air_fast_fall_enabled() -> bool:
+	return true
+
+
+func _get_air_fast_fall_gravity_mul() -> float:
+	return esqueleto_fast_fall_gravity_mul
 
 
 func start_dash_with_direction(dir_sign: float) -> void:
@@ -193,10 +431,62 @@ func start_dash_with_direction(dir_sign: float) -> void:
 
 
 func _special_uses_left() -> int:
-	return 1 if _esqueleto_buff_velocidade_tiro_ativo else 0
+	return 1 if _esqueleto_buff_velocidade_tiro_ativo or _auto_mutilacao_ativo else 0
+
+
+func get_move_speed_buff_mul() -> float:
+	if _auto_mutilacao_ativo:
+		return esqueleto_skill_auto_mutilacao_vel_movimento_mul
+	return 1.0
+
+
+func _get_esqueleto_attack_speed_mul() -> float:
+	var mul := 1.0
+	if _esqueleto_buff_velocidade_tiro_ativo:
+		mul *= esqueleto_skill_buff_velocidade_tiro_multiplicador
+	if _auto_mutilacao_ativo:
+		mul *= esqueleto_skill_auto_mutilacao_vel_ataque_mul
+	return mul
+
+
+func _get_esqueleto_shoot_cooldown_s() -> float:
+	return shoot_cooldown / _get_esqueleto_attack_speed_mul()
+
+
+func _refresh_esqueleto_combat_modulate() -> void:
+	if _esqueleto_chuva_ossos_ativa:
+		if _esqueleto_ult_armagem_animacao_restante_s > 0.0:
+			self.modulate = esqueleto_skill_ult_chuva_ossos_modulate
+			return
+		if _esqueleto_buff_velocidade_tiro_ativo:
+			self.modulate = Color(0.5, 1.5, 2.0)
+		elif _auto_mutilacao_ativo:
+			self.modulate = Color(1.35, 0.48, 0.52)
+		else:
+			self.modulate = Color(1, 1, 1)
+		return
+	if _esqueleto_buff_velocidade_tiro_ativo:
+		self.modulate = Color(0.5, 1.5, 2.0)
+	elif _auto_mutilacao_ativo:
+		self.modulate = Color(1.35, 0.48, 0.52)
+	else:
+		self.modulate = Color(1, 1, 1)
+
+
+func _pagar_custo_hp(custo: int) -> bool:
+	if custo <= 0:
+		return true
+	if hp <= custo:
+		return false
+	hp -= custo
+	health_changed.emit(hp)
+	_notify_damage_received(custo)
+	return true
 
 
 func _preview_gravity_for_shot() -> float:
+	if _vaso_carregando:
+		return esqueleto_skill_vaso_gravity
 	return 0.0
 
 
@@ -247,10 +537,7 @@ func enter_ult_efeito_phase() -> void:
 	if not _esqueleto_chuva_ossos_ativa:
 		return
 	_esqueleto_ult_armagem_animacao_restante_s = 0.0
-	if _esqueleto_buff_velocidade_tiro_ativo:
-		self.modulate = Color(0.5, 1.5, 2.0)
-	else:
-		self.modulate = Color(1, 1, 1)
+	_refresh_esqueleto_combat_modulate()
 	ult_status_changed.emit(true, _esqueleto_chuva_ossos_tempo_restante_s, false)
 
 
@@ -261,11 +548,17 @@ func end_ult_super_phase_visual() -> void:
 func _finalizar_chuva_ossos() -> void:
 	_esqueleto_chuva_ossos_ativa = false
 	_esqueleto_chuva_ossos_tempo_restante_s = 0.0
-	if _esqueleto_buff_velocidade_tiro_ativo:
-		self.modulate = Color(0.5, 1.5, 2.0)
-	else:
-		self.modulate = Color(1, 1, 1)
+	_refresh_esqueleto_combat_modulate()
 	ult_status_changed.emit(false, 0.0, false)
+
+
+func _tentar_ativar_ult() -> void:
+	match _build_skill(EsqueletoBuildCatalog.SLOT_ULT):
+		EsqueletoBuildCatalog.SKILL_CHUVA_OSSOS:
+			_tentar_ativar_ult_chuva_ossos()
+		_:
+			push_warning("Esqueleto: ULT desconhecida '%s' — fallback chuva de ossos." % _build_skill(EsqueletoBuildCatalog.SLOT_ULT))
+			_tentar_ativar_ult_chuva_ossos()
 
 
 func _tentar_ativar_ult_chuva_ossos() -> void:
@@ -273,7 +566,7 @@ func _tentar_ativar_ult_chuva_ossos() -> void:
 		return
 	if _esqueleto_ult_cd_restante_s > 0.0 or _esqueleto_chuva_ossos_ativa:
 		return
-	if _feixe_carregando or _is_charging or _esqueleto_buff_velocidade_tiro_ativo:
+	if _feixe_carregando or _vaso_carregando or _is_charging:
 		return
 	if not _ult_just_pressed():
 		return
@@ -294,9 +587,7 @@ func _feixe_launch_speed(t: float) -> float:
 			t
 		)
 	)
-	if _esqueleto_buff_velocidade_tiro_ativo:
-		speed *= esqueleto_skill_buff_velocidade_tiro_multiplicador
-	return speed
+	return speed * _get_esqueleto_attack_speed_mul()
 
 
 func _refresh_feixe_preview() -> void:
@@ -320,13 +611,16 @@ func _disparar_feixe() -> void:
 	if vel.length_squared() < 1.0:
 		vel = (Vector2.RIGHT * speed) if player_id == 1 else (Vector2.LEFT * speed)
 	var dir := vel.normalized()
-	var spawn_pos := muzzle.global_position + dir * (22.0 * size)
+	var size_spawn := size * esqueleto_projetil_tamanho_mul
+	var spawn_pos := muzzle.global_position + dir * (22.0 * size_spawn)
 	var shots: Array = [{
 		"pos": spawn_pos,
 		"vel": vel,
 		"gravity": 0.0,
 		"bounces": 0,
 		"damage": esqueleto_skill_feixe_dano,
+		"clash_power": esqueleto_skill_feixe_dano,
+		"clash_integrity": esqueleto_skill_feixe_clash_integridade,
 		"size": size,
 		"flags": {"esqueleto_feixe": true},
 	}]
@@ -345,18 +639,41 @@ func _ativar_buff_velocidade_tiro_carregado() -> void:
 	_esqueleto_buff_velocidade_tiro_ativo = true
 	_esqueleto_buff_velocidade_tiro_tempo_restante_s = esqueleto_skill_buff_velocidade_tiro_duracao_s
 	_esqueleto_buff_velocidade_tiro_cd_restante_s = esqueleto_skill_buff_velocidade_tiro_recarga_s
-	self.modulate = Color(0.5, 1.5, 2.0)
+	_refresh_esqueleto_combat_modulate()
 	special_buff_changed.emit(true, 1, esqueleto_skill_buff_velocidade_tiro_duracao_s)
 
 
-func _process_combat(delta: float) -> void:
-	if input_enabled and _control_lock_left <= 0.0:
-		_tentar_ativar_ult_chuva_ossos()
+func _ativar_auto_mutilacao() -> void:
+	if not _pagar_custo_hp(esqueleto_skill_auto_mutilacao_custo_hp):
+		return
+	_auto_mutilacao_ativo = true
+	_auto_mutilacao_tempo_restante_s = esqueleto_skill_auto_mutilacao_duracao_s
+	_auto_mutilacao_cd_restante_s = esqueleto_skill_auto_mutilacao_recarga_s
+	_refresh_esqueleto_combat_modulate()
+	_esqueleto_play_action_once("hurt")
+	SfxManager.play("hit_light", global_position, 0.92, -1.0)
+	special_buff_changed.emit(true, 1, esqueleto_skill_auto_mutilacao_duracao_s)
 
-	var ult_parado := is_ult_em_armagem_ou_animacao()
 
+func _process_skill_1(delta: float, ult_parado: bool) -> void:
+	match _build_skill(EsqueletoBuildCatalog.SLOT_SKILL_1):
+		EsqueletoBuildCatalog.SKILL_FEIXE:
+			_process_skill_1_feixe(delta, ult_parado)
+		EsqueletoBuildCatalog.SKILL_TORRETA:
+			_process_torreta(false, ult_parado)
+		EsqueletoBuildCatalog.SKILL_ZUMBI:
+			_process_zumbi(false, ult_parado)
+		EsqueletoBuildCatalog.SKILL_MANDIBULA_ESPECTRAL:
+			_process_mandibula(false, ult_parado)
+		EsqueletoBuildCatalog.SKILL_VASO_CARNIVORA:
+			_process_skill_1_vaso(delta, ult_parado)
+		_:
+			pass
+
+
+func _process_skill_1_feixe(delta: float, ult_parado: bool) -> void:
 	if input_enabled and _control_lock_left <= 0.0 and not _is_charging and not ult_parado:
-		if _feixe_cd_restante_s <= 0.0 and _grenade_just_pressed() and not _feixe_carregando:
+		if _feixe_cd_restante_s <= 0.0 and _grenade_just_pressed() and not _vaso_carregando:
 			_feixe_carregando = true
 			_feixe_tempo_carga_s = 0.0
 			charge_bar.visible = true
@@ -378,15 +695,231 @@ func _process_combat(delta: float) -> void:
 			_feixe_cd_restante_s = esqueleto_skill_feixe_recarga_s
 			_hide_charge_trajectory_ui()
 
-		if input_enabled and _control_lock_left <= 0.0 and not ult_parado:
-			if (
-				_special_just_pressed()
-				and _esqueleto_buff_velocidade_tiro_cd_restante_s <= 0.0
-				and not _esqueleto_buff_velocidade_tiro_ativo
-			):
-				_ativar_buff_velocidade_tiro_carregado()
 
-	if _cooldown_left <= 0.0 and input_enabled and not _feixe_carregando and not ult_parado:
+func _process_skill_1_vaso(delta: float, ult_parado: bool) -> void:
+	if input_enabled and _control_lock_left <= 0.0 and not _is_charging and not ult_parado:
+		if _vaso_cd_restante_s <= 0.0 and _grenade_just_pressed() and not _feixe_carregando:
+			_vaso_carregando = true
+			_vaso_tempo_carga_s = 0.0
+			charge_bar.visible = true
+			charge_bar.value = 0.0
+			trajectory.visible = true
+			_refresh_vaso_preview()
+		if _vaso_carregando and _grenade_pressed():
+			_vaso_tempo_carga_s = minf(
+				esqueleto_skill_vaso_tempo_max_carga_s,
+				_vaso_tempo_carga_s + delta,
+			)
+			var tb := (
+				0.0
+				if esqueleto_skill_vaso_tempo_max_carga_s <= 0.0
+				else (_vaso_tempo_carga_s / esqueleto_skill_vaso_tempo_max_carga_s)
+			)
+			charge_bar.value = clampf(tb * 100.0, 0.0, 100.0)
+			_refresh_vaso_preview()
+		if _vaso_carregando and _grenade_just_released():
+			_disparar_vaso()
+			_vaso_carregando = false
+			_vaso_cd_restante_s = esqueleto_skill_vaso_recarga_s
+			_hide_charge_trajectory_ui()
+
+
+func _vaso_throw_speed(t: float) -> float:
+	return lerpf(esqueleto_skill_vaso_vel_min, esqueleto_skill_vaso_vel_max, clampf(t, 0.0, 1.0))
+
+
+func _refresh_vaso_preview() -> void:
+	var t := (
+		0.0
+		if esqueleto_skill_vaso_tempo_max_carga_s <= 0.0
+		else clampf(_vaso_tempo_carga_s / esqueleto_skill_vaso_tempo_max_carga_s, 0.0, 1.0)
+	)
+	var lob_deg := launch_angle_degrees + esqueleto_skill_vaso_lob_angulo_graus
+	var speed := _vaso_throw_speed(t)
+	var v := _compute_launch_velocity_with_angle(speed, lob_deg)
+	var p := _trajectory_preview_origin()
+	var g := esqueleto_skill_vaso_gravity
+	trajectory.clear_points()
+	for i in range(trajectory_points):
+		trajectory.add_point(to_local(p))
+		v.y += g * trajectory_step
+		p += v * trajectory_step
+		if not get_viewport_rect().has_point(p):
+			break
+
+
+func _disparar_vaso() -> void:
+	var t := (
+		0.0
+		if esqueleto_skill_vaso_tempo_max_carga_s <= 0.0
+		else clampf(_vaso_tempo_carga_s / esqueleto_skill_vaso_tempo_max_carga_s, 0.0, 1.0)
+	)
+	var lob_deg := launch_angle_degrees + esqueleto_skill_vaso_lob_angulo_graus
+	var speed := _vaso_throw_speed(t)
+	var vel := _compute_launch_velocity_with_angle(speed, lob_deg)
+	carnivorous_pot_requested.emit(self, muzzle.global_position, vel)
+	_esqueleto_play_action_once("attack")
+	SfxManager.play("grenade_throw", global_position, 0.9, -1.0)
+
+
+func _process_skill_2(ult_parado: bool) -> void:
+	match _build_skill(EsqueletoBuildCatalog.SLOT_SKILL_2):
+		EsqueletoBuildCatalog.SKILL_BUFF_VELOCIDADE:
+			_process_skill_2_buff(ult_parado)
+		EsqueletoBuildCatalog.SKILL_AUTO_MUTILACAO:
+			_process_skill_2_auto_mutilacao(ult_parado)
+		EsqueletoBuildCatalog.SKILL_TORRETA:
+			_process_torreta(true, ult_parado)
+		EsqueletoBuildCatalog.SKILL_ZUMBI:
+			_process_zumbi(true, ult_parado)
+		EsqueletoBuildCatalog.SKILL_MANDIBULA_ESPECTRAL:
+			_process_mandibula(true, ult_parado)
+		_:
+			pass
+
+
+func _process_torreta(use_special_button: bool, ult_parado: bool) -> void:
+	if not input_enabled or _control_lock_left > 0.0 or ult_parado:
+		return
+	if _esqueleto_skill1_charging() or _is_charging:
+		return
+	var pressed := _special_just_pressed() if use_special_button else _grenade_just_pressed()
+	if not pressed:
+		return
+	if _torreta_active:
+		if _torreta_evolution_cd_restante_s <= 0.0:
+			if _torreta_sentinel_input_held():
+				turret_sentinel_requested.emit(self)
+				_torreta_evolution_cd_restante_s = esqueleto_skill_torreta_evolution_recarga_s
+				_esqueleto_play_action_once("attack")
+				SfxManager.play("grenade_throw", global_position, 0.78, 4.0)
+			elif _torreta_rocket_input_held():
+				turret_rocket_requested.emit(self)
+				_torreta_evolution_cd_restante_s = esqueleto_skill_torreta_evolution_recarga_s
+				_esqueleto_play_action_once("attack")
+				SfxManager.play("ult_start", global_position, 0.42, -10.0)
+		return
+	if _torreta_cd_restante_s > 0.0:
+		return
+	_colocar_torreta()
+
+
+func _torreta_sentinel_input_held() -> bool:
+	var prefix := "p1" if player_id == 1 else "p2"
+	# Teclado: W está em hover_up; comando: stick/d-pad em move_up.
+	if Input.is_action_pressed(prefix + "_move_up"):
+		return true
+	if Input.is_action_pressed(prefix + "_hover_up"):
+		return true
+	if Input.get_axis(prefix + "_move_down", prefix + "_move_up") > 0.35:
+		return true
+	return Input.get_axis(prefix + "_hover_down", prefix + "_hover_up") > 0.35
+
+
+func _torreta_rocket_input_held() -> bool:
+	var prefix := "p1" if player_id == 1 else "p2"
+	# Teclado: S está em hover_down / down; comando: stick/d-pad em move_down.
+	if Input.is_action_pressed(prefix + "_move_down"):
+		return true
+	if Input.is_action_pressed(prefix + "_hover_down"):
+		return true
+	if Input.is_action_pressed(prefix + "_down"):
+		return true
+	if Input.get_axis(prefix + "_move_down", prefix + "_move_up") < -0.35:
+		return true
+	return Input.get_axis(prefix + "_hover_down", prefix + "_hover_up") < -0.35
+
+
+func _colocar_torreta() -> void:
+	_torreta_cd_restante_s = esqueleto_skill_torreta_recarga_s
+	var face_sign := 1.0
+	if _facing_root != null and absf(_facing_root.scale.x) > 0.01:
+		face_sign = signf(_facing_root.scale.x)
+	elif player_id == 2:
+		face_sign = -1.0
+	var spawn_pos := global_position + Vector2(face_sign * esqueleto_skill_torreta_offset_spawn_x, 0.0)
+	turret_requested.emit(self, spawn_pos)
+	_esqueleto_play_action_once("attack")
+	SfxManager.play("grenade_throw", global_position, 0.85, -2.0)
+
+
+func _process_zumbi(use_special_button: bool, ult_parado: bool) -> void:
+	if not input_enabled or _control_lock_left > 0.0 or ult_parado:
+		return
+	var pressed := _special_just_pressed() if use_special_button else _grenade_just_pressed()
+	if not pressed or _esqueleto_skill1_charging() or _is_charging:
+		return
+	if _zumbi_active:
+		zumbi_detonate_requested.emit(self)
+		return
+	if _zumbi_cd_restante_s > 0.0:
+		return
+	_invocar_zumbi()
+
+
+func _invocar_zumbi() -> void:
+	_zumbi_cd_restante_s = esqueleto_skill_zumbi_recarga_s
+	var face_sign := 1.0
+	if _facing_root != null and absf(_facing_root.scale.x) > 0.01:
+		face_sign = signf(_facing_root.scale.x)
+	elif player_id == 2:
+		face_sign = -1.0
+	var spawn_pos := global_position + Vector2(face_sign * esqueleto_skill_zumbi_offset_spawn_x, 0.0)
+	zumbi_summon_requested.emit(self, spawn_pos)
+	_esqueleto_play_action_once("attack")
+	SfxManager.play("grenade_throw", global_position, 0.9, 0.0)
+
+
+func _process_mandibula(use_special_button: bool, ult_parado: bool) -> void:
+	if not input_enabled or _control_lock_left > 0.0 or ult_parado:
+		return
+	if _mandibula_cd_restante_s > 0.0 or _esqueleto_skill1_charging() or _is_charging:
+		return
+	var pressed := _special_just_pressed() if use_special_button else _grenade_just_pressed()
+	if pressed:
+		_invocar_mandibula()
+
+
+func _invocar_mandibula() -> void:
+	if AutoAimFiveWayUtil.find_valid_opponent(self) == null:
+		return
+	_mandibula_cd_restante_s = esqueleto_skill_mandibula_recarga_s
+	spectral_jaw_requested.emit(self)
+	_esqueleto_play_action_once("attack")
+	SfxManager.play("grenade_throw", global_position, 0.88, 4.0)
+
+
+func _process_skill_2_buff(ult_parado: bool) -> void:
+	if input_enabled and _control_lock_left <= 0.0 and not ult_parado:
+		if (
+			_special_just_pressed()
+			and _esqueleto_buff_velocidade_tiro_cd_restante_s <= 0.0
+			and not _esqueleto_buff_velocidade_tiro_ativo
+		):
+			_ativar_buff_velocidade_tiro_carregado()
+
+
+func _process_skill_2_auto_mutilacao(ult_parado: bool) -> void:
+	if input_enabled and _control_lock_left <= 0.0 and not ult_parado:
+		if (
+			_special_just_pressed()
+			and _auto_mutilacao_cd_restante_s <= 0.0
+			and not _auto_mutilacao_ativo
+			and hp > esqueleto_skill_auto_mutilacao_custo_hp
+		):
+			_ativar_auto_mutilacao()
+
+
+func _process_basic_shot(delta: float, ult_parado: bool) -> void:
+	match _build_skill(EsqueletoBuildCatalog.SLOT_BASIC_SHOT):
+		EsqueletoBuildCatalog.SKILL_TIRO_CARREGADO:
+			_process_basic_shot_carregado(delta, ult_parado)
+		_:
+			pass
+
+
+func _process_basic_shot_carregado(delta: float, ult_parado: bool) -> void:
+	if _cooldown_left <= 0.0 and input_enabled and not _esqueleto_skill1_charging() and not ult_parado:
 		if (not _is_charging) and _shoot_just_pressed():
 			_is_charging = true
 			_charge_time = 0.0
@@ -409,28 +942,52 @@ func _process_combat(delta: float) -> void:
 			var t := 0.0 if max_charge_time <= 0.0 else (_charge_time / max_charge_time)
 			var speed := _esqueleto_velocidade_viagem_projetil(
 				lerpf(min_launch_speed, max_launch_speed, t)
-			)
-			if _esqueleto_buff_velocidade_tiro_ativo:
-				speed *= esqueleto_skill_buff_velocidade_tiro_multiplicador
+			) * _get_esqueleto_attack_speed_mul()
 			var v0 := _compute_launch_velocity(speed)
 			shoot_requested.emit(self, muzzle.global_position, v0, {})
 			_apply_recoil(v0, recoil_normal)
 			_esqueleto_play_action_once("attack")
-			_cooldown_left = shoot_cooldown
+			_cooldown_left = _get_esqueleto_shoot_cooldown_s()
 			_hide_charge_trajectory_ui()
 	else:
-		if _is_charging and not _feixe_carregando:
+		if _is_charging and not _esqueleto_skill1_charging():
 			_is_charging = false
 			_hide_charge_trajectory_ui()
+
+
+func _process_combat(delta: float) -> void:
+	if input_enabled and _control_lock_left <= 0.0:
+		_tentar_ativar_ult()
+
+	var ult_parado := is_ult_em_armagem_ou_animacao()
+
+	_process_skill_1(delta, ult_parado)
+	_process_skill_2(ult_parado)
+	_process_basic_shot(delta, ult_parado)
 
 
 func _extra_reset_for_vs_round() -> void:
 	_feixe_cd_restante_s = 0.0
 	_feixe_carregando = false
 	_feixe_tempo_carga_s = 0.0
+	_vaso_cd_restante_s = 0.0
+	_vaso_carregando = false
+	_vaso_tempo_carga_s = 0.0
+	_torreta_cd_restante_s = 0.0
+	_torreta_active = false
+	_torreta_evolution_cd_restante_s = 0.0
+	_zumbi_cd_restante_s = 0.0
+	_zumbi_active = false
+	_mandibula_cd_restante_s = 0.0
+	set_esqueleto_zombie_slow_mul(1.0)
+	clear_esqueleto_podridao()
+	clear_esqueleto_putrefacao()
 	_esqueleto_buff_velocidade_tiro_ativo = false
 	_esqueleto_buff_velocidade_tiro_tempo_restante_s = 0.0
 	_esqueleto_buff_velocidade_tiro_cd_restante_s = 0.0
+	_auto_mutilacao_ativo = false
+	_auto_mutilacao_tempo_restante_s = 0.0
+	_auto_mutilacao_cd_restante_s = 0.0
 	_esqueleto_ult_cd_restante_s = 0.0
 	_esqueleto_chuva_ossos_ativa = false
 	_esqueleto_ult_armagem_animacao_restante_s = 0.0
@@ -682,11 +1239,19 @@ func _sync_esqueleto_body_sprite(_delta: float) -> void:
 	_apply_esqueleto_sprite_modulate()
 
 
+func _refresh_character_body_modulate() -> void:
+	_apply_esqueleto_sprite_modulate()
+
+
 func _apply_esqueleto_sprite_modulate() -> void:
 	if _body_sprite == null:
 		return
 	if _frozen_left > 0.0:
 		_body_sprite.modulate = Color(0.75, 0.9, 1.0, 1.0)
+	elif has_esqueleto_podridao():
+		_body_sprite.modulate = get_esqueleto_podridao_body_color()
+	elif has_esqueleto_putrefacao():
+		_body_sprite.modulate = get_esqueleto_putrefacao_body_color()
 	elif _is_sprint_speed_boost_active():
 		_body_sprite.modulate = _orig_sprite_modulate * sprint_visual_body_mult
 	else:

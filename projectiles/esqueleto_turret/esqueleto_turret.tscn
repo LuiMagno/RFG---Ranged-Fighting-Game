@@ -1,0 +1,78 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://projectiles/esqueleto_turret/esqueleto_turret.gd" id="1_turret"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
+size = Vector2(30, 14)
+
+[node name="EsqueletoTurret" type="CharacterBody2D"]
+collision_layer = 8
+collision_mask = 49
+floor_snap_length = 6.0
+script = ExtResource("1_turret")
+
+[node name="BaseRim" type="Polygon2D" parent="."]
+position = Vector2(0, 8)
+polygon = PackedVector2Array(-18, 0, 18, 0, 16, 5, -16, 5)
+color = Color(0.42, 0.38, 0.34, 1)
+
+[node name="BasePlate" type="Polygon2D" parent="."]
+position = Vector2(0, 4)
+polygon = PackedVector2Array(-15, -2, 15, -2, 13, 6, -13, 6)
+color = Color(0.78, 0.74, 0.66, 1)
+
+[node name="LegsRoot" type="Node2D" parent="."]
+visible = false
+position = Vector2(0, 10)
+
+[node name="LegLPivot" type="Node2D" parent="LegsRoot"]
+position = Vector2(-10, 0)
+
+[node name="LegL" type="Polygon2D" parent="LegsRoot/LegLPivot"]
+polygon = PackedVector2Array(-3, 0, 3, 0, 2, 14, -2, 14)
+color = Color(0.86, 0.82, 0.74, 1)
+
+[node name="LegLFoot" type="Polygon2D" parent="LegsRoot/LegLPivot"]
+position = Vector2(0, 14)
+polygon = PackedVector2Array(-5, 0, 5, 0, 4, 3, -4, 3)
+color = Color(0.72, 0.68, 0.6, 1)
+
+[node name="LegRPivot" type="Node2D" parent="LegsRoot"]
+position = Vector2(10, 0)
+
+[node name="LegR" type="Polygon2D" parent="LegsRoot/LegRPivot"]
+polygon = PackedVector2Array(-3, 0, 3, 0, 2, 14, -2, 14)
+color = Color(0.86, 0.82, 0.74, 1)
+
+[node name="LegRFoot" type="Polygon2D" parent="LegsRoot/LegRPivot"]
+position = Vector2(0, 14)
+polygon = PackedVector2Array(-5, 0, 5, 0, 4, 3, -4, 3)
+color = Color(0.72, 0.68, 0.6, 1)
+
+[node name="HeadPivot" type="Node2D" parent="."]
+position = Vector2(0, -2)
+
+[node name="ThrusterFlame" type="Polygon2D" parent="HeadPivot"]
+visible = false
+position = Vector2(-8, 0)
+polygon = PackedVector2Array(0, -5, -18, 0, 0, 5)
+color = Color(1, 0.45, 0.12, 0.88)
+
+[node name="HeadBody" type="Polygon2D" parent="HeadPivot"]
+polygon = PackedVector2Array(-9, -7, 7, -7, 9, 4, -9, 4)
+color = Color(0.86, 0.82, 0.74, 1)
+
+[node name="Barrel" type="Polygon2D" parent="HeadPivot"]
+polygon = PackedVector2Array(6, -3, 20, -2.5, 20, 2.5, 6, 3)
+color = Color(0.58, 0.54, 0.48, 1)
+
+[node name="BarrelTip" type="Polygon2D" parent="HeadPivot"]
+polygon = PackedVector2Array(19, -2, 24, 0, 19, 2)
+color = Color(0.92, 0.88, 0.62, 1)
+
+[node name="Muzzle" type="Marker2D" parent="HeadPivot"]
+position = Vector2(24, 0)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 6)
+shape = SubResource("RectangleShape2D_body")

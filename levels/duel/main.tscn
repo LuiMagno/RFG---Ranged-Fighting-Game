@@ -6,6 +6,11 @@
 [ext_resource type="PackedScene" path="res://projectiles/grenade/grenade.tscn" id="4_grnd"]
 [ext_resource type="Script" uid="uid://bsjvlq4hfptgw" path="res://characters/arqueiro_player.gd" id="5_archer"]
 [ext_resource type="PackedScene" path="res://projectiles/archer_spike/archer_spike.tscn" id="6_spike"]
+[ext_resource type="PackedScene" path="res://projectiles/esqueleto_turret/esqueleto_turret.tscn" id="6b_turret"]
+[ext_resource type="PackedScene" path="res://projectiles/esqueleto_zombie/esqueleto_zombie.tscn" id="6c_zombie"]
+[ext_resource type="PackedScene" path="res://projectiles/esqueleto_spectral_jaw/esqueleto_spectral_jaw.tscn" id="6d_jaw"]
+[ext_resource type="PackedScene" path="res://projectiles/esqueleto_carnivorous_pot/esqueleto_carnivorous_pot.tscn" id="6e_pot"]
+[ext_resource type="PackedScene" path="res://projectiles/esqueleto_carnivorous_plant/esqueleto_carnivorous_plant.tscn" id="6f_plant"]
 [ext_resource type="PackedScene" path="res://projectiles/homing_missile/homing_missile.tscn" id="7_homing"]
 [ext_resource type="PackedScene" path="res://projectiles/ice_missile/ice_missile.tscn" id="8_ice"]
 [ext_resource type="PackedScene" path="res://projectiles/gravity_orb/gravity_orb.tscn" id="9_orb"]
@@ -14,6 +19,7 @@
 [ext_resource type="Script" uid="uid://4ehcmjfnrgv1" path="res://levels/duel/vs_match_end_menu.gd" id="12_vs_end"]
 [ext_resource type="PackedScene" path="res://levels/duel/camera/camera_system.tscn" id="13_camera"]
 [ext_resource type="Script" path="res://characters/aim/aim_debug_overlay.gd" id="14_aimdbg"]
+[ext_resource type="Script" path="res://ui/damage_numbers_layer.gd" id="15_dmgnums"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_2"]
 size = Vector2(1920, 84)
@@ -35,6 +41,11 @@ ice_missile_scene = ExtResource("8_ice")
 gravity_orb_scene = ExtResource("9_orb")
 grenade_scene = ExtResource("4_grnd")
 archer_spike_scene = ExtResource("6_spike")
+esqueleto_turret_scene = ExtResource("6b_turret")
+esqueleto_zombie_scene = ExtResource("6c_zombie")
+esqueleto_spectral_jaw_scene = ExtResource("6d_jaw")
+esqueleto_carnivorous_pot_scene = ExtResource("6e_pot")
+esqueleto_carnivorous_plant_scene = ExtResource("6f_plant")
 
 [node name="CameraRig" parent="." instance=ExtResource("13_camera")]
 
@@ -642,6 +653,9 @@ text = "Boneco atira automaticamente a cada 3 segundos"
 [node name="BtnBackSettings" type="Button" parent="TrainingPauseLayer/Root/Center/Panel/SettingsMenu" unique_id=416777385]
 layout_mode = 2
 text = "Voltar"
+
+[node name="DamageNumbers" type="Node2D" parent="."]
+script = ExtResource("15_dmgnums")
 
 [node name="LeftPlayer" type="CharacterBody2D" parent="." unique_id=1571489207]
 position = Vector2(210, 672)

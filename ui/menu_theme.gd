@@ -56,11 +56,72 @@ static func style_checkbox(cb: CheckBox) -> void:
 
 static func fill_class_option(ob: OptionButton) -> void:
 	ob.clear()
-	ob.add_item("Pistoleiro")
-	ob.add_item("Arqueiro")
-	ob.add_item("Mago")
-	ob.add_item("Esqueleto")
-	ob.add_item("Ongma Epilef (teste)")
+	# ob.add_item("Pistoleiro", Player.CharacterKind.PISTOLEIRO)
+	# ob.add_item("Arqueiro", Player.CharacterKind.ARQUEIRO)
+	# ob.add_item("Mago", Player.CharacterKind.MAGO)
+	ob.add_item("Esqueleto", Player.CharacterKind.ESQUELETO)
+	ob.add_item("Ongma Epilef (teste)", Player.CharacterKind.ONGMA_EPILEF)
+
+
+static func select_class_option(ob: OptionButton, kind: int) -> void:
+	kind = RunConfig.clamp_character_kind(kind)
+	for i in ob.item_count:
+		if ob.get_item_id(i) == kind:
+			ob.select(i)
+			return
+	if ob.item_count > 0:
+		ob.select(0)
+
+
+static func get_class_option_id(ob: OptionButton) -> int:
+	if ob.item_count <= 0:
+		return Player.CharacterKind.ESQUELETO
+	return ob.get_item_id(ob.selected)
+
+
+static func fill_esqueleto_build_slot_option(ob: OptionButton, slot_key: StringName, selected_id: StringName) -> void:
+	ob.clear()
+	var options := EsqueletoBuildCatalog.get_slot_options(slot_key)
+	for opt in options:
+		var idx := ob.item_count
+		ob.add_item(String(opt.get("label", "")))
+		ob.set_item_metadata(idx, opt.get("id", &""))
+	select_esqueleto_build_slot_option(ob, selected_id)
+
+
+static func select_esqueleto_build_slot_option(ob: OptionButton, selected_id: StringName) -> void:
+	for i in ob.item_count:
+		if ob.get_item_metadata(i) == selected_id:
+			ob.select(i)
+			return
+	if ob.item_count > 0:
+		ob.select(0)
+
+
+static func get_esqueleto_build_slot_option_id(ob: OptionButton) -> StringName:
+	if ob.item_count <= 0:
+		return &""
+	var meta: Variant = ob.get_item_metadata(ob.selected)
+	if meta is StringName:
+		return meta
+	return &""
+
+
+static func apply_esqueleto_build_side_panel_style(panel: Panel) -> void:
+	apply_esqueleto_build_submenu_style(panel)
+
+
+static func apply_esqueleto_build_submenu_style(panel: Panel) -> void:
+	var panel_sb := StyleBoxFlat.new()
+	panel_sb.bg_color = Color(0.09, 0.11, 0.15, 0.96)
+	panel_sb.set_border_width_all(2)
+	panel_sb.border_color = Color(0.35, 0.65, 0.92, 0.5)
+	panel_sb.set_corner_radius_all(14)
+	panel_sb.set_content_margin_all(2)
+	panel_sb.shadow_color = Color(0, 0, 0, 0.2)
+	panel_sb.shadow_size = 2
+	panel_sb.shadow_offset = Vector2(0, 2)
+	panel.add_theme_stylebox_override("panel", panel_sb)
 
 
 static func fill_stage_option(ob: OptionButton) -> void:

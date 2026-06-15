@@ -61,7 +61,9 @@ func _on_vs_intro_selected(index: int) -> void:
 
 
 func _on_aim_options_pressed() -> void:
-	get_tree().change_scene_to_file(MenuPaths.SCENE_TEST_AIM_OPTIONS)
+	var err := get_tree().change_scene_to_file(MenuPaths.SCENE_TEST_AIM_OPTIONS)
+	if err != OK:
+		push_error("Mira (teste): falha ao abrir menu (%s)." % error_string(err))
 
 
 func _on_esqueleto_projetil_vel_selected(_index: int) -> void:

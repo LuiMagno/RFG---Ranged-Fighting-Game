@@ -38,8 +38,7 @@ func _ready() -> void:
 	_opt_esqueleto_projetil_vel.item_selected.connect(_on_esqueleto_projetil_vel_selected)
 	_opt_p1_scheme.item_selected.connect(_on_p1_scheme_selected)
 	_opt_p1_device.item_selected.connect(_on_p1_device_selected)
-	var imax := maxi(_opt_p1_class.item_count - 1, 0)
-	_opt_p1_class.select(clampi(RunConfig.p1_character, 0, imax))
+	MenuThemeUtil.select_class_option(_opt_p1_class, RunConfig.p1_character)
 	_opt_p1_class.item_selected.connect(_on_p1_class_selected)
 	_apply_panel_style()
 	_sync_settings_controls()
@@ -105,8 +104,7 @@ func _on_mode_menu_pressed() -> void:
 
 
 func _sync_settings_controls() -> void:
-	var imax := maxi(_opt_p1_class.item_count - 1, 0)
-	_opt_p1_class.select(clampi(RunConfig.p1_character, 0, imax))
+	MenuThemeUtil.select_class_option(_opt_p1_class, RunConfig.p1_character)
 	_opt_p1_scheme.select(clampi(int(RunConfig.p1_input_scheme), 0, maxi(_opt_p1_scheme.item_count - 1, 0)))
 	MenuThemeUtil.select_joy_device_option(_opt_p1_device, RunConfig.p1_joy_device)
 	_opt_p1_device.visible = RunConfig.p1_input_scheme == RunConfig.InputScheme.GAMEPAD
@@ -134,10 +132,11 @@ func _on_p1_device_selected(index: int) -> void:
 	_push_input_map_to_game()
 
 
-func _on_p1_class_selected(index: int) -> void:
-	if RunConfig.p1_character == index:
+func _on_p1_class_selected(_index: int) -> void:
+	var kind := MenuThemeUtil.get_class_option_id(_opt_p1_class)
+	if RunConfig.p1_character == kind:
 		return
-	RunConfig.p1_character = index
+	RunConfig.p1_character = kind
 	get_tree().paused = false
 	get_tree().reload_current_scene()
 

@@ -1,0 +1,151 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/components/esqueleto_build_side_panel.gd" id="1_panel"]
+
+[node name="EsqueletoBuildSidePanel" type="Control"]
+custom_minimum_size = Vector2(340, 600)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+script = ExtResource("1_panel")
+
+[node name="MainPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="MainPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 22.0
+offset_top = 22.0
+offset_right = -22.0
+offset_bottom = -22.0
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="MainPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.93, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "Build Esqueleto"
+horizontal_alignment = 1
+
+[node name="PlayerTabs" type="HBoxContainer" parent="MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BtnPlayer1" type="Button" parent="MainPanel/VBox/PlayerTabs"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Jogador 1"
+
+[node name="BtnPlayer2" type="Button" parent="MainPanel/VBox/PlayerTabs"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Jogador 2"
+
+[node name="Subtitle" type="Label" parent="MainPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.62, 0.75, 1)
+theme_override_font_sizes/font_size = 13
+text = "Jogador 1"
+horizontal_alignment = 1
+
+[node name="SepTop" type="HSeparator" parent="MainPanel/VBox"]
+layout_mode = 2
+
+[node name="Skill1Block" type="VBoxContainer" parent="MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Skill1Label" type="Label" parent="MainPanel/VBox/Skill1Block"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Skill 1 (F / X)"
+
+[node name="OptSkill1" type="OptionButton" parent="MainPanel/VBox/Skill1Block"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+
+[node name="Skill2Block" type="VBoxContainer" parent="MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Skill2Label" type="Label" parent="MainPanel/VBox/Skill2Block"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Skill 2 (G / Y)"
+
+[node name="OptSkill2" type="OptionButton" parent="MainPanel/VBox/Skill2Block"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+
+[node name="BasicShotBlock" type="VBoxContainer" parent="MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="BasicShotLabel" type="Label" parent="MainPanel/VBox/BasicShotBlock"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Tiro basico (RB / mouse)"
+
+[node name="OptBasicShot" type="OptionButton" parent="MainPanel/VBox/BasicShotBlock"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+
+[node name="DashBlock" type="VBoxContainer" parent="MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="DashLabel" type="Label" parent="MainPanel/VBox/DashBlock"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "Dash (Shift / B)"
+
+[node name="OptDash" type="OptionButton" parent="MainPanel/VBox/DashBlock"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+
+[node name="UltBlock" type="VBoxContainer" parent="MainPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="UltLabel" type="Label" parent="MainPanel/VBox/UltBlock"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.75, 0.95, 1)
+theme_override_font_sizes/font_size = 12
+text = "ULT (R / LB)"
+
+[node name="OptUlt" type="OptionButton" parent="MainPanel/VBox/UltBlock"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+
+[node name="Hint" type="Label" parent="MainPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.5, 0.55, 0.62, 1)
+theme_override_font_sizes/font_size = 11
+text = "Build do Esqueleto — aplica ao escolher a classe."
+autowrap_mode = 3
+vertical_alignment = 2

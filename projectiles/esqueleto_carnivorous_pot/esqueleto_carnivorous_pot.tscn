@@ -1,0 +1,23 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://projectiles/esqueleto_carnivorous_pot/esqueleto_carnivorous_pot.gd" id="1_pot"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_pot"]
+radius = 10.0
+
+[node name="EsqueletoCarnivorousPot" type="CharacterBody2D"]
+collision_layer = 8
+collision_mask = 49
+script = ExtResource("1_pot")
+
+[node name="PotBody" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-10, -6, 10, -6, 11, 2, 9, 10, -9, 10, -11, 2)
+color = Color(0.58, 0.38, 0.22, 1)
+
+[node name="Sprout" type="Polygon2D" parent="."]
+position = Vector2(0, -8)
+polygon = PackedVector2Array(-4, 4, 0, -10, 4, 4)
+color = Color(0.32, 0.72, 0.28, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_pot")

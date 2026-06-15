@@ -13,6 +13,10 @@ var _explosion_scene := preload("res://projectiles/explosion/explosion.tscn")
 
 # Damage dealt on player hit.
 @export var damage := 20
+## Poder ofensivo no choque flecha×flecha (Esqueleto / Ongma).
+var clash_power: int = 20
+## Integridade restante no choque flecha×flecha (Esqueleto / Ongma).
+var clash_integrity: int = 20
 
 # NOTE: "gravity" is a native member in some nodes in Godot, so we avoid that name.
 @export var gravity_accel := 1200.0
@@ -65,6 +69,8 @@ func setup(
 		bounces_left = bounces_override
 	if damage_override >= 0:
 		damage = damage_override
+	clash_power = damage
+	clash_integrity = damage
 	if is_archer_carrier:
 		_body_poly.modulate = Color(1.0, 0.82, 0.35, 1.0)
 	if _initialized:
@@ -79,6 +85,8 @@ func set_shot_flags(flags: Dictionary) -> void:
 	_shot_flags = flags.duplicate()
 	if _shot_flags.get("esqueleto_chuva_osso", false) and _body_poly != null:
 		_body_poly.modulate = Color(0.95, 0.88, 0.72, 1.0)
+	if _shot_flags.get("esqueleto_torreta_tiro", false) and _body_poly != null:
+		_body_poly.modulate = Color(0.78, 0.76, 0.72, 1.0)
 
 
 func get_shot_flags() -> Dictionary:
@@ -135,6 +143,8 @@ func apply_grenade_explosion_boost(explosion_center: Vector2, multiply: int = 3)
 		cp.global_position = global_position
 		# Reaplica setup pra garantir exceções de colisão e tamanho corretos.
 		cp.setup(_owner, base_vel.rotated(off), gravity_accel, bounces_left, damage, _pending_size_multiplier, false, _cluster_spread_deg)
+		cp.clash_power = clash_power
+		cp.clash_integrity = clash_integrity
 		cp._grenade_boosted = true
 
 
@@ -181,12 +191,8 @@ func _physics_process(delta: float) -> void:
 				add_collision_exception_with(other)
 				other.add_collision_exception_with(self)
 				return
-			# Cancel only if the arrows are from different owners.
 			if other._owner != null and _owner != null and other._owner != _owner:
-				_spawn_explosion(collision.get_position())
-				if not other.is_queued_for_deletion():
-					other.queue_free()
-				queue_free()
+				_resolve_arrow_clash(other, collision.get_position())
 				return
 
 		if collider is ArcherSpike:
@@ -198,6 +204,30 @@ func _physics_process(delta: float) -> void:
 				sp.add_collision_exception_with(self)
 				return
 			sp.hit_by_arrow()
+			queue_free()
+			return
+
+		if collider is EsqueletoTurret:
+			var tur := collider as EsqueletoTurret
+			if tur.is_queued_for_deletion():
+				return
+			var tur_owner := tur.get_owner_player()
+			if tur_owner != null and _owner != null and tur_owner == _owner:
+				add_collision_exception_with(tur)
+				return
+			tur.take_damage(damage)
+			queue_free()
+			return
+
+		if collider is EsqueletoZombie:
+			var zm := collider as EsqueletoZombie
+			if zm.is_queued_for_deletion():
+				return
+			var zm_owner := zm.get_owner_player()
+			if zm_owner != null and _owner != null and zm_owner == _owner:
+				add_collision_exception_with(zm)
+				return
+			zm.take_damage(damage)
 			queue_free()
 			return
 
@@ -252,6 +282,64 @@ func _spawn_explosion(world_pos: Vector2) -> void:
 	var e := _explosion_scene.instantiate() as Node2D
 	get_tree().current_scene.add_child(e)
 	e.global_position = world_pos
+
+
+func _spawn_clash_fx(world_pos: Vector2, large: bool) -> void:
+	if large:
+		_spawn_explosion(world_pos)
+		return
+	SfxManager.play("explosion_small", world_pos, 0.85, 2.0)
+	var e := _explosion_scene.instantiate() as Node2D
+	e.set("lifetime", 0.06)
+	e.set("start_scale", 0.9)
+	e.set("end_scale", 2.2)
+	get_tree().current_scene.add_child(e)
+	e.global_position = world_pos
+
+
+func _arrow_owner_is_esqueleto_family(arrow: Arrow) -> bool:
+	return arrow._owner is EsqueletoPlayer
+
+
+func _resolve_arrow_clash(other: Arrow, hit_pos: Vector2) -> void:
+	if get_instance_id() > other.get_instance_id():
+		return
+	if is_queued_for_deletion() or other.is_queued_for_deletion():
+		return
+
+	if not _arrow_owner_is_esqueleto_family(self) and not _arrow_owner_is_esqueleto_family(other):
+		_spawn_explosion(hit_pos)
+		if not other.is_queued_for_deletion():
+			other.queue_free()
+		queue_free()
+		return
+
+	var self_power := clash_power
+	var other_power := other.clash_power
+	var self_hp_after := clash_integrity - other_power
+	var other_hp_after := other.clash_integrity - self_power
+	var self_dead := self_hp_after <= 0
+	var other_dead := other_hp_after <= 0
+
+	if self_dead and other_dead:
+		_spawn_clash_fx(hit_pos, true)
+		if not other.is_queued_for_deletion():
+			other.queue_free()
+		queue_free()
+		return
+
+	if self_dead:
+		_spawn_clash_fx(global_position, false)
+		queue_free()
+	if other_dead:
+		_spawn_clash_fx(other.global_position, false)
+		if not other.is_queued_for_deletion():
+			other.queue_free()
+
+	if not self_dead:
+		clash_integrity = self_hp_after
+	if not other_dead:
+		other.clash_integrity = other_hp_after
 
 
 func _apply_size_multiplier(mult: float) -> void:

@@ -12,6 +12,18 @@ Os números e comportamentos do **Esqueleto** definem o **padrão de referência
 
 **Família Esqueleto no código:** qualquer nó com script que **é** `EsqueletoPlayer` (inclui **Ongma Epilef**, `extends EsqueletoPlayer`) entra nas mesmas regras de `Game` que o esqueleto para flecha reta e HUD do buff de velocidade — ver `owner_player is EsqueletoPlayer` em `levels/duel/game.gd`. Ficha do laboratório: [personagens/ongma_epilef.md](personagens/ongma_epilef.md).
 
+**Build modular (Esqueleto):** nos menus Vs e Treino, ao escolher **Esqueleto** (não Ongma), abre-se o painel lateral `ui/components/esqueleto_build_side_panel.tscn`. Cada jogador tem a sua build em `RunConfig` (`p1_esqueleto_build` / `p2_esqueleto_build`). O catálogo `characters/esqueleto/esqueleto_build_catalog.gd` (`EsqueletoBuildCatalog`) é a fonte única para menus e runtime; `EsqueletoPlayer.apply_build_from_run_config()` é chamado em `Game._assign_player_script` só quando `kind == ESQUELETO`.
+
+| Slot (`RunConfig`) | ID default | Input | Comportamento (fase 1) |
+|--------------------|------------|-------|-------------------------|
+| `skill_1` | `feixe` | F / X (`*_grenade`) | Feixe carregar + soltar |
+| `skill_2` | `buff_velocidade_tiro` | G / Y (`*_special`) | Buff velocidade do tiro carregado |
+| `basic_shot` | `tiro_carregado` | RB / mouse (`*_shoot`) | Tiro carregado baseline |
+| `dash` | `dash_acao` | Shift / B (`*_dash`) | Dash por botão (`uses_dash_action_button`) |
+| `ult` | `chuva_ossos` | R / LB (`*_ult`) | ULT Chuva de ossos |
+
+**Registar nova skill:** adicionar ID + label em `EsqueletoBuildCatalog.get_slot_options(slot_key)` e implementar o handler correspondente em `EsqueletoPlayer` (dispatch por `match` em `_process_skill_1`, `_process_skill_2`, `_process_basic_shot`, `uses_dash_action_button`, `_tentar_ativar_ult`). IDs desconhecidos fazem fallback para o default do slot.
+
 ---
 
 **Controles (duelo, após `_ensure_input_map` em `game.gd`):**
@@ -42,6 +54,7 @@ O tiro usa a cena `projectiles/arrow/arrow.tscn` (classe `Arrow`). Para o esquel
 | Gravidade no voo | **0** | `Game._spawn_one_arrow`: pistoleiro **ou** `owner_player is EsqueletoPlayer` (Esqueleto, Ongma Epilef, …) → `g = 0` |
 | Ricochetes padrão | **0** | `Game._spawn_one_arrow`: não-pistoleiro → `bounces = 0` |
 | Dano padrão (sem override) | **20** | `Arrow.damage` (`arrow.gd`) |
+| Poder / integridade no choque | **20** / **20** (inicial = dano) | `Arrow.clash_power`, `Arrow.clash_integrity` — só activo quando pelo menos um projétil é da família Esqueleto (`EsqueletoPlayer`); ver secção 4.2 |
 | Knockback ao acertar | **520** horizontal, **220** para cima | `Arrow.knockback_x`, `knockback_up` |
 | Tamanho visual/colisor base da flecha | Corpo ~28×6 px (polígono); colisor círculo **raio 10** | `arrow.tscn` + `arrow.gd` |
 | Cooldown após soltar o tiro | **≥ 1,0** s | `EsqueletoPlayer.MIN_SHOOT_COOLDOWN_S`; em `_ready`, `shoot_cooldown = max(1.0, shoot_cooldown)` |
@@ -104,6 +117,18 @@ Valores da instância em `main.tscn` (válidos para qualquer script de `Player`,
 | Multiplicador de velocidade no tiro carregado | **2,0** × | `esqueleto_skill_buff_velocidade_tiro_multiplicador` (aplica-se à velocidade já interpolada por carga) |
 | HUD | `special_buff_changed(true, 1, tempo_restante)` enquanto activo; `false` ao expirar ou no reset Vs |
 
+### 4.1.1 Auto mutilação (Skill 2 G/Y — buff com custo de HP)
+
+| Parâmetro | Valor |
+|-----------|--------|
+| Custo | **10** HP (requer `hp > 10` para activar) | `esqueleto_skill_auto_mutilacao_custo_hp` |
+| Duração | **4,0** s | `esqueleto_skill_auto_mutilacao_duracao_s` |
+| Recarga | **10,0** s | `esqueleto_skill_auto_mutilacao_recarga_s` |
+| Velocidade de ataque | **+50%** (`1,5×` projéteis + cooldown entre tiros) | `esqueleto_skill_auto_mutilacao_vel_ataque_mul` |
+| Velocidade de movimento | **+25%** (`1,25×`) | `esqueleto_skill_auto_mutilacao_vel_movimento_mul` |
+| Visual | Brilho vermelho no corpo | `_refresh_esqueleto_combat_modulate` |
+| HUD | Igual buff Skill 2 | `special_buff_changed` |
+
 ### 4.2 Feixe (segurar `*_grenade` e soltar: F / X)
 
 Na prática é um disparo único via `shots_requested` com flags de dano/tamanho/gravidade.
@@ -114,6 +139,9 @@ Na prática é um disparo único via `shots_requested` com flags de dano/tamanho
 | Tempo máximo de carga | **0,65** s | `esqueleto_skill_feixe_tempo_max_carga_s` |
 | Escala (tamanho) | `lerp(1.85, 3.45, t)` | `esqueleto_skill_feixe_escala_min` … `esqueleto_skill_feixe_escala_max` |
 | Dano | **36** | `esqueleto_skill_feixe_dano` |
+| Feedback numérico no hit | **36** em tier **heavy** | `Player.damage_received` → `DamageNumbersLayer` (flutuante ~0,75 s) |
+| Poder no choque | **36** | `clash_power` no payload = `esqueleto_skill_feixe_dano` |
+| Integridade no choque | **36** | `esqueleto_skill_feixe_clash_integridade` (tunável; 36 aguenta 1 tiro normal de 20) |
 | Velocidade | `lerp(min_launch × 1.05, max_launch × 1.42, t)` | `esqueleto_skill_feixe_velocidade_mul_min` / `esqueleto_skill_feixe_velocidade_mul_max` → **441** … **1278** px/s nos extremos |
 | Gravidade do projétil | **0** | payload em `_disparar_feixe` |
 | Ricochetes | **0** | `bounces: 0` |
@@ -122,6 +150,106 @@ Na prática é um disparo único via `shots_requested` com flags de dano/tamanho
 | Ângulo acima da horizontal | **5–16°** | `esqueleto_skill_feixe_recoil_angulo_acima_horizontal_graus` |
 | Decaimento do carry X (base) | **3200** | `Player.knockback_carry_x_decay` |
 | Tiro normal durante carga do feixe | Ramo de carregar `*_shoot` **não** corre enquanto `_feixe_carregando` | `EsqueletoPlayer._process_combat` (prioridade ao feixe) |
+
+**Choque flecha×flecha (Esqueleto / Ongma):** em `Arrow._resolve_arrow_clash` — cada projétil subtrai o `clash_power` adversário da `clash_integrity`; quem ficar ≤ 0 explode; sobrevivente mantém integridade e continua. Mesmo poder (ex. 20 vs 20, 36 vs 36) → explosão mútua. Feixe vs 1 tiro normal → feixe com **16** HP; 2.º normal destrói ambos. Duelistas **fora** da família Esqueleto mantêm cancelamento instantâneo mútuo entre si.
+
+### 4.2.1 Vaso carnívoro (Skill 1 F/X — carregar + arco)
+
+| Parâmetro | Valor |
+|-----------|--------|
+| Activar | Segurar `*_grenade` (F / X) e soltar | `_process_skill_1_vaso` |
+| Cooldown | **8,0** s | `esqueleto_skill_vaso_recarga_s` |
+| Carga máxima | **0,75** s | `esqueleto_skill_vaso_tempo_max_carga_s` |
+| Velocidade do arco | **280** → **920** px/s | `esqueleto_skill_vaso_vel_*` |
+| Gravidade | **1500** px/s² | `esqueleto_skill_vaso_gravity` |
+| Ângulo do arco | `launch_angle` + **38°** | `esqueleto_skill_vaso_lob_angulo_graus` |
+| Alcance | Carga máxima atinge a metade inimiga | preview com gravidade |
+| Impacto | Toca **superfície** → planta carnívora | `EsqueletoCarnivorousPot` |
+| Planta | **10** s, morde em **104** px; pescoço segue inimigos e avança na mordida | `EsqueletoCarnivorousPlant` |
+| Mordida | **8** dano + **1** carga putrefação | `esqueleto_skill_vaso_planta_*` |
+| Putrefação | Até **5** cargas; **2** dano/tick/carga / **0,6** s / **4** s | `add_esqueleto_putrefacao_charge` |
+
+### 4.2.2 Torreta (Skill 1 F/X ou Skill 2 G/Y — conforme build)
+
+| Parâmetro | Valor |
+|-----------|--------|
+| Activação | `*_grenade` (Skill 1) ou `*_special` (Skill 2) — toque único |
+| Cooldown | **10,0** s (só ao colocar; transformação não gasta CD) | `esqueleto_skill_torreta_recarga_s` |
+| Disparos | **5** | `esqueleto_skill_torreta_disparos` |
+| Dano por tiro | **20** | `esqueleto_skill_torreta_dano_tiro` |
+| Intervalo entre tiros | **2,5** s | `esqueleto_skill_torreta_intervalo_disparo_s` |
+| Vida | **30** (≥30 dano acumulado destrói) | `esqueleto_skill_torreta_vida` |
+| Offset de spawn | **24** px na direcção que o personagem enfrenta | `esqueleto_skill_torreta_offset_spawn_x` |
+| Queda / terreno | `CharacterBody2D` com gravidade; assenta em chão (layer 1) e patamares (16/32) | `EsqueletoTurret.TERRAIN_COLLISION_MASK` |
+| Fim de vida | Desaparece logo após o **5.º** disparo (ou ao levar ≥30 dano) | `_process_combat` / `take_damage` |
+| Mira | 360° — posição **actual** do inimigo a cada disparo | `EsqueletoTurret` + `AutoAimFiveWayUtil` |
+| Limite | 1 torreta activa por jogador (nova só após a anterior morrer) | `Game._active_turrets` |
+| Projétil | `Arrow` via `Game.spawn_esqueleto_turret_shot`; flag `esqueleto_torreta_tiro`; escala = tiro carregado |
+| Destruição | Projéteis **inimigos** (`Arrow.take_damage` na torreta); feixe (36) destrói num hit | `arrow.gd` + `EsqueletoTurret.take_damage` |
+| Pausa SUPER | Torreta pausa com outros projéteis durante animação ULT | `Game._is_pausable_combat_projectile` |
+
+#### Torreta Sentinela (torreta activa + skill + **cima**)
+
+| Parâmetro | Valor |
+|-----------|--------|
+| Activação | Mesmo botão da torreta **com** `move_up` / **`hover_up` (W)** / stick para cima, enquanto a torreta estiver no chão | `turret_sentinel_requested` |
+| Transformação | Pernas ósseas; anda pelo chão; persegue inimigo em alcance médio e mantém distância ideal | `EsqueletoTurret.transform_to_sentinel` |
+| Vida | **20** (cap ao transformar; dano já recebido conta) | `esqueleto_skill_torreta_sentinela_vida` |
+| Disparos | **10** (magazine novo) | `esqueleto_skill_torreta_sentinela_disparos` |
+| Dano por tiro | **11** | `esqueleto_skill_torreta_sentinela_dano_tiro` |
+| Intervalo entre tiros | **1,15** s | `esqueleto_skill_torreta_sentinela_intervalo_disparo_s` |
+| Velocidade de marcha | **95** px/s | `esqueleto_skill_torreta_sentinela_walk_speed` |
+| Alcance de seguimento | **380** px (horizontal; persegue até entrar no alcance) | `esqueleto_skill_torreta_sentinela_alcance_seguir` |
+| Distância ideal | **185** px (aproxima/afasta com deadband) | `esqueleto_skill_torreta_sentinela_distancia_ideal` |
+| Disparo | Igual torreta estacionária — **sem limite de alcance**; mira no centro da hitbox do inimigo | `EsqueletoTurret` |
+
+#### Torreta Foguete — Kamikaze oscilante (torreta activa + skill + **baixo**)
+
+| Parâmetro | Valor |
+|-----------|--------|
+| Activação | Mesmo botão da torreta **com** `move_down` / **`hover_down` (S)** / `down`, enquanto a torreta estiver no chão | `turret_rocket_requested` |
+| Cooldown evolução | **4,0** s entre sentinela/foguete na mesma torreta | `esqueleto_skill_torreta_evolution_recarga_s` |
+| Fase carga | **0,3** s — travada, pernas compactam, cano vira propulsor; **pode ser destruída** | `esqueleto_skill_torreta_foguete_carga_s` |
+| Voo | Aceleração contínua até **920** px/s; tracking leve **95°/s**; **1** ricochete em parede | `esqueleto_skill_torreta_foguete_*` |
+| Impacto | Explosão raio **150** px; **36** dano base; knockback **520/260** | idem |
+| Transferência de tiros | Cada tiro restante → **+4** dano e **+10%** vel. máx. do foguete | `bonus_dano_por_tiro` / `bonus_vel_por_tiro` |
+| Sobrecarga | Inimigo em movimento ≥ **220** px/s no impacto → explosão **+35%** raio e **+25%** dano | `sobrecarga_vel_inimigo` |
+| Projéteis | Empurra flechas/granadas leves na explosão | `_push_nearby_projectiles` |
+
+### 4.2.3 Zumbi (Skill 1 F/X ou Skill 2 G/Y — conforme build)
+
+| Parâmetro | Valor |
+|-----------|--------|
+| Invocar | Toque único no botão do slot | `_invocar_zumbi` |
+| Re-activar | Mesmo botão com zumbi vivo → **explode** (sem cooldown extra) | `zumbi_detonate_requested` |
+| Cooldown (só invocar) | **12,0** s | `esqueleto_skill_zumbi_recarga_s` |
+| Velocidade de caminhada | **160** px/s (~62% do move_speed base) | `esqueleto_skill_zumbi_walk_speed` |
+| Perseguição | Posição **actual** do inimigo no chão (eixo X) | `EsqueletoZombie` + `AutoAimFiveWayUtil` |
+| Agarrar | Raio **48** px + alinhamento vertical **±40** px | `esqueleto_skill_zumbi_grab_radius` |
+| Slow no agarrar | **0,55×** move_speed | `Player.set_esqueleto_zombie_slow_mul` |
+| Vida | **25** | `esqueleto_skill_zumbi_vida` |
+| Explosão | Raio **160** · dano **22** · knockback leve | `esqueleto_skill_zumbi_explosion_*` |
+| Queda / terreno | Igual torreta (`collision_mask` 49) | `EsqueletoZombie` |
+| Limite | 1 zumbi activo por jogador (nova invocação substitui) | `Game._active_zombies` |
+
+### 4.2.4 Mandíbula espectral (Skill 1 F/X ou Skill 2 G/Y — conforme build)
+
+| Parâmetro | Valor |
+|-----------|--------|
+| Invocar | Toque único no botão do slot | `_invocar_mandibula` |
+| Alvo | Inimigo válido (`AutoAimFiveWayUtil`); sem alvo → **não gasta cooldown** | pré-check em `EsqueletoPlayer` |
+| Posição | Persegue o **centro** da hitbox do oponente (`40×90`) — fica em cima do corpo | `Player.get_body_collision_rect` |
+| Emergência | Sobe de baixo + escala (**0,7** s) + som `shoot_magic` — janela para ler e fugir | `esqueleto_skill_mandibula_emergencia_s` |
+| Perseguição | Segue o centro do alvo por **2,5** s a **200** px/s | `esqueleto_skill_mandibula_perseguicao_s` |
+| Acerto | Hitbox `48×56` encosta no oponente (ou snap ≤**34** px do centro) | `EsqueletoSpectralJaw` |
+| Dano da mordida | **22** + knockback **300** / **150** (X / Y) | `esqueleto_skill_mandibula_knockback_*` |
+| Podridão (DOT) | **5** dano / **0,5** s · **3,0** s + **slow 10%** (`0,9×`) | `apply_esqueleto_podridao` + `podridao_slow_mul` |
+| VFX podridão | Inimigo **brilha verde** + **pulso** a cada tick | `Player` / `EsqueletoPlayer._apply_esqueleto_sprite_modulate` |
+| Cooldown | **10,0** s | `esqueleto_skill_mandibula_recarga_s` |
+| Visual mordida | Surgimento → perseguição com boca aberta → mordida → some | `projectiles/esqueleto_spectral_jaw/` |
+| Falha | Perseguição expira sem alcançar → some (som `dash` abafado) | `_miss_and_fade` |
+| Slow | **10%** enquanto a podridão durar; combina com slow do zumbi (usa o mais forte) | `get_esqueleto_locomotion_slow_mul` |
+| Reaplicar | Refresca duração da podridão (não stacka ticks paralelos) | `apply_esqueleto_podridao` |
 
 ### 4.3 ULT — Chuva de ossos (`*_ult`: R / LB)
 
@@ -140,8 +268,9 @@ Na prática é um disparo único via `shots_requested` com flags de dano/tamanho
 | Câmera (animação) | Foco + zoom + callout **SUPER!** + vignette | `CameraSystem.show_super_highlight` |
 | Efeito (chuva) | Após animação; tremor leve; câmera já repôs enquadramento | `Game._run_esqueleto_bone_rain` |
 | Ambos jogadores | Parados **só** em acionamento + animação; **livres** no efeito | `Game._begin_ult_armagem_animacao` / `enter_ult_efeito_phase` |
+| Timer Vs + projéteis no ar | **Pausados** durante acionamento + animação SUPER | `Game._set_combat_projectiles_paused` + skip `_vs_round_time_left` em `_process` |
 | HUD | **SUPER!** → chuva (Xs) | `ult_status_changed(..., super_phase)` |
-| Bloqueios | Não activa durante feixe a carregar, tiro a carregar, buff G activo ou ULT já activa | `_tentar_ativar_ult_chuva_ossos` |
+| Bloqueios | Não activa durante feixe a carregar, tiro a carregar ou ULT já activa | `_tentar_ativar_ult_chuva_ossos` |
 
 ---
 
@@ -169,6 +298,10 @@ Na prática é um disparo único via `shots_requested` com flags de dano/tamanho
 **Pulo durante o dash:** `Player._apply_jump_during_dash()` — **`velocity = (v_dash + v_jump) × dash_jump_impulse_mul`**, com `v_dash` / `v_jump` definidos pelos exports `dash_jump_vertical_mul`, `dash_jump_horizontal_scale`, `dash_jump_impulse_mul` (arco diagonal forte vs. pulo normal).
 
 **Invulnerabilidade no dash (só Esqueleto / Ongma):** export `esqueleto_dash_invuln_seconds` (**0,12** s por defeito) em `EsqueletoPlayer`. Ao iniciar o dash, `_esqueleto_dash_invuln_left` bloqueia **`take_damage`** e **`apply_knockback`**; projéteis em colisão directa (**flecha**, **fireball**, **espinho**, **orbe de gravidade**, etc.) **atravessam** o corpo (`Player.should_pass_through_projectile` + excepção de colisão). O timer corre independentemente de `_dash_time_left`. **`apply_pit_fall_penalty`** e dano em área (ex.: explosão de granada) **não** usam pass-through. Outros duelistas **não** têm esta invuln.
+
+**Dash aéreo diagonal (só Esqueleto / Ongma):** hooks `_air_dash_hold_down_enabled()` e `_get_air_dash_diagonal_velocity()` em `EsqueletoPlayer`. Segurar **`p*_down`** enquanto `_dash_time_left > 0` e no ar aplica `velocity = speed × (cos θ, sin θ)` com `speed` de `_get_dash_stats()` e `θ = esqueleto_air_dash_down_angle_deg` (**35°** por defeito). A magnitude total mantém-se **620** px/s; soltar ↓ volta ao dash horizontal (`vy ≤ 0`). Conta como o **mesmo** dash aéreo (`limit_air_dash_to_one` inalterado).
+
+**Queda rápida no ar (só Esqueleto / Ongma):** hooks `_air_fast_fall_enabled()` e `_get_air_fast_fall_gravity_mul()`. Segurar **`p*_down`** no ar **sem** dash activo aplica `gravity_accel × esqueleto_fast_fall_gravity_mul` (**2,5×** por defeito). **Exclusão mútua:** com dash activo, só diagonal — queda rápida não corre. No chão, `p*_down` em plataforma continua a ser drop-through (`Player._tick_platform_drop_through`).
 
 ---
 
@@ -231,7 +364,9 @@ Camadas (duelo): jogadores `collision_mask = 3`; flechas em `arrow.tscn` com `co
 
 ## 9. Referência rápida de arquivos
 
-- `characters/esqueleto_player.gd` — feixe, buff de velocidade no tiro carregado, cooldown mínimo de tiro, reset de toques no Vs.
+- `characters/esqueleto_player.gd` — feixe, buff de velocidade no tiro carregado, torreta, zumbi, cooldown mínimo de tiro, reset de toques no Vs.
+- `projectiles/esqueleto_turret/esqueleto_turret.gd` + `.tscn` — entidade da torreta (mira, disparos, HP).
+- `projectiles/esqueleto_zombie/esqueleto_zombie.gd` + `.tscn` — zumbi (perseguição, agarrar, explosão).
 - `characters/ongma_epilef_player.gd` — laboratório; `extends EsqueletoPlayer`.
 - `characters/player.gd` — movimento, mira, recoil, pulo, dash (`uses_dash_action_button` / duplo toque, gap mínimo, dash no ar com reset em chão/parede), `_get_dash_stats()`, wall jump, `start_dash_with_direction`, pulo no dash (vector composto), corrida clássica opcional, **corrida pós-dash**, indicador visual de sprint, gravidade/clamp no dash, duplo toque estrito (teclado + `move_up`/`move_down` no comando).
 - `levels/duel/game.gd` — flecha com `g = 0` se pistoleiro **ou** `owner_player is EsqueletoPlayer`; HUD do buff para `left_player/right_player is EsqueletoPlayer`; spawn de `Arrow`.

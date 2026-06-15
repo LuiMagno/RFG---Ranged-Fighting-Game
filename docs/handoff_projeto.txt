@@ -24,7 +24,7 @@ teleguiado, escudo, etc.), mas partilham a mesma base técnica (Player) e a
 mesma cena física (main.tscn). O script do lutador é trocado em runtime.
 
 Objetivo de combate: reduzir o HP do adversário (100 por defeito). No modo Vs,
-vence quem ganhar 3 rounds (KO por HP ou timeout de 60 s por round).
+vence quem ganhar 3 rounds (KO por HP ou timeout de 99 s por round).
 
 ================================================================================
 2. MODOS DE JOGO (RunConfig.mode)
@@ -33,11 +33,15 @@ vence quem ganhar 3 rounds (KO por HP ou timeout de 60 s por round).
 VS_PLAYER
   - Dois humanos (teclado+mouse vs controle, ou ambos com esquemas configuráveis).
   - Menu: ui/vs_character_menu.tscn — escolha de classe P1/P2, palco, input.
-  - Rounds: 60 s, primeiro a 3 vitórias; banner entre rounds; menu fim de partida.
+  - Esqueleto (P1 e/ou P2): painel lateral ui/components/esqueleto_build_side_panel.tscn
+    com 5 slots (skill 1, skill 2, tiro básico, dash, ult); builds independentes por jogador
+    em RunConfig.p1_esqueleto_build / p2_esqueleto_build; Ongma Epilef não usa o painel.
+  - Rounds: 99 s, primeiro a 3 vitórias; banner entre rounds; menu fim de partida.
 
 TRAINING
   - P1 humano; P2 é boneco à direita (script pistoleiro por defeito no assign).
   - Menu: ui/training_menu.tscn — classe P1, palco, input.
+  - Esqueleto (P1): mesmo painel lateral de build; grava em RunConfig.p1_esqueleto_build.
   - Opções de treino/teste (boneco atira, câmera KO, intro Vs, velocidade Esqueleto,
     modos de mira testáveis: LOCKED_HORIZONTAL (default), FREE_AIM_RIGHT_STICK (stick dir / mouse),
     FREE_AIM_LEFT_STICK (stick esq. ou WASD unifica mov + tiro), RIGHT_STICK_3_WAY (stick dir
@@ -131,9 +135,12 @@ Resumo de kits (detalhe em docs/personagens/*.md):
 
 4.3 RunConfig (autoload)
   - Persiste escolhas da sessão: mode, stage, p1/p2_character, input schemes,
-    joy devices, flags de treino.
+    joy devices, flags de treino, builds Esqueleto (p1/p2_esqueleto_build).
+  - Build Esqueleto: slots skill_1, skill_2, basic_shot, dash, ult (IDs em
+    characters/esqueleto/esqueleto_build_catalog.gd); defaults = kit baseline actual.
   - Helpers: resolve_exclusive_keyboard_mouse, clear_shoot_mouse_bindings_for_menu,
-    get_shoot_hint_token_for_player ("mouse" ou "RB").
+    get_shoot_hint_token_for_player ("mouse" ou "RB"), get_esqueleto_build,
+    set_esqueleto_build_slot, reset_esqueleto_build_to_defaults, is_esqueleto_character.
 
 4.4 Cena de duelo (levels/duel/main.tscn)
   - LeftPlayer / RightPlayer: mesmo CharacterBody2D 40×90, script trocado via
@@ -149,7 +156,9 @@ Resumo de kits (detalhe em docs/personagens/*.md):
 
 4.6 UI
   - ui/menu_theme.gd (MenuThemeUtil): estilos, fill_class_option, fill_stage_option,
-    vs_character_name/accent (0..4).
+    vs_character_name/accent (0..4), fill_esqueleto_build_slot_option,
+    apply_esqueleto_build_side_panel_style.
+  - ui/components/esqueleto_build_side_panel.* — painel lateral reutilizável (Vs + Treino).
   - Pausa: pause_menu_controller.gd, training_pause_menu_controller.gd.
   - Fim de partida Vs: vs_match_end_menu.gd.
 
@@ -268,8 +277,9 @@ characters/
   pistoleiro_player.gd
   arqueiro_player.gd
   mago_player.gd
-  esqueleto_player.gd              Baseline design + kit
-  ongma_epilef_player.gd           Teste (extends Esqueleto)
+  esqueleto_player.gd              Baseline design + kit (dispatch por build)
+  esqueleto/esqueleto_build_catalog.gd  Catálogo de slots/skills da build
+  ongma_epilef_player.gd           Teste (extends Esqueleto; kit fixo, sem painel build)
 levels/duel/
   main.tscn                        Arena + players + UI
   game.gd                          Coordenador
@@ -283,6 +293,7 @@ ui/
   menu.tscn / menu.gd
   vs_character_menu.*
   training_menu.*
+  components/esqueleto_build_side_panel.*
   menu_theme.gd
 docs/
   handoff_projeto.txt              Este ficheiro
@@ -346,10 +357,12 @@ Testes manuais sugeridos:
     tiro + feixe. HUD e docs antigos podem mencionar triplo — código em
     esqueleto_player.gd é autoritativo.
   - README.md menciona Area2D para flecha; código usa CharacterBody2D (arrow.gd).
-  - ground_pound (_start_ground_pound_dash) é WIP/experimental (vy fixo 2000).
+  - Esqueleto/Ongma: dash aéreo diagonal (segurar ↓ no dash) + queda rápida
+    (segurar ↓ sem dash); hooks em Player, overrides em esqueleto_player.gd.
+    WIP antigo _start_ground_pound_dash removido.
   - Câmera: ver docs/camera_implementacao_v2.txt (KO, intro Vs, ULT, hit leve,
     clutch, letterbox). Pit/timeout/granada global ainda sem preset dedicado.
-  - Vs: 3 rounds to win, 60 s/round; training dummy atira se training_dummy_shoot.
+  - Vs: 3 rounds to win, 99 s/round (timer pausa na SUPER da ULT); training dummy atira se training_dummy_shoot.
   - Export preset presente (export_presets.cfg) para builds futuras.
 
 Para trabalhar numa feature:

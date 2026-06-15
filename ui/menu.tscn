@@ -40,7 +40,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="MainPanel" type="Panel" parent="Center" unique_id=254045201]
-custom_minimum_size = Vector2(520, 460)
+custom_minimum_size = Vector2(520, 500)
 layout_mode = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center/MainPanel" unique_id=259024581]
@@ -86,6 +86,7 @@ text = "Treinamento"
 [node name="BtnTestOptions" type="Button" parent="Center/MainPanel/VBox"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
+focus_mode = 2
 text = "Opções de Teste"
 
 [node name="BtnQuit" type="Button" parent="Center/MainPanel/VBox" unique_id=398682128]
@@ -98,6 +99,7 @@ layout_mode = 2
 
 [node name="Hint" type="Label" parent="Center/MainPanel/VBox" unique_id=591604232]
 layout_mode = 2
+mouse_filter = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.5, 0.55, 0.62, 1)
 theme_override_font_sizes/font_size = 11

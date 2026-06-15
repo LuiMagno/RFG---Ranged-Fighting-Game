@@ -12,10 +12,15 @@ class_name Game
 @export var gravity_orb_scene: PackedScene
 @export var grenade_scene: PackedScene
 @export var archer_spike_scene: PackedScene
+@export var esqueleto_turret_scene: PackedScene
+@export var esqueleto_zombie_scene: PackedScene
+@export var esqueleto_spectral_jaw_scene: PackedScene
+@export var esqueleto_carnivorous_pot_scene: PackedScene
+@export var esqueleto_carnivorous_plant_scene: PackedScene
 
-const PISTOLEIRO_PLAYER_SCRIPT := "res://characters/pistoleiro_player.gd"
-const ARQUEIRO_PLAYER_SCRIPT := "res://characters/arqueiro_player.gd"
-const MAGO_PLAYER_SCRIPT := "res://characters/mago_player.gd"
+const PISTOLEIRO_PLAYER_SCRIPT := "res://characters/pistoleiro_player.gd"  # fora do roster temporário
+const ARQUEIRO_PLAYER_SCRIPT := "res://characters/arqueiro_player.gd"  # fora do roster temporário
+const MAGO_PLAYER_SCRIPT := "res://characters/mago_player.gd"  # fora do roster temporário
 const ESQUELETO_PLAYER_SCRIPT := "res://characters/esqueleto_player.gd"
 const ONGMA_EPILEF_PLAYER_SCRIPT := "res://characters/ongma_epilef_player.gd"
 
@@ -26,8 +31,9 @@ const CAM_HIT_LIGHT := preload("res://levels/duel/camera/presets/hit_light.tres"
 const CLUTCH_HP_RATIO := 0.15
 const CLUTCH_AMBIENT_SHAKE := 2.5
 const BONE_RAIN_SPAWN_Y := 24.0
+const _ULT_PAUSE_PROJECTILE_META := "_pre_ult_super_process_mode"
 
-const VS_ROUND_DURATION_S := 60.0
+const VS_ROUND_DURATION_S := 99.0
 const VS_ROUNDS_TO_WIN := 3
 
 const STAGE_NORMAL_BG := Color(0.12, 0.13, 0.15, 1)
@@ -78,11 +84,14 @@ const STAGE_FACTORY_PIT_CD := 0.85
 @onready var _vs_round_banner_label: Label = $VsRoundBannerLayer/BannerRoot/BannerCenter/RoundBannerLabel
 @onready var _vs_match_end_menu: VsMatchEndMenu = $VsMatchEndLayer
 @onready var _camera_system: CameraSystem = $CameraRig/CameraSystem
+@onready var _damage_numbers: DamageNumbersLayer = $DamageNumbers
 
 # Flecha especial do arqueiro no ar (segundo disparo fragmenta).
 var _archer_carriers: Dictionary = {}
 var _active_grenades: Dictionary = {}
 var _active_ice: Dictionary = {}
+var _active_turrets: Dictionary = {}
+var _active_zombies: Dictionary = {}
 var _bone_rain_gen_p1 := 0
 var _bone_rain_gen_p2 := 0
 var _bone_rain_running: Dictionary = {}
@@ -127,6 +136,7 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	MusicManager.stop()
 	if _camera_system != null:
 		_camera_system.reset_to_default()
 	else:
@@ -300,14 +310,16 @@ func apply_input_map_from_run_config() -> void:
 func _assign_player_scripts_from_run_config() -> void:
 	var lp := get_node_or_null("LeftPlayer")
 	if lp != null:
-		_assign_player_script(lp, RunConfig.p1_character)
+		_assign_player_script(lp, RunConfig.clamp_character_kind(RunConfig.p1_character))
 	var rp := get_node_or_null("RightPlayer")
 	if rp == null:
 		_fix_player_ids_after_script_assign(lp, null)
 		return
 	var right_kind := RunConfig.p2_character
 	if RunConfig.mode == RunConfig.Mode.TRAINING:
-		right_kind = Player.CharacterKind.PISTOLEIRO
+		# right_kind = Player.CharacterKind.PISTOLEIRO  # dummy antigo — fora do roster temporário
+		right_kind = Player.CharacterKind.ESQUELETO
+	right_kind = RunConfig.clamp_character_kind(right_kind)
 	_assign_player_script(rp, right_kind)
 	# set_script() zera exports para o default do novo script; player_id precisa bater com o lado da arena.
 	_fix_player_ids_after_script_assign(lp, rp)
@@ -321,22 +333,23 @@ func _fix_player_ids_after_script_assign(left: Node, right: Node) -> void:
 
 
 func _assign_player_script(node: Node, kind: int) -> void:
-	var path := ARQUEIRO_PLAYER_SCRIPT
-	if kind == Player.CharacterKind.PISTOLEIRO:
-		path = PISTOLEIRO_PLAYER_SCRIPT
-	elif kind == Player.CharacterKind.ARQUEIRO:
-		path = ARQUEIRO_PLAYER_SCRIPT
-	elif kind == Player.CharacterKind.MAGO:
-		path = MAGO_PLAYER_SCRIPT
-	elif kind == Player.CharacterKind.ESQUELETO:
-		path = ESQUELETO_PLAYER_SCRIPT
-	elif kind == Player.CharacterKind.ONGMA_EPILEF:
+	kind = RunConfig.clamp_character_kind(kind)
+	var path := ESQUELETO_PLAYER_SCRIPT
+	if kind == Player.CharacterKind.ONGMA_EPILEF:
 		path = ONGMA_EPILEF_PLAYER_SCRIPT
-	else:
-		path = MAGO_PLAYER_SCRIPT
+	# if kind == Player.CharacterKind.PISTOLEIRO:
+	# 	path = PISTOLEIRO_PLAYER_SCRIPT
+	# elif kind == Player.CharacterKind.ARQUEIRO:
+	# 	path = ARQUEIRO_PLAYER_SCRIPT
+	# elif kind == Player.CharacterKind.MAGO:
+	# 	path = MAGO_PLAYER_SCRIPT
+	# elif kind == Player.CharacterKind.ESQUELETO:
+	# 	path = ESQUELETO_PLAYER_SCRIPT
 	var scr := load(path) as Script
 	if scr != null and node.get_script() != scr:
 		node.set_script(scr)
+	if kind == Player.CharacterKind.ESQUELETO and node is EsqueletoPlayer:
+		(node as EsqueletoPlayer).apply_build_from_run_config()
 
 
 func _ready() -> void:
@@ -346,6 +359,7 @@ func _ready() -> void:
 	left_player.shoot_requested.connect(_spawn_arrow)
 	left_player.shots_requested.connect(_spawn_shots)
 	right_player.shoot_requested.connect(_spawn_arrow)
+	right_player.shots_requested.connect(_spawn_shots)
 	left_player.special_requested.connect(_spawn_p1_special)
 	right_player.special_requested.connect(_spawn_p1_special)
 	left_player.archer_split_now_requested.connect(_on_archer_split_now_requested)
@@ -362,8 +376,24 @@ func _ready() -> void:
 	right_player.mage_orb_requested.connect(_spawn_gravity_orb)
 	left_player.bone_rain_requested.connect(_on_bone_rain_requested)
 	right_player.bone_rain_requested.connect(_on_bone_rain_requested)
+	left_player.turret_requested.connect(_spawn_esqueleto_turret)
+	right_player.turret_requested.connect(_spawn_esqueleto_turret)
+	left_player.turret_sentinel_requested.connect(_on_turret_sentinel_requested)
+	right_player.turret_sentinel_requested.connect(_on_turret_sentinel_requested)
+	left_player.turret_rocket_requested.connect(_on_turret_rocket_requested)
+	right_player.turret_rocket_requested.connect(_on_turret_rocket_requested)
+	left_player.zumbi_summon_requested.connect(_spawn_esqueleto_zombie)
+	right_player.zumbi_summon_requested.connect(_spawn_esqueleto_zombie)
+	left_player.spectral_jaw_requested.connect(_spawn_esqueleto_spectral_jaw)
+	right_player.spectral_jaw_requested.connect(_spawn_esqueleto_spectral_jaw)
+	left_player.carnivorous_pot_requested.connect(_spawn_esqueleto_carnivorous_pot)
+	right_player.carnivorous_pot_requested.connect(_spawn_esqueleto_carnivorous_pot)
+	left_player.zumbi_detonate_requested.connect(_on_zombie_detonate_requested)
+	right_player.zumbi_detonate_requested.connect(_on_zombie_detonate_requested)
 
 	# UI updates come from signals (easy to swap for a real HUD later).
+	left_player.damage_received.connect(_on_player_damage_received.bind(left_player))
+	right_player.damage_received.connect(_on_player_damage_received.bind(right_player))
 	left_player.health_changed.connect(_on_left_hp_changed)
 	right_player.health_changed.connect(_on_right_hp_changed)
 	left_player.special_buff_changed.connect(_on_left_special_buff_changed)
@@ -383,6 +413,7 @@ func _ready() -> void:
 	_vs_p2_spawn = right_player.position
 	_training_p2_spawn = right_player.position
 	_apply_mode()
+	_apply_vs_music()
 	if RunConfig.mode == RunConfig.Mode.VS_PLAYER:
 		_vs_hud.visible = true
 		_start_vs_round()
@@ -426,6 +457,8 @@ func _process(delta: float) -> void:
 	if not _vs_round_playing or _vs_match_end_menu_open or _vs_resolving_round:
 		return
 	if get_tree().paused:
+		return
+	if _ult_armagem_animacao_active:
 		return
 	_vs_round_time_left -= delta
 	_update_vs_hud()
@@ -568,6 +601,8 @@ func _clear_vs_projectiles_and_carry_state() -> void:
 	_archer_carriers.clear()
 	_active_grenades.clear()
 	_active_ice.clear()
+	_active_turrets.clear()
+	_active_zombies.clear()
 	for c in get_children():
 		if (
 			c is Arrow
@@ -576,6 +611,8 @@ func _clear_vs_projectiles_and_carry_state() -> void:
 			or c is ArcherSpike
 			or c is Fireball
 			or c is IceField
+			or c is EsqueletoTurret
+			or c is EsqueletoZombie
 		):
 			c.queue_free()
 
@@ -584,9 +621,7 @@ func _update_vs_hud() -> void:
 	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
 		return
 	var whole := maxi(0, ceili(_vs_round_time_left))
-	var mn := whole / 60
-	var sc := whole % 60
-	_vs_timer_label.text = "%d:%02d" % [mn, sc]
+	_vs_timer_label.text = str(whole)
 	_vs_score_label.text = "Vitórias: %d — %d  (primeiro a %d)" % [_p1_rounds_won, _p2_rounds_won, VS_ROUNDS_TO_WIN]
 
 
@@ -626,12 +661,12 @@ func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
 		)
 		var base_pad := base_pad_move + " · B dash"
 		match kind:
-			Player.CharacterKind.PISTOLEIRO:
-				return base_pad + " · X granada"
-			Player.CharacterKind.ARQUEIRO:
-				return base_pad + " · L3 espinhos · Y especial (leque com combo)"
-			Player.CharacterKind.MAGO:
-				return base_pad + " · X gelo · R3 levitar · Y segure/solta orbe"
+			# Player.CharacterKind.PISTOLEIRO:
+			# 	return base_pad + " · X granada"
+			# Player.CharacterKind.ARQUEIRO:
+			# 	return base_pad + " · L3 espinhos · Y especial (leque com combo)"
+			# Player.CharacterKind.MAGO:
+			# 	return base_pad + " · X gelo · R3 levitar · Y segure/solta orbe"
 			Player.CharacterKind.ESQUELETO, Player.CharacterKind.ONGMA_EPILEF:
 				return (
 					base_pad_move
@@ -646,12 +681,12 @@ func _skill_hint_lines(player_id: int, kind: int, gamepad: bool) -> String:
 	var base_kb_move := "Mov A/D · Espaço pulo · Q escudo · W/S flutuar (no ar) · Mouse mira e tiro"
 	var base_kb := base_kb_move + " · Shift esq dash"
 	match kind:
-		Player.CharacterKind.PISTOLEIRO:
-			return base_kb + " · F granada · G especial"
-		Player.CharacterKind.ARQUEIRO:
-			return base_kb + " · F espinhos · G especial (leque com combo)"
-		Player.CharacterKind.MAGO:
-			return base_kb + " · F gelo (F de novo detona) · C levitar · G segure e solte orbe"
+		# Player.CharacterKind.PISTOLEIRO:
+		# 	return base_kb + " · F granada · G especial"
+		# Player.CharacterKind.ARQUEIRO:
+		# 	return base_kb + " · F espinhos · G especial (leque com combo)"
+		# Player.CharacterKind.MAGO:
+		# 	return base_kb + " · F gelo (F de novo detona) · C levitar · G segure e solte orbe"
 		Player.CharacterKind.ESQUELETO, Player.CharacterKind.ONGMA_EPILEF:
 			return (
 				base_kb_move
@@ -773,6 +808,14 @@ func _apply_mode() -> void:
 		# Training: right player is a dummy (pistoleiro straight shots).
 		right_player.input_enabled = false
 		_start_training_dummy_loop()
+
+
+func _apply_vs_music() -> void:
+	if RunConfig.mode != RunConfig.Mode.VS_PLAYER:
+		MusicManager.stop()
+		return
+	MusicManager.play("vs_factory")
+
 
 func _start_training_dummy_loop() -> void:
 	if _training_loop_running:
@@ -1238,9 +1281,191 @@ func _on_grenade_detonate_requested(owner_player: Player) -> void:
 	gr.remote_detonate()
 
 
+func _spawn_esqueleto_turret(owner_player: Player, spawn_position: Vector2) -> void:
+	if esqueleto_turret_scene == null:
+		push_error("Game: 'esqueleto_turret_scene' não está atribuído em main.tscn.")
+		return
+	if not owner_player is EsqueletoPlayer:
+		return
+	var ep := owner_player as EsqueletoPlayer
+	var existing: EsqueletoTurret = _active_turrets.get(owner_player)
+	if existing != null and is_instance_valid(existing):
+		existing.queue_free()
+	var turret := esqueleto_turret_scene.instantiate() as EsqueletoTurret
+	if turret == null:
+		return
+	add_child(turret)
+	turret.global_position = spawn_position
+	turret.setup(owner_player, self, ep.get_torreta_setup_config())
+	_active_turrets[owner_player] = turret
+	ep.set_turret_active(true)
+	turret.tree_exiting.connect(_on_turret_tree_exiting.bind(owner_player, turret))
+
+
+func _on_turret_sentinel_requested(owner_player: Player) -> void:
+	if not owner_player is EsqueletoPlayer:
+		return
+	var turret: EsqueletoTurret = _active_turrets.get(owner_player)
+	if turret == null or not is_instance_valid(turret):
+		for n in get_tree().get_nodes_in_group("esqueleto_turrets"):
+			if n is EsqueletoTurret and (n as EsqueletoTurret).get_owner_player() == owner_player:
+				turret = n as EsqueletoTurret
+				_active_turrets[owner_player] = turret
+				break
+	if turret == null or not is_instance_valid(turret):
+		(owner_player as EsqueletoPlayer).set_turret_active(false)
+		return
+	if not turret.can_transform_to_sentinel():
+		return
+	var ep := owner_player as EsqueletoPlayer
+	turret.transform_to_sentinel(ep.get_torreta_sentinel_setup_config())
+
+
+func _on_turret_rocket_requested(owner_player: Player) -> void:
+	if not owner_player is EsqueletoPlayer:
+		return
+	var turret: EsqueletoTurret = _active_turrets.get(owner_player)
+	if turret == null or not is_instance_valid(turret):
+		for n in get_tree().get_nodes_in_group("esqueleto_turrets"):
+			if n is EsqueletoTurret and (n as EsqueletoTurret).get_owner_player() == owner_player:
+				turret = n as EsqueletoTurret
+				_active_turrets[owner_player] = turret
+				break
+	if turret == null or not is_instance_valid(turret):
+		(owner_player as EsqueletoPlayer).set_turret_active(false)
+		return
+	if not turret.can_transform_to_rocket():
+		return
+	var ep := owner_player as EsqueletoPlayer
+	turret.begin_rocket_transform(ep.get_torreta_rocket_setup_config())
+
+
+func spawn_esqueleto_turret_shot(
+	owner_player: Player,
+	spawn_position: Vector2,
+	initial_velocity: Vector2,
+	damage: int,
+) -> void:
+	_spawn_one_arrow(
+		owner_player,
+		spawn_position,
+		initial_velocity,
+		{"esqueleto_torreta_tiro": true},
+		0.0,
+		0,
+		damage,
+		1.0,
+	)
+
+
+func _on_turret_tree_exiting(owner_player: Player, turret: EsqueletoTurret) -> void:
+	if _active_turrets.get(owner_player) == turret:
+		_active_turrets.erase(owner_player)
+	if owner_player is EsqueletoPlayer:
+		(owner_player as EsqueletoPlayer).set_turret_active(false)
+
+
+func _spawn_esqueleto_spectral_jaw(owner_player: Player) -> void:
+	if esqueleto_spectral_jaw_scene == null:
+		push_error("Game: 'esqueleto_spectral_jaw_scene' não está atribuído em main.tscn.")
+		return
+	if not owner_player is EsqueletoPlayer:
+		return
+	var opponent := AutoAimFiveWayUtil.find_valid_opponent(owner_player)
+	if opponent == null:
+		return
+	var ep := owner_player as EsqueletoPlayer
+	var jaw := esqueleto_spectral_jaw_scene.instantiate() as EsqueletoSpectralJaw
+	if jaw == null:
+		return
+	add_child(jaw)
+	jaw.setup(owner_player, opponent, ep.get_mandibula_setup_config())
+
+
+func _spawn_esqueleto_carnivorous_pot(
+	owner_player: Player,
+	spawn_position: Vector2,
+	throw_velocity: Vector2,
+) -> void:
+	if esqueleto_carnivorous_pot_scene == null:
+		push_error("Game: 'esqueleto_carnivorous_pot_scene' não está atribuído em main.tscn.")
+		return
+	if not owner_player is EsqueletoPlayer:
+		return
+	var ep := owner_player as EsqueletoPlayer
+	var pot := esqueleto_carnivorous_pot_scene.instantiate() as EsqueletoCarnivorousPot
+	if pot == null:
+		return
+	add_child(pot)
+	pot.global_position = spawn_position
+	pot.setup(owner_player, self, throw_velocity, ep.get_vaso_plant_setup_config())
+
+
+func spawn_esqueleto_carnivorous_plant(
+	owner_player: Player,
+	spawn_position: Vector2,
+	config: Dictionary,
+) -> void:
+	if esqueleto_carnivorous_plant_scene == null:
+		push_error("Game: 'esqueleto_carnivorous_plant_scene' não está atribuído em main.tscn.")
+		return
+	var plant := esqueleto_carnivorous_plant_scene.instantiate() as EsqueletoCarnivorousPlant
+	if plant == null:
+		return
+	add_child(plant)
+	plant.global_position = spawn_position
+	plant.setup(owner_player, config)
+
+
+func _spawn_esqueleto_zombie(owner_player: Player, spawn_position: Vector2) -> void:
+	if esqueleto_zombie_scene == null:
+		push_error("Game: 'esqueleto_zombie_scene' não está atribuído em main.tscn.")
+		return
+	if not owner_player is EsqueletoPlayer:
+		return
+	var ep := owner_player as EsqueletoPlayer
+	var existing: EsqueletoZombie = _active_zombies.get(owner_player)
+	if existing != null and is_instance_valid(existing):
+		existing.queue_free()
+	var zombie := esqueleto_zombie_scene.instantiate() as EsqueletoZombie
+	if zombie == null:
+		return
+	add_child(zombie)
+	zombie.global_position = spawn_position
+	zombie.setup(owner_player, ep.get_zumbi_setup_config())
+	_active_zombies[owner_player] = zombie
+	ep.set_zombie_active(true)
+	zombie.tree_exiting.connect(_on_zombie_tree_exiting.bind(owner_player, zombie))
+
+
+func _on_zombie_detonate_requested(owner_player: Player) -> void:
+	var zombie: EsqueletoZombie = _active_zombies.get(owner_player)
+	if zombie == null or not is_instance_valid(zombie):
+		_active_zombies.erase(owner_player)
+		for n in get_tree().get_nodes_in_group("esqueleto_zombies"):
+			if n is EsqueletoZombie:
+				var z2 := n as EsqueletoZombie
+				if z2.get_owner_player() == owner_player:
+					zombie = z2
+					_active_zombies[owner_player] = zombie
+					break
+	if zombie == null or not is_instance_valid(zombie):
+		if owner_player is EsqueletoPlayer:
+			(owner_player as EsqueletoPlayer).set_zombie_active(false)
+		return
+	zombie.remote_detonate()
+
+
+func _on_zombie_tree_exiting(owner_player: Player, zombie: EsqueletoZombie) -> void:
+	if _active_zombies.get(owner_player) == zombie:
+		_active_zombies.erase(owner_player)
+	if owner_player is EsqueletoPlayer:
+		(owner_player as EsqueletoPlayer).set_zombie_active(false)
+
+
 func _spawn_shots(owner_player: Player, shots: Array) -> void:
 	# shots is an Array[Dictionary] with optional keys:
-	# pos, vel, gravity, bounces, damage, size, flags
+	# pos, vel, gravity, bounces, damage, size, flags, clash_power, clash_integrity
 	var feixe_fired := false
 	for s in shots:
 		if typeof(s) != TYPE_DICTIONARY:
@@ -1252,9 +1477,13 @@ func _spawn_shots(owner_player: Player, shots: Array) -> void:
 		var damage: int = s.get("damage", -1)
 		var size: float = s.get("size", 1.0)
 		var shot_flags: Dictionary = s.get("flags", {})
+		var clash_power: int = int(s.get("clash_power", -1))
+		var clash_integrity: int = int(s.get("clash_integrity", -1))
 		if shot_flags.get("esqueleto_feixe", false):
 			feixe_fired = true
-		_spawn_one_arrow(owner_player, pos, vel, shot_flags, gravity, bounces, damage, size)
+		_spawn_one_arrow(
+			owner_player, pos, vel, shot_flags, gravity, bounces, damage, size, clash_power, clash_integrity
+		)
 	if feixe_fired:
 		_camera_apply_preset(CAM_ESQUELETO_FEIXE_FIRE)
 		SfxManager.play("shoot_feixe", owner_player.global_position)
@@ -1267,7 +1496,9 @@ func _spawn_one_arrow(
 	gravity_override: float = INF,
 	bounces_override: int = -1,
 	damage_override: int = -1,
-	size_multiplier: float = 1.0
+	size_multiplier: float = 1.0,
+	clash_power_override: int = -1,
+	clash_integrity_override: int = -1
 ) -> void:
 	if shot_flags.get("spike_shot", false) and owner_player is ArqueiroPlayer:
 		if archer_spike_scene == null:
@@ -1315,8 +1546,18 @@ func _spawn_one_arrow(
 		cluster_spread = (owner_player as ArqueiroPlayer).archer_split_spread_deg
 	if is_carrier:
 		size_multiplier = maxf(size_multiplier, 1.12)
+	if owner_player is EsqueletoPlayer:
+		var ep := owner_player as EsqueletoPlayer
+		if shot_flags.get("esqueleto_feixe", false):
+			size_multiplier *= ep.esqueleto_projetil_tamanho_mul
+		else:
+			size_multiplier *= ep.esqueleto_tiro_carregado_chuva_tamanho_mul
 
 	arrow.setup(owner_player, initial_velocity, g, b, damage_override, size_multiplier, is_carrier, cluster_spread)
+	if clash_power_override >= 0:
+		arrow.clash_power = clash_power_override
+	if clash_integrity_override >= 0:
+		arrow.clash_integrity = clash_integrity_override
 	if not shot_flags.is_empty():
 		arrow.set_shot_flags(shot_flags)
 	if want_homing and arrow.has_method("set_homing_target"):
@@ -1498,6 +1739,7 @@ func is_ult_super_focus_active() -> bool:
 
 func _begin_ult_armagem_animacao(owner: Player, opponent: Player, duration_s: float) -> void:
 	_ult_armagem_animacao_active = true
+	_set_combat_projectiles_paused(true)
 	_ult_armagem_owner = owner
 	_ult_armagem_opponent = opponent
 	_ult_armagem_owner_input_saved = owner.input_enabled if owner != null else true
@@ -1524,6 +1766,7 @@ func _end_ult_armagem_animacao() -> void:
 	_ult_armagem_animacao_active = false
 	_ult_armagem_owner = null
 	_ult_armagem_opponent = null
+	_set_combat_projectiles_paused(false)
 	if _camera_system != null:
 		_camera_system.set_super_focus_active(false)
 		_camera_system.cancel_dominant_effect()
@@ -1541,6 +1784,32 @@ func _get_opponent_player(p: Player) -> Player:
 	if p == right_player:
 		return left_player
 	return null
+
+
+func _is_pausable_combat_projectile(node: Node) -> bool:
+	return (
+		node is Arrow
+		or node is Grenade
+		or node is GravityOrb
+		or node is ArcherSpike
+		or node is Fireball
+		or node is IceField
+		or node is EsqueletoTurret
+		or node is EsqueletoZombie
+	)
+
+
+func _set_combat_projectiles_paused(paused: bool) -> void:
+	for child in get_children():
+		if not _is_pausable_combat_projectile(child):
+			continue
+		if paused:
+			if not child.has_meta(_ULT_PAUSE_PROJECTILE_META):
+				child.set_meta(_ULT_PAUSE_PROJECTILE_META, child.process_mode)
+			child.process_mode = Node.PROCESS_MODE_DISABLED
+		elif child.has_meta(_ULT_PAUSE_PROJECTILE_META):
+			child.process_mode = int(child.get_meta(_ULT_PAUSE_PROJECTILE_META))
+			child.remove_meta(_ULT_PAUSE_PROJECTILE_META)
 
 
 func _on_bone_rain_requested(owner: Player) -> void:
@@ -1684,6 +1953,12 @@ func _update_clutch_state() -> void:
 		return
 	_camera_system.set_clutch_overlay(_should_show_clutch())
 	_refresh_ambient_shake()
+
+
+func _on_player_damage_received(amount: int, victim: Player) -> void:
+	if _damage_numbers == null:
+		return
+	_damage_numbers.spawn_for_player(victim, amount)
 
 
 func _on_left_hp_changed(hp: int) -> void:

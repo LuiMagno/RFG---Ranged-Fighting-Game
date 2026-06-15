@@ -8,6 +8,7 @@ enum CharacterKind { PISTOLEIRO, ARQUEIRO, MAGO, ESQUELETO, ONGMA_EPILEF }
 
 signal shoot_requested(owner_player: Player, spawn_position: Vector2, initial_velocity: Vector2, shot_flags: Dictionary)
 signal health_changed(current_hp: int)
+signal damage_received(amount: int)
 signal special_requested(owner_player: Player, spawn_position: Vector2)
 signal shots_requested(owner_player: Player, shots: Array)
 signal special_buff_changed(active: bool, uses_left: int, time_left: float)
@@ -20,6 +21,13 @@ signal mage_ice_requested(owner_player: Player, spawn_position: Vector2, initial
 signal mage_ice_detonate_requested(owner_player: Player)
 signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_t: float)
 signal bone_rain_requested(owner_player: Player)
+signal turret_requested(owner_player: Player, spawn_position: Vector2)
+signal turret_sentinel_requested(owner_player: Player)
+signal turret_rocket_requested(owner_player: Player)
+signal zumbi_summon_requested(owner_player: Player, spawn_position: Vector2)
+signal zumbi_detonate_requested(owner_player: Player)
+signal spectral_jaw_requested(owner_player: Player)
+signal carnivorous_pot_requested(owner_player: Player, spawn_position: Vector2, throw_velocity: Vector2)
 signal ult_status_changed(active: bool, time_left: float, super_phase: bool)
 
 @export var player_id: int = 1
@@ -142,6 +150,26 @@ var _jumps_left: int = 0
 var _control_lock_left := 0.0
 var _recoil_vel: Vector2 = Vector2.ZERO
 var _carry_knockback_x: float = 0.0
+var _esqueleto_zombie_slow_mul: float = 1.0
+const PODRIDAO_COLOR_BASE := Color(0.55, 1.35, 0.45, 1.0)
+const PODRIDAO_COLOR_TICK := Color(0.35, 1.65, 0.25, 1.0)
+const PODRIDAO_TICK_FLASH_S := 0.12
+var _esqueleto_podridao_time_left_s: float = 0.0
+var _esqueleto_podridao_tick_accum_s: float = 0.0
+var _esqueleto_podridao_damage_per_tick: int = 0
+var _esqueleto_podridao_tick_interval_s: float = 0.5
+var _esqueleto_podridao_tick_flash_left_s: float = 0.0
+var _esqueleto_podridao_slow_mul: float = 1.0
+const PUTREFACAO_COLOR_BASE := Color(0.72, 0.48, 0.28, 1.0)
+const PUTREFACAO_COLOR_TICK := Color(0.9, 0.32, 0.15, 1.0)
+const PUTREFACAO_TICK_FLASH_S := 0.12
+const PUTREFACAO_MAX_STACKS := 5
+var _esqueleto_putrefacao_stacks: int = 0
+var _esqueleto_putrefacao_time_left_s: float = 0.0
+var _esqueleto_putrefacao_tick_accum_s: float = 0.0
+var _esqueleto_putrefacao_damage_per_stack: int = 2
+var _esqueleto_putrefacao_tick_interval_s: float = 0.6
+var _esqueleto_putrefacao_tick_flash_left_s: float = 0.0
 var _special_buff_left := 0.0
 var _was_special_active := false
 var _traj_color_normal := Color.WHITE
@@ -223,8 +251,9 @@ func is_ongma_epilef() -> bool:
 	return false
 
 
-func _extra_timer_tick(_delta: float) -> void:
-	pass
+func _extra_timer_tick(delta: float) -> void:
+	_tick_esqueleto_podridao(delta)
+	_tick_esqueleto_putrefacao(delta)
 
 
 ## Subclasses limpam buffs / estados de combate entre rounds no Vs.
@@ -273,6 +302,44 @@ func _get_dash_stats() -> Dictionary:
 		"cooldown": 0.1,
 		"gravity_scale": 0.0,
 	}
+
+
+## Se true, segurar ↓ durante dash no ar aplica velocidade diagonal (Esqueleto / Ongma).
+func _air_dash_hold_down_enabled() -> bool:
+	return false
+
+
+func _get_air_dash_diagonal_velocity(speed: float) -> Vector2:
+	return Vector2(_dash_dir_sign * speed, 0.0)
+
+
+func _is_air_dash_diagonal_active() -> bool:
+	return (
+		_air_dash_hold_down_enabled()
+		and _dash_time_left > 0.0
+		and not is_on_floor()
+		and input_enabled
+		and _down_action_pressed()
+	)
+
+
+## Se true, segurar ↓ no ar (sem dash) aplica queda rápida (Esqueleto / Ongma).
+func _air_fast_fall_enabled() -> bool:
+	return false
+
+
+func _get_air_fast_fall_gravity_mul() -> float:
+	return 1.0
+
+
+func _is_air_fast_fall_active() -> bool:
+	return (
+		_air_fast_fall_enabled()
+		and not is_on_floor()
+		and _dash_time_left <= 0.0
+		and input_enabled
+		and _down_action_pressed()
+	)
 
 
 ## Se true, carregar tiro principal bloqueia dash em `_can_start_dash`. Esqueleto devolve false.
@@ -493,7 +560,11 @@ func _physics_process(delta: float) -> void:
 	if _dash_time_left > 0.0:
 		_dash_time_left = maxf(0.0, _dash_time_left - delta)
 		var st_d: Dictionary = _get_dash_stats()
-		velocity.x = _dash_dir_sign * float(st_d.get("speed", 700.0))
+		var dash_spd := float(st_d.get("speed", 700.0))
+		if _is_air_dash_diagonal_active():
+			velocity = _get_air_dash_diagonal_velocity(dash_spd)
+		else:
+			velocity.x = _dash_dir_sign * dash_spd
 		if _dash_time_left <= 0.0:
 			_dash_cd_left = float(st_d.get("cooldown", 0.3))
 			var forward_dash_sign := 1.0 if player_id == 1 else -1.0
@@ -504,14 +575,16 @@ func _physics_process(delta: float) -> void:
 			# hy>0 = intenção “para cima” na tela; em 2D velocity.y positivo é para baixo.
 			var hv := _get_hover_move_vector() if input_enabled else Vector2.ZERO
 			var sp0 := _get_sprint_speed_mult()
-			velocity = Vector2(hv.x * move_speed * sp0, -hv.y * move_speed * sp0)
+			var loco0 := get_esqueleto_locomotion_slow_mul() * get_move_speed_buff_mul()
+			velocity = Vector2(hv.x * move_speed * sp0 * loco0, -hv.y * move_speed * sp0 * loco0)
 		else:
 			var sp := _get_sprint_speed_mult()
+			var loco_mul := get_esqueleto_locomotion_slow_mul() * get_move_speed_buff_mul()
 			if RunConfig.is_free_aim_left_stick_test() and input_enabled:
-				velocity.x = _locomotion_aim_tuned.x * move_speed * sp + _carry_knockback_x
+				velocity.x = _locomotion_aim_tuned.x * move_speed * sp * loco_mul + _carry_knockback_x
 			else:
 				var dir := 0.0 if not input_enabled else _get_move_axis()
-				velocity.x = dir * move_speed * sp + _carry_knockback_x
+				velocity.x = dir * move_speed * sp * loco_mul + _carry_knockback_x
 			_carry_knockback_x = move_toward(_carry_knockback_x, 0.0, knockback_carry_x_decay * delta)
 	else:
 		if hovering:
@@ -528,6 +601,8 @@ func _physics_process(delta: float) -> void:
 			var gmul := 1.0
 			if _dash_time_left > 0.0:
 				gmul = float(_get_dash_stats().get("gravity_scale", 0.42))
+			elif _is_air_fast_fall_active():
+				gmul = _get_air_fast_fall_gravity_mul()
 			if gmul > 0.0001:
 				velocity.y += gravity_accel * gmul * delta
 	else:
@@ -562,7 +637,7 @@ func _physics_process(delta: float) -> void:
 				SfxManager.play("jump", global_position, 1.0, -6.0)
 
 	# Dash com gravidade “zerada”: sem aceleração para baixo e sem continuar acumulando queda (vy > 0).
-	if _dash_time_left > 0.0 and not is_on_floor() and not hovering:
+	if _dash_time_left > 0.0 and not is_on_floor() and not hovering and not _is_air_dash_diagonal_active():
 		var gs := float(_get_dash_stats().get("gravity_scale", 0.42))
 		if gs <= 0.0001:
 			velocity.y = minf(velocity.y, 0.0)
@@ -578,16 +653,6 @@ func _physics_process(delta: float) -> void:
 	_apply_wall_jump_visual_flash(delta)
 	_prev_vertical_hover_axis = _get_vertical_hover_axis()
 	_prev_gamepad_move_vertical = _get_gamepad_move_vertical_axis()
-
-#função de dash para baixo.
-func _start_ground_pound_dash() -> void:
-		
-		
-	_hover_float_left = 0.0
-	_interrupt_sprint()
-		
-	velocity.x = 0
-	velocity.y = 2000.0 
 
 func start_hover_float(seconds: float) -> void:
 	if seconds <= 0.0:
@@ -654,20 +719,11 @@ func is_stalled() -> bool:
 func _set_frozen_visual(active: bool) -> void:
 	if active and not _frozen_use_ice_visual:
 		return
-	# "Filtro menos saturado": puxa para um azul pálido / gelo.
-	if _body_visual != null:
-		_body_visual.modulate = Color(0.75, 0.9, 1.0, 1.0) if active else _orig_body_modulate
-	if _bow_visual != null:
-		_bow_visual.modulate = Color(0.85, 0.95, 1.0, 1.0) if active else _orig_bow_modulate
+	_refresh_character_body_modulate()
 
 
 func _refresh_sprint_body_modulate() -> void:
-	if _body_visual == null:
-		return
-	if _is_sprint_speed_boost_active():
-		_body_visual.modulate = _orig_body_modulate * sprint_visual_body_mult
-	else:
-		_body_visual.modulate = _orig_body_modulate
+	_refresh_character_body_modulate()
 
 
 func _ensure_sprint_indicator() -> void:
@@ -1403,6 +1459,173 @@ func _get_sprint_speed_mult() -> float:
 	return sprint_speed_multiplier
 
 
+func set_esqueleto_zombie_slow_mul(mul: float) -> void:
+	_esqueleto_zombie_slow_mul = clampf(mul, 0.15, 1.0)
+
+
+func get_esqueleto_zombie_slow_mul() -> float:
+	return _esqueleto_zombie_slow_mul
+
+
+func get_esqueleto_locomotion_slow_mul() -> float:
+	return minf(_esqueleto_zombie_slow_mul, _esqueleto_podridao_slow_mul)
+
+
+func get_move_speed_buff_mul() -> float:
+	return 1.0
+
+
+## Retângulo global da hitbox do duelista (`CollisionShape2D` 40×90 por defeito).
+func get_body_collision_rect() -> Rect2:
+	var cs := get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if cs != null and cs.shape is RectangleShape2D:
+		var local_rect := (cs.shape as RectangleShape2D).get_rect()
+		return cs.global_transform * local_rect
+	return Rect2(global_position.x - 20.0, global_position.y - 45.0, 40.0, 90.0)
+
+
+func apply_esqueleto_podridao(
+	damage_per_tick: int,
+	duration_s: float,
+	tick_interval_s: float,
+	slow_mul: float = 1.0,
+) -> void:
+	_esqueleto_podridao_damage_per_tick = maxi(0, damage_per_tick)
+	_esqueleto_podridao_tick_interval_s = maxf(0.05, tick_interval_s)
+	_esqueleto_podridao_time_left_s = maxf(0.0, duration_s)
+	_esqueleto_podridao_tick_accum_s = 0.0
+	_esqueleto_podridao_slow_mul = clampf(slow_mul, 0.15, 1.0)
+	_refresh_character_body_modulate()
+
+
+func clear_esqueleto_podridao() -> void:
+	_esqueleto_podridao_time_left_s = 0.0
+	_esqueleto_podridao_tick_accum_s = 0.0
+	_esqueleto_podridao_damage_per_tick = 0
+	_esqueleto_podridao_tick_flash_left_s = 0.0
+	_esqueleto_podridao_slow_mul = 1.0
+	_refresh_character_body_modulate()
+
+
+func has_esqueleto_podridao() -> bool:
+	return _esqueleto_podridao_time_left_s > 0.0
+
+
+func get_esqueleto_podridao_body_color() -> Color:
+	if _esqueleto_podridao_tick_flash_left_s > 0.0:
+		return PODRIDAO_COLOR_TICK
+	return PODRIDAO_COLOR_BASE
+
+
+func _tick_esqueleto_podridao(delta: float) -> void:
+	if _esqueleto_podridao_time_left_s <= 0.0:
+		return
+	_esqueleto_podridao_time_left_s -= delta
+	_esqueleto_podridao_tick_flash_left_s = maxf(0.0, _esqueleto_podridao_tick_flash_left_s - delta)
+	_esqueleto_podridao_tick_accum_s += delta
+	while (
+		_esqueleto_podridao_tick_accum_s >= _esqueleto_podridao_tick_interval_s
+		and _esqueleto_podridao_time_left_s > 0.0
+	):
+		_esqueleto_podridao_tick_accum_s -= _esqueleto_podridao_tick_interval_s
+		if _esqueleto_podridao_damage_per_tick > 0:
+			take_damage(_esqueleto_podridao_damage_per_tick)
+		_esqueleto_podridao_tick_flash_left_s = PODRIDAO_TICK_FLASH_S
+	if _esqueleto_podridao_time_left_s <= 0.0:
+		clear_esqueleto_podridao()
+	else:
+		_refresh_character_body_modulate()
+
+
+func add_esqueleto_putrefacao_charge(
+	stacks: int = 1,
+	duration_s: float = 4.0,
+	damage_per_stack_per_tick: int = 2,
+	tick_interval_s: float = 0.6,
+) -> void:
+	var add := maxi(1, stacks)
+	_esqueleto_putrefacao_stacks = mini(PUTREFACAO_MAX_STACKS, _esqueleto_putrefacao_stacks + add)
+	_esqueleto_putrefacao_damage_per_stack = maxi(0, damage_per_stack_per_tick)
+	_esqueleto_putrefacao_tick_interval_s = maxf(0.05, tick_interval_s)
+	_esqueleto_putrefacao_time_left_s = maxf(0.0, duration_s)
+	_esqueleto_putrefacao_tick_accum_s = 0.0
+	_refresh_character_body_modulate()
+
+
+func clear_esqueleto_putrefacao() -> void:
+	_esqueleto_putrefacao_stacks = 0
+	_esqueleto_putrefacao_time_left_s = 0.0
+	_esqueleto_putrefacao_tick_accum_s = 0.0
+	_esqueleto_putrefacao_damage_per_stack = 0
+	_esqueleto_putrefacao_tick_flash_left_s = 0.0
+	_refresh_character_body_modulate()
+
+
+func has_esqueleto_putrefacao() -> bool:
+	return _esqueleto_putrefacao_stacks > 0 and _esqueleto_putrefacao_time_left_s > 0.0
+
+
+func get_esqueleto_putrefacao_stacks() -> int:
+	return _esqueleto_putrefacao_stacks
+
+
+func get_esqueleto_putrefacao_body_color() -> Color:
+	if _esqueleto_putrefacao_tick_flash_left_s > 0.0:
+		return PUTREFACAO_COLOR_TICK
+	return PUTREFACAO_COLOR_BASE
+
+
+func _tick_esqueleto_putrefacao(delta: float) -> void:
+	if _esqueleto_putrefacao_time_left_s <= 0.0 or _esqueleto_putrefacao_stacks <= 0:
+		return
+	_esqueleto_putrefacao_time_left_s -= delta
+	_esqueleto_putrefacao_tick_flash_left_s = maxf(0.0, _esqueleto_putrefacao_tick_flash_left_s - delta)
+	_esqueleto_putrefacao_tick_accum_s += delta
+	while (
+		_esqueleto_putrefacao_tick_accum_s >= _esqueleto_putrefacao_tick_interval_s
+		and _esqueleto_putrefacao_time_left_s > 0.0
+		and _esqueleto_putrefacao_stacks > 0
+	):
+		_esqueleto_putrefacao_tick_accum_s -= _esqueleto_putrefacao_tick_interval_s
+		var tick_dmg := _esqueleto_putrefacao_stacks * _esqueleto_putrefacao_damage_per_stack
+		if tick_dmg > 0:
+			take_damage(tick_dmg)
+		_esqueleto_putrefacao_tick_flash_left_s = PUTREFACAO_TICK_FLASH_S
+	if _esqueleto_putrefacao_time_left_s <= 0.0:
+		clear_esqueleto_putrefacao()
+	else:
+		_refresh_character_body_modulate()
+
+
+func _refresh_character_body_modulate() -> void:
+	_refresh_body_visual_modulate()
+
+
+func _refresh_body_visual_modulate() -> void:
+	if _body_visual == null:
+		return
+	if _frozen_left > 0.0 and _frozen_use_ice_visual:
+		_body_visual.modulate = Color(0.75, 0.9, 1.0, 1.0)
+	elif has_esqueleto_podridao():
+		_body_visual.modulate = get_esqueleto_podridao_body_color()
+	elif has_esqueleto_putrefacao():
+		_body_visual.modulate = get_esqueleto_putrefacao_body_color()
+	elif _is_sprint_speed_boost_active():
+		_body_visual.modulate = _orig_body_modulate * sprint_visual_body_mult
+	else:
+		_body_visual.modulate = _orig_body_modulate
+	_refresh_bow_visual_modulate()
+
+
+func _refresh_bow_visual_modulate() -> void:
+	if _bow_visual == null:
+		return
+	if _frozen_left > 0.0 and _frozen_use_ice_visual:
+		_bow_visual.modulate = Color(0.85, 0.95, 1.0, 1.0)
+	else:
+		_bow_visual.modulate = _orig_bow_modulate
+
+
 func _is_sprint_speed_boost_active() -> bool:
 	return (sprint_mechanic_enabled or post_dash_sprint_enabled) and input_enabled and _sprint_active and _is_holding_forward_only()
 
@@ -1465,9 +1688,6 @@ func _update_double_tap_forward_movement() -> void:
 	if uses_dash_action_button():
 		if Input.is_action_just_pressed("p1_dash" if player_id == 1 else "p2_dash"):
 			start_dash_with_direction(_dash_dir_sign_from_dash_button())
-		if _down_action_just_pressed():
-			if not is_on_floor():
-				_start_ground_pound_dash()
 		return
 	# Input vertical sustentado (teclado: W/S + gatilhos; comando: idem + stick esquerdo Y) anula a janela do duplo toque.
 	if _forward_double_tap_window_open(now_s) and _double_tap_vertical_input_active():
@@ -1490,10 +1710,6 @@ func _update_double_tap_forward_movement() -> void:
 			start_dash_with_direction(back)
 			_last_back_tap_time_s = -100.0
 
-	# --- DASH PARA BAIXO (Ground Pound) ---
-	if _down_action_just_pressed():
-		if not is_on_floor():
-			_start_ground_pound_dash()
 	# Mesmo frame: primeiro toque horizontal + W/S invalida o par (contaminação após atualizar tempos).
 	_invalidate_double_tap_chains_on_contaminant(now_s)
 
@@ -1777,9 +1993,13 @@ func apply_pit_fall_penalty(arena_local_spawn: Vector2, damage: int) -> void:
 	if damage > 0:
 		hp = maxi(0, hp - damage)
 		health_changed.emit(hp)
+		_notify_damage_received(damage)
 	position = arena_local_spawn
 	velocity = Vector2.ZERO
 	_carry_knockback_x = 0.0
+	set_esqueleto_zombie_slow_mul(1.0)
+	clear_esqueleto_podridao()
+	clear_esqueleto_putrefacao()
 
 
 func _enforce_arena_half() -> void:
@@ -1811,10 +2031,16 @@ func should_pass_through_projectile(_projectile: Node) -> bool:
 	return false
 
 
+func _notify_damage_received(amount: int) -> void:
+	if amount > 0:
+		damage_received.emit(amount)
+
+
 func take_damage(amount: int) -> void:
 	_interrupt_sprint()
 	hp = maxi(0, hp - amount)
 	health_changed.emit(hp)
+	_notify_damage_received(amount)
 	print("Player ", player_id, " HP: ", hp)
 
 
@@ -1850,6 +2076,8 @@ func prepare_for_vs_round_respawn(local_spawn: Vector2) -> void:
 	_prev_vertical_hover_axis = 0.0
 	_prev_gamepad_move_vertical = 0.0
 	_set_frozen_visual(false)
+	clear_esqueleto_podridao()
+	clear_esqueleto_putrefacao()
 	_hide_charge_trajectory_ui()
 	if shield_visual != null:
 		shield_visual.visible = false
