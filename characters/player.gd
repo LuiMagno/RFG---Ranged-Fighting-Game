@@ -21,9 +21,14 @@ signal mage_ice_requested(owner_player: Player, spawn_position: Vector2, initial
 signal mage_ice_detonate_requested(owner_player: Player)
 signal mage_orb_requested(owner_player: Player, spawn_position: Vector2, charge_t: float)
 signal bone_rain_requested(owner_player: Player)
+signal mirror_image_requested(owner_player: Player)
+signal mirror_swap_requested(owner_player: Player)
 signal turret_requested(owner_player: Player, spawn_position: Vector2)
 signal turret_sentinel_requested(owner_player: Player)
 signal turret_rocket_requested(owner_player: Player)
+signal turret_fortress_requested(owner_player: Player)
+signal turret_mortar_requested(owner_player: Player)
+signal turret_shield_requested(owner_player: Player)
 signal zumbi_summon_requested(owner_player: Player, spawn_position: Vector2)
 signal zumbi_detonate_requested(owner_player: Player)
 signal spectral_jaw_requested(owner_player: Player)
@@ -217,7 +222,7 @@ var _auto_aim_target: Player = null
 var _hybrid_manual_slot: int = ThreeWayAimUtil.Direction.FORWARD
 var _hybrid_manual_vertical: float = 0.0
 var _lock_on_face_active: bool = false
-var _lock_on_target: Player = null
+var _lock_on_target: Node2D = null
 var _lock_on_face_sign: int = 1
 var _assist_player_dir: Vector2 = Vector2.ZERO
 var _assist_target_dir: Vector2 = Vector2.ZERO
@@ -489,6 +494,8 @@ func _ready() -> void:
 	_lock_on_face_active = (
 		RunConfig.is_lock_on_face_test() and RunConfig.test_lock_on_face_default
 	)
+	if _lock_on_face_active:
+		_lock_on_target = LockOnFaceUtil.resolve_lock_on_target(self, null)
 	_ensure_sprint_indicator()
 	_reset_aim_direction_to_forward()
 	_sync_launch_angle_from_aim_direction()
@@ -527,9 +534,18 @@ func _physics_process(delta: float) -> void:
 	_update_aim(delta)
 	if RunConfig.is_lock_on_face_test():
 		if _lock_on_toggle_just_pressed():
-			_lock_on_face_active = not _lock_on_face_active
 			if not _lock_on_face_active:
-				_reset_lock_on_visual()
+				_lock_on_face_active = true
+				_lock_on_target = LockOnFaceUtil.resolve_lock_on_target(self, null)
+				if _lock_on_target == null:
+					_lock_on_face_active = false
+					_reset_lock_on_visual()
+			else:
+				_prune_freed_lock_on_target()
+				_lock_on_target = LockOnFaceUtil.next_lock_on_target(self, _lock_on_target)
+				if _lock_on_target == null:
+					_lock_on_face_active = false
+					_reset_lock_on_visual()
 		if _frozen_left <= 0.0:
 			_update_lock_on_facing()
 	elif _lock_on_face_active or _lock_on_target != null:
@@ -1102,6 +1118,7 @@ func _sync_launch_angle_unclamped_from_aim_direction() -> void:
 
 
 func _resolve_sprite_flip_h() -> bool:
+	_prune_freed_lock_on_target()
 	if (
 		RunConfig.is_lock_on_face_test()
 		and _lock_on_face_active
@@ -1141,15 +1158,24 @@ func _resolve_lock_on_opponent() -> Player:
 	return LockOnFaceUtil.find_valid_opponent(self)
 
 
+func _prune_freed_lock_on_target() -> void:
+	if _lock_on_target != null and not is_instance_valid(_lock_on_target):
+		_lock_on_target = null
+
+
+func _resolve_lock_on_aim_target() -> Node2D:
+	_prune_freed_lock_on_target()
+	return LockOnFaceUtil.resolve_lock_on_target(self, _lock_on_target)
+
+
 func _update_lock_on_shot_aim() -> void:
-	var opponent := _resolve_lock_on_opponent()
-	_lock_on_target = opponent
-	if opponent == null:
+	_lock_on_target = _resolve_lock_on_aim_target()
+	if _lock_on_target == null:
 		_reset_aim_direction_to_forward()
 		return
 	var result := LockOnFaceUtil.aim_at_target(
 		muzzle.global_position,
-		opponent.global_position,
+		_lock_on_target.global_position,
 		player_id
 	)
 	_aim_direction = result.get("direction", _aim_direction)
@@ -1164,9 +1190,9 @@ func _update_lock_on_facing() -> void:
 	if not _lock_on_face_active or not input_enabled or hp <= 0:
 		_reset_lock_on_visual()
 		return
-	if _lock_on_target == null or not is_instance_valid(_lock_on_target):
-		_lock_on_target = _resolve_lock_on_opponent()
+	_lock_on_target = _resolve_lock_on_aim_target()
 	if _lock_on_target == null:
+		_lock_on_face_active = false
 		_reset_lock_on_visual()
 		return
 	_lock_on_face_sign = LockOnFaceUtil.face_sign_from_target(
@@ -1195,7 +1221,7 @@ func _refresh_lock_on_debug() -> void:
 		return
 	var target_label := ""
 	if _lock_on_target != null and is_instance_valid(_lock_on_target):
-		target_label = "P%d" % _lock_on_target.player_id
+		target_label = LockOnFaceUtil.label_for_target(self, _lock_on_target)
 	var facing := ""
 	if _lock_on_target != null:
 		facing = LockOnFaceUtil.facing_label(_lock_on_face_sign)
@@ -1274,7 +1300,7 @@ func _refresh_aim_debug() -> void:
 		var target_label := "—"
 		if _lock_on_target != null and is_instance_valid(_lock_on_target):
 			raw = _lock_on_target.global_position - muzzle.global_position
-			target_label = "P%d" % _lock_on_target.player_id
+			target_label = LockOnFaceUtil.label_for_target(self, _lock_on_target)
 		_aim_debug.refresh(
 			muzzle.position,
 			_aim_direction,
@@ -1877,11 +1903,11 @@ func _compute_launch_velocity(speed: float) -> Vector2:
 
 func _compute_launch_velocity_base(speed: float) -> Vector2:
 	if RunConfig.is_lock_on_face_test() and _lock_on_face_active:
-		var opponent := _resolve_lock_on_opponent()
-		if opponent != null:
+		var target := _resolve_lock_on_aim_target()
+		if target != null:
 			var result := LockOnFaceUtil.aim_at_target(
 				muzzle.global_position,
-				opponent.global_position,
+				target.global_position,
 				player_id
 			)
 			var dir: Vector2 = result.get("direction", Vector2.ZERO)
@@ -1985,6 +2011,20 @@ func get_enemy_half_x_range() -> Vector2:
 	if player_id == 1:
 		return Vector2(mid + boundary, w - pad)
 	return Vector2(pad, mid - boundary)
+
+
+func get_own_half_x_range() -> Vector2:
+	var w := _arena_world_width
+	var mid := _arena_mid_x
+	if w <= 0.0:
+		var rect := get_viewport_rect()
+		w = rect.size.x
+		mid = w * 0.5
+	var pad := arena_padding_x
+	var boundary := pad + _arena_half_gap_extra
+	if player_id == 1:
+		return Vector2(pad, mid - boundary)
+	return Vector2(mid + boundary, w - pad)
 
 
 func apply_pit_fall_penalty(arena_local_spawn: Vector2, damage: int) -> void:
