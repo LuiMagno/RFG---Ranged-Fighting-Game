@@ -85,12 +85,99 @@ func set_shot_flags(flags: Dictionary) -> void:
 	_shot_flags = flags.duplicate()
 	if _shot_flags.get("esqueleto_chuva_osso", false) and _body_poly != null:
 		_body_poly.modulate = Color(0.95, 0.88, 0.72, 1.0)
-	if _shot_flags.get("esqueleto_torreta_tiro", false) and _body_poly != null:
+	if _shot_flags.get("esqueleto_torreta_escudo_intercept", false) and _body_poly != null:
+		_body_poly.modulate = Color(0.55, 0.82, 1.0, 1.0)
+	elif _shot_flags.get("mirror_clone", false) and _body_poly != null:
+		_body_poly.modulate = Color(0.45, 0.78, 1.1, 0.72)
+	elif _shot_flags.get("esqueleto_torreta_tiro", false) and _body_poly != null:
 		_body_poly.modulate = Color(0.78, 0.76, 0.72, 1.0)
 
 
 func get_shot_flags() -> Dictionary:
 	return _shot_flags
+
+
+func _steer_intercept_shot(delta: float) -> void:
+	var best: Node2D = null
+	var best_dist := INF
+	for n in get_tree().get_nodes_in_group("arrows"):
+		if not (n is Arrow) or n == self:
+			continue
+		var other := n as Arrow
+		if not is_instance_valid(other) or other.is_queued_for_deletion():
+			continue
+		if other._owner == null or other._owner == _owner:
+			continue
+		if _is_intercept_immune(other):
+			continue
+		var d := global_position.distance_squared_to(other.global_position)
+		if d < best_dist:
+			best_dist = d
+			best = other
+	for n in get_tree().get_nodes_in_group("grenades"):
+		if not (n is Grenade):
+			continue
+		var gr := n as Grenade
+		if not is_instance_valid(gr) or gr.is_queued_for_deletion():
+			continue
+		if gr.get_owner_player() == null or gr.get_owner_player() == _owner:
+			continue
+		var d := global_position.distance_squared_to(gr.global_position)
+		if d < best_dist:
+			best_dist = d
+			best = gr
+	if best == null:
+		return
+	var desired := (best.global_position - global_position).normalized() * velocity.length()
+	velocity = velocity.lerp(desired, clampf(10.0 * delta, 0.0, 0.4))
+
+
+func _try_proximity_intercept() -> bool:
+	const RADIUS := 34.0
+	const RADIUS_SQ := RADIUS * RADIUS
+	for n in get_tree().get_nodes_in_group("arrows"):
+		if not (n is Arrow) or n == self:
+			continue
+		var other := n as Arrow
+		if not is_instance_valid(other) or other.is_queued_for_deletion():
+			continue
+		if other._owner == null or other._owner == _owner:
+			continue
+		if _is_intercept_immune(other):
+			continue
+		if global_position.distance_squared_to(other.global_position) > RADIUS_SQ:
+			continue
+		_spawn_clash_fx(global_position.lerp(other.global_position, 0.5), false)
+		if not other.is_queued_for_deletion():
+			other.queue_free()
+		queue_free()
+		return true
+	for n in get_tree().get_nodes_in_group("grenades"):
+		if not (n is Grenade):
+			continue
+		var gr := n as Grenade
+		if not is_instance_valid(gr) or gr.is_queued_for_deletion():
+			continue
+		if gr.get_owner_player() == null or gr.get_owner_player() == _owner:
+			continue
+		if global_position.distance_squared_to(gr.global_position) > RADIUS_SQ:
+			continue
+		_spawn_clash_fx(global_position.lerp(gr.global_position, 0.5), false)
+		gr.queue_free()
+		queue_free()
+		return true
+	return false
+
+
+func _is_intercept_immune(body: Arrow) -> bool:
+	var flags := body.get_shot_flags()
+	if flags.get("esqueleto_feixe", false):
+		return true
+	if flags.get("esqueleto_chuva_osso", false):
+		return true
+	if flags.get("esqueleto_torreta_escudo_intercept", false):
+		return true
+	return false
 
 
 func apply_grenade_explosion_boost(explosion_center: Vector2, multiply: int = 3) -> void:
@@ -173,6 +260,11 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 
+	if _shot_flags.get("esqueleto_torreta_escudo_intercept", false):
+		_steer_intercept_shot(delta)
+		if _try_proximity_intercept():
+			return
+
 	# Projectile motion
 	velocity.y += gravity_accel * delta
 	var collision := move_and_collide(velocity * delta)
@@ -185,6 +277,16 @@ func _physics_process(delta: float) -> void:
 		var collider := collision.get_collider()
 		if collider is Arrow:
 			var other := collider as Arrow
+			var self_intercept: bool = bool(_shot_flags.get("esqueleto_torreta_escudo_intercept", false))
+			var other_intercept: bool = bool(other.get_shot_flags().get("esqueleto_torreta_escudo_intercept", false))
+			if self_intercept or other_intercept:
+				if other._owner != null and _owner != null and other._owner != _owner:
+					if not other.get_shot_flags().get("esqueleto_feixe", false):
+						_spawn_clash_fx(collision.get_position(), false)
+						if not other.is_queued_for_deletion():
+							other.queue_free()
+						queue_free()
+						return
 			# Flechas do mesmo dono podem nascer/ficar próximas (ex.: fragmentação do arqueiro).
 			# Não devem se destruir nem ricochetear entre si.
 			if other._owner != null and _owner != null and other._owner == _owner:
@@ -204,6 +306,34 @@ func _physics_process(delta: float) -> void:
 				sp.add_collision_exception_with(self)
 				return
 			sp.hit_by_arrow()
+			queue_free()
+			return
+
+		if _shot_flags.get("esqueleto_torreta_escudo_intercept", false):
+			if collider is Grenade:
+				var gr := collider as Grenade
+				if gr.get_owner_player() != null and gr.get_owner_player() != _owner:
+					_spawn_clash_fx(collision.get_position(), false)
+					gr.queue_free()
+					queue_free()
+					return
+			if collider is Fireball:
+				var fb := collider as Fireball
+				if fb.get_owner_player() != null and fb.get_owner_player() != _owner:
+					_spawn_clash_fx(collision.get_position(), false)
+					fb.queue_free()
+					queue_free()
+					return
+
+		if collider is EsqueletoMirrorClone:
+			var mc := collider as EsqueletoMirrorClone
+			if mc.is_queued_for_deletion() or not mc.is_alive():
+				return
+			var mc_owner := mc.get_owner_player()
+			if mc_owner != null and _owner != null and mc_owner == _owner:
+				add_collision_exception_with(mc)
+				return
+			mc.take_damage(damage)
 			queue_free()
 			return
 
@@ -233,6 +363,9 @@ func _physics_process(delta: float) -> void:
 
 		if collider is Player:
 			var victim := collider as Player
+			if _shot_flags.get("esqueleto_torreta_escudo_intercept", false):
+				add_collision_exception_with(victim)
+				return
 			if victim != _owner:
 				if victim.should_pass_through_projectile(self):
 					add_collision_exception_with(victim)

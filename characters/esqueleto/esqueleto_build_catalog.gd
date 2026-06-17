@@ -14,6 +14,7 @@ const SKILL_BUFF_VELOCIDADE := &"buff_velocidade_tiro"
 const SKILL_TIRO_CARREGADO := &"tiro_carregado"
 const SKILL_DASH_ACAO := &"dash_acao"
 const SKILL_CHUVA_OSSOS := &"chuva_ossos"
+const SKILL_MIRROR_IMAGE := &"mirror_image"
 const SKILL_TORRETA := &"torreta"
 const SKILL_ZUMBI := &"zumbi"
 const SKILL_MANDIBULA_ESPECTRAL := &"mandibula_espectral"
@@ -85,7 +86,10 @@ static func get_slot_options(slot_key: StringName) -> Array[Dictionary]:
 		SLOT_DASH:
 			return [{"id": SKILL_DASH_ACAO, "label": "Dash por botao (Shift / B)"}]
 		SLOT_ULT:
-			return [{"id": SKILL_CHUVA_OSSOS, "label": "Chuva de ossos"}]
+			return [
+				{"id": SKILL_CHUVA_OSSOS, "label": "Chuva de ossos"},
+				{"id": SKILL_MIRROR_IMAGE, "label": "Mirror Image"},
+			]
 		_:
 			return []
 

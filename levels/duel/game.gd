@@ -31,6 +31,7 @@ const CAM_HIT_LIGHT := preload("res://levels/duel/camera/presets/hit_light.tres"
 const CLUTCH_HP_RATIO := 0.15
 const CLUTCH_AMBIENT_SHAKE := 2.5
 const BONE_RAIN_SPAWN_Y := 24.0
+const ESQUELETO_MIRROR_CLONE_SCENE := preload("res://projectiles/esqueleto_mirror_clone/esqueleto_mirror_clone.tscn")
 const _ULT_PAUSE_PROJECTILE_META := "_pre_ult_super_process_mode"
 
 const VS_ROUND_DURATION_S := 99.0
@@ -95,6 +96,10 @@ var _active_zombies: Dictionary = {}
 var _bone_rain_gen_p1 := 0
 var _bone_rain_gen_p2 := 0
 var _bone_rain_running: Dictionary = {}
+var _active_mirror_clones: Dictionary = {}
+var _mirror_slowmo_token := 0
+var _mirror_rare_shot_owner_cd: Dictionary = {}
+const MIRROR_RARE_SHOT_OWNER_CD_S := 2.0
 ## ULT fases 1–2 (acionamento + animação): ambos parados até `enter_ult_efeito_phase`.
 var _ult_armagem_animacao_active := false
 var _ult_armagem_owner: Player = null
@@ -376,12 +381,22 @@ func _ready() -> void:
 	right_player.mage_orb_requested.connect(_spawn_gravity_orb)
 	left_player.bone_rain_requested.connect(_on_bone_rain_requested)
 	right_player.bone_rain_requested.connect(_on_bone_rain_requested)
+	left_player.mirror_image_requested.connect(_on_mirror_image_requested)
+	right_player.mirror_image_requested.connect(_on_mirror_image_requested)
+	left_player.mirror_swap_requested.connect(_on_mirror_swap_requested)
+	right_player.mirror_swap_requested.connect(_on_mirror_swap_requested)
 	left_player.turret_requested.connect(_spawn_esqueleto_turret)
 	right_player.turret_requested.connect(_spawn_esqueleto_turret)
 	left_player.turret_sentinel_requested.connect(_on_turret_sentinel_requested)
 	right_player.turret_sentinel_requested.connect(_on_turret_sentinel_requested)
 	left_player.turret_rocket_requested.connect(_on_turret_rocket_requested)
 	right_player.turret_rocket_requested.connect(_on_turret_rocket_requested)
+	left_player.turret_fortress_requested.connect(_on_turret_fortress_requested)
+	right_player.turret_fortress_requested.connect(_on_turret_fortress_requested)
+	left_player.turret_mortar_requested.connect(_on_turret_mortar_requested)
+	right_player.turret_mortar_requested.connect(_on_turret_mortar_requested)
+	left_player.turret_shield_requested.connect(_on_turret_shield_requested)
+	right_player.turret_shield_requested.connect(_on_turret_shield_requested)
 	left_player.zumbi_summon_requested.connect(_spawn_esqueleto_zombie)
 	right_player.zumbi_summon_requested.connect(_spawn_esqueleto_zombie)
 	left_player.spectral_jaw_requested.connect(_spawn_esqueleto_spectral_jaw)
@@ -449,6 +464,7 @@ func rematch_vs_after_post_game() -> void:
 
 
 func _process(delta: float) -> void:
+	_update_mirror_clones(delta)
 	if RunConfig.stage == RunConfig.Stage.TIERED_ABYSS or RunConfig.stage == RunConfig.Stage.OLD_FACTORY:
 		_pit_cd_p1 = maxf(0.0, _pit_cd_p1 - delta)
 		_pit_cd_p2 = maxf(0.0, _pit_cd_p2 - delta)
@@ -475,6 +491,8 @@ func _start_vs_round() -> void:
 	_clear_vs_projectiles_and_carry_state()
 	cancel_bone_rain_for_player(left_player)
 	cancel_bone_rain_for_player(right_player)
+	cancel_mirror_image_for_player(left_player)
+	cancel_mirror_image_for_player(right_player)
 	left_player.prepare_for_vs_round_respawn(_vs_p1_spawn)
 	right_player.prepare_for_vs_round_respawn(_vs_p2_spawn)
 	left_player.input_enabled = true
@@ -613,6 +631,7 @@ func _clear_vs_projectiles_and_carry_state() -> void:
 			or c is IceField
 			or c is EsqueletoTurret
 			or c is EsqueletoZombie
+			or c is EsqueletoMirrorClone
 		):
 			c.queue_free()
 
@@ -1340,6 +1359,63 @@ func _on_turret_rocket_requested(owner_player: Player) -> void:
 	turret.begin_rocket_transform(ep.get_torreta_rocket_setup_config())
 
 
+func _on_turret_fortress_requested(owner_player: Player) -> void:
+	if not owner_player is EsqueletoPlayer:
+		return
+	var turret: EsqueletoTurret = _active_turrets.get(owner_player)
+	if turret == null or not is_instance_valid(turret):
+		for n in get_tree().get_nodes_in_group("esqueleto_turrets"):
+			if n is EsqueletoTurret and (n as EsqueletoTurret).get_owner_player() == owner_player:
+				turret = n as EsqueletoTurret
+				_active_turrets[owner_player] = turret
+				break
+	if turret == null or not is_instance_valid(turret):
+		(owner_player as EsqueletoPlayer).set_turret_active(false)
+		return
+	if not turret.can_transform_to_fortress():
+		return
+	var ep := owner_player as EsqueletoPlayer
+	turret.transform_to_fortress(ep.get_torreta_fortress_setup_config())
+
+
+func _on_turret_mortar_requested(owner_player: Player) -> void:
+	if not owner_player is EsqueletoPlayer:
+		return
+	var turret: EsqueletoTurret = _active_turrets.get(owner_player)
+	if turret == null or not is_instance_valid(turret):
+		for n in get_tree().get_nodes_in_group("esqueleto_turrets"):
+			if n is EsqueletoTurret and (n as EsqueletoTurret).get_owner_player() == owner_player:
+				turret = n as EsqueletoTurret
+				_active_turrets[owner_player] = turret
+				break
+	if turret == null or not is_instance_valid(turret):
+		(owner_player as EsqueletoPlayer).set_turret_active(false)
+		return
+	if not turret.can_transform_to_mortar():
+		return
+	var ep := owner_player as EsqueletoPlayer
+	turret.transform_to_mortar(ep.get_torreta_mortar_setup_config())
+
+
+func _on_turret_shield_requested(owner_player: Player) -> void:
+	if not owner_player is EsqueletoPlayer:
+		return
+	var turret: EsqueletoTurret = _active_turrets.get(owner_player)
+	if turret == null or not is_instance_valid(turret):
+		for n in get_tree().get_nodes_in_group("esqueleto_turrets"):
+			if n is EsqueletoTurret and (n as EsqueletoTurret).get_owner_player() == owner_player:
+				turret = n as EsqueletoTurret
+				_active_turrets[owner_player] = turret
+				break
+	if turret == null or not is_instance_valid(turret):
+		(owner_player as EsqueletoPlayer).set_turret_active(false)
+		return
+	if not turret.can_transform_to_shield():
+		return
+	var ep := owner_player as EsqueletoPlayer
+	turret.transform_to_shield(ep.get_torreta_shield_setup_config())
+
+
 func spawn_esqueleto_turret_shot(
 	owner_player: Player,
 	spawn_position: Vector2,
@@ -1355,6 +1431,25 @@ func spawn_esqueleto_turret_shot(
 		0,
 		damage,
 		1.0,
+	)
+
+
+func spawn_esqueleto_turret_intercept_shot(
+	owner_player: Player,
+	spawn_position: Vector2,
+	initial_velocity: Vector2,
+) -> void:
+	_spawn_one_arrow(
+		owner_player,
+		spawn_position,
+		initial_velocity,
+		{"esqueleto_torreta_escudo_intercept": true},
+		0.0,
+		0,
+		0,
+		0.95,
+		32,
+		32,
 	)
 
 
@@ -1716,6 +1811,461 @@ func _camera_apply_preset(preset: CameraEffectPreset, direction: Vector2 = Vecto
 	_camera_system.request_apply_preset(preset, direction)
 
 
+func _on_mirror_image_requested(owner: Player) -> void:
+	if not owner is EsqueletoPlayer:
+		return
+	var ep := owner as EsqueletoPlayer
+	if not ep.is_mirror_image_ativa():
+		return
+	_run_mirror_invocation_vfx(ep)
+	_spawn_mirror_clones(ep)
+
+
+func _on_mirror_swap_requested(owner: Player) -> void:
+	if not owner is EsqueletoPlayer:
+		return
+	var ep := owner as EsqueletoPlayer
+	if not ep.try_consume_mirror_swap():
+		return
+	var clones := _get_alive_mirror_clones(ep)
+	if clones.is_empty():
+		return
+	var target := _pick_mirror_swap_clone(ep, clones)
+	if target == null:
+		return
+	_execute_mirror_swap(ep, target)
+
+
+func _run_mirror_invocation_vfx(ep: EsqueletoPlayer) -> void:
+	_mirror_slowmo_token += 1
+	var token := _mirror_slowmo_token
+	var slow_scale := ep.esqueleto_skill_ult_mirror_image_slowmo_scale
+	var slow_s := ep.esqueleto_skill_ult_mirror_image_slowmo_s
+	Engine.time_scale = slow_scale
+	var tw := create_tween()
+	tw.set_ignore_time_scale(true)
+	tw.tween_interval(slow_s)
+	tw.tween_callback(func() -> void:
+		if token == _mirror_slowmo_token:
+			Engine.time_scale = 1.0
+	)
+	for i in range(2):
+		var puff := preload("res://projectiles/explosion/explosion.tscn").instantiate() as Node2D
+		if puff == null:
+			continue
+		add_child(puff)
+		var side := -1.0 if i == 0 else 1.0
+		puff.global_position = ep.global_position + Vector2(
+			ep.esqueleto_skill_ult_mirror_image_spawn_offset_x * side,
+			-8.0,
+		)
+		puff.scale = Vector2.ONE * 0.75
+		if puff is CanvasItem:
+			(puff as CanvasItem).modulate = Color(0.5, 0.82, 1.2, 0.9)
+
+
+func _spawn_mirror_clones(owner: EsqueletoPlayer) -> void:
+	_despawn_mirror_clones(owner)
+	_mirror_rare_shot_owner_cd.erase(owner)
+	var clones: Array = []
+	var personality := 0
+	for side: float in [-1.0, 1.0]:
+		var offset_x: float = owner.esqueleto_skill_ult_mirror_image_spawn_offset_x * side
+		var spawn_pos := _find_mirror_clone_spawn(owner.global_position, offset_x, owner)
+		var clone := ESQUELETO_MIRROR_CLONE_SCENE.instantiate() as EsqueletoMirrorClone
+		if clone == null:
+			personality += 1
+			continue
+		add_child(clone)
+		clone.global_position = spawn_pos
+		clone.setup(owner, self, offset_x)
+		clone.configure_cpu(personality, owner.get_mirror_cpu_tuning())
+		clone.set_arena_x_range(owner.get_own_half_x_range())
+		clones.append(clone)
+		personality += 1
+	_active_mirror_clones[owner] = clones
+
+
+func _find_mirror_clone_spawn(base: Vector2, offset_x: float, owner: Player) -> Vector2:
+	var offsets: Array[float] = [offset_x]
+	for step in [24.0, 48.0, 72.0, 96.0]:
+		offsets.append(offset_x - step * signf(offset_x))
+		offsets.append(offset_x + step * signf(offset_x))
+	var best := base + Vector2(offset_x, 0.0)
+	var best_penalty := INF
+	for ox: float in offsets:
+		var pos := base + Vector2(ox, 0.0)
+		var penalty := absf(ox - offset_x)
+		if _is_mirror_spawn_clear(pos, owner):
+			if penalty < best_penalty:
+				best_penalty = penalty
+				best = pos
+	return best
+
+
+func _is_mirror_spawn_clear(pos: Vector2, owner: Player) -> bool:
+	var space := get_world_2d().direct_space_state
+	if space == null:
+		return true
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(28.0, 44.0)
+	var params := PhysicsShapeQueryParameters2D.new()
+	params.shape = shape
+	params.transform = Transform2D(0.0, pos + Vector2(0.0, 4.0))
+	params.collision_mask = 49
+	if owner != null:
+		params.exclude = [owner.get_rid()]
+	return space.intersect_shape(params, 4).is_empty()
+
+
+func _get_alive_mirror_clones(owner: Player) -> Array:
+	if not _active_mirror_clones.has(owner):
+		return []
+	var alive: Array = []
+	for c in _active_mirror_clones[owner]:
+		if c is EsqueletoMirrorClone and is_instance_valid(c) and (c as EsqueletoMirrorClone).is_alive():
+			alive.append(c)
+	return alive
+
+
+func _despawn_mirror_clones(owner: Player) -> void:
+	if not _active_mirror_clones.has(owner):
+		return
+	for c in _active_mirror_clones[owner]:
+		if is_instance_valid(c):
+			c.queue_free()
+	_active_mirror_clones.erase(owner)
+	_mirror_rare_shot_owner_cd.erase(owner)
+
+
+func _tick_mirror_rare_shot_owner_cds(delta: float) -> void:
+	for owner in _mirror_rare_shot_owner_cd.keys():
+		if not is_instance_valid(owner):
+			_mirror_rare_shot_owner_cd.erase(owner)
+			continue
+		_mirror_rare_shot_owner_cd[owner] = maxf(
+			0.0,
+			float(_mirror_rare_shot_owner_cd[owner]) - delta
+		)
+
+
+func _update_mirror_clones(delta: float) -> void:
+	_tick_mirror_rare_shot_owner_cds(delta)
+	var owners := _active_mirror_clones.keys()
+	for owner in owners:
+		if not is_instance_valid(owner) or not (owner is EsqueletoPlayer):
+			_despawn_mirror_clones(owner)
+			continue
+		var ep := owner as EsqueletoPlayer
+		if not ep.is_mirror_image_ativa():
+			_despawn_mirror_clones(owner)
+			continue
+		var clones := _get_alive_mirror_clones(owner)
+		_active_mirror_clones[owner] = clones
+		if clones.is_empty() and ep.get_mirror_time_left() > 0.0 and not ep.is_mirror_invocacao_active():
+			ep.notify_mirror_clones_destroyed()
+			_despawn_mirror_clones(owner)
+			continue
+		var echo_delay := ep.get_mirror_echo_delay_s()
+		var opponent := AutoAimFiveWayUtil.find_valid_opponent(ep)
+		for clone in clones:
+			var mc := clone as EsqueletoMirrorClone
+			var echo: Dictionary = ep.poll_mirror_echo(mc.get_last_echo_t(), echo_delay)
+			if echo.has("snapshot"):
+				var snap: Dictionary = echo.get("snapshot", {})
+				if not snap.is_empty():
+					mc.apply_echo_snapshot(snap, delta, opponent)
+			mc.set_last_echo_t(float(echo.get("t", mc.get_last_echo_t())))
+			for ev in echo.get("events", []):
+				_mirror_clone_fire_event(ep, mc, ev, opponent)
+			mc.tick_cpu(delta, ep, opponent, ep.get_mirror_owner_idle_s())
+			var combat_vel := mc.consume_combat_shot_request()
+			if combat_vel.length_squared() > 1.0:
+				_spawn_mirror_one_arrow(
+					ep,
+					mc.get_muzzle_global(),
+					combat_vel,
+					{"mirror_clone": true},
+					-1,
+				)
+			_try_mirror_clone_rare_shot(ep, mc, opponent)
+			mc.physics_step(delta)
+
+
+func _mirror_apply_cpu_velocity(
+	owner: EsqueletoPlayer,
+	clone: EsqueletoMirrorClone,
+	opponent: Player,
+	base_vel: Vector2,
+	seed_salt: int,
+) -> Vector2:
+	var seed := hash(
+		str(clone.get_instance_id()) + ":" + str(seed_salt) + ":" + str(Time.get_ticks_usec())
+	)
+	return MirrorCloneCpuUtil.apply_cpu_aim_to_velocity(
+		base_vel,
+		clone.get_muzzle_global(),
+		opponent,
+		owner.player_id,
+		clone.get_aim_direction(),
+		clone.get_cpu_aim_blend(),
+		clone.get_cpu_jitter_deg(),
+		clone.get_personality(),
+		seed,
+	)
+
+
+func _mirror_clone_fire_event(
+	owner: EsqueletoPlayer,
+	clone: EsqueletoMirrorClone,
+	ev: Dictionary,
+	opponent: Player,
+) -> void:
+	if typeof(ev) != TYPE_DICTIONARY:
+		return
+	var event_t := float(ev.get("t", -1.0))
+	if event_t >= 0.0 and not clone.can_fire_echo_event(event_t):
+		return
+	if clone.should_skip_echo_shot():
+		return
+	var stagger := clone.consume_shot_stagger()
+	match String(ev.get("type", "")):
+		"shoot_single":
+			var data: Dictionary = ev.get("data", {})
+			var base_vel: Vector2 = data.get("vel", Vector2.ZERO)
+			if base_vel.length_squared() < 1.0:
+				return
+			var flags: Dictionary = data.get("flags", {}).duplicate()
+			flags["mirror_clone"] = true
+			var dmg: int = int(data.get("damage", -1))
+			var fire := func() -> void:
+				var vel := _mirror_apply_cpu_velocity(owner, clone, opponent, base_vel, event_t)
+				_spawn_mirror_one_arrow(owner, clone.get_muzzle_global(), vel, flags, dmg)
+			clone.queue_delayed_echo_shot(stagger, fire)
+			if clone.should_fire_distraction_shot():
+				var decoy_seed := hash(str(clone.get_instance_id()) + ":decoy:" + str(event_t))
+				var decoy_delay := stagger + 0.07
+				clone.queue_delayed_echo_shot(
+					decoy_delay,
+					func() -> void:
+						var decoy_vel := MirrorCloneCpuUtil.distraction_shot_velocity(
+							base_vel.length(),
+							clone.get_muzzle_global(),
+							opponent,
+							owner.player_id,
+							clone.get_distraction_jitter_deg(),
+							decoy_seed,
+						)
+						if decoy_vel.length_squared() < 1.0:
+							return
+						_spawn_mirror_one_arrow(
+							owner,
+							clone.get_muzzle_global(),
+							decoy_vel,
+							{"mirror_clone": true},
+							-1,
+						)
+				)
+		"shots":
+			var shots: Array = ev.get("data", [])
+			if stagger > 0.001:
+				clone.queue_delayed_echo_shot(
+					stagger,
+					func() -> void:
+						_spawn_mirror_shots(owner, clone, shots, opponent)
+				)
+			else:
+				_spawn_mirror_shots(owner, clone, shots, opponent)
+
+
+func _try_mirror_clone_rare_shot(
+	ep: EsqueletoPlayer,
+	clone: EsqueletoMirrorClone,
+	opponent: Player,
+) -> void:
+	if opponent == null or not is_instance_valid(opponent) or opponent.hp <= 0:
+		return
+	if ep.is_mirror_invocacao_active():
+		return
+	if not clone.can_attempt_rare_shot(ep.get_mirror_owner_idle_s()):
+		return
+	if float(_mirror_rare_shot_owner_cd.get(ep, 0.0)) > 0.0:
+		return
+	if not MirrorCloneCpuUtil.roll_rare_shot(clone.get_rare_shot_chance()):
+		return
+	var seed := hash(str(clone.get_instance_id()) + ":rare:" + str(Time.get_ticks_usec()))
+	var vel := MirrorCloneCpuUtil.rare_shot_velocity(
+		clone.get_muzzle_global(),
+		opponent,
+		ep.player_id,
+		ep.get_mirror_rare_shot_speed(),
+		clone.get_personality(),
+		clone.get_cpu_jitter_deg(),
+		clone.get_rare_jitter_mul(),
+		seed,
+	)
+	if vel.length_squared() < 1.0:
+		return
+	_spawn_mirror_one_arrow(ep, clone.get_muzzle_global(), vel, {"mirror_clone": true}, -1)
+	clone.start_rare_shot_cooldown()
+	_mirror_rare_shot_owner_cd[ep] = MIRROR_RARE_SHOT_OWNER_CD_S
+
+
+func _spawn_mirror_one_arrow(
+	owner: EsqueletoPlayer,
+	spawn_position: Vector2,
+	initial_velocity: Vector2,
+	shot_flags: Dictionary,
+	damage_override: int,
+) -> void:
+	var dmg_mul := owner.get_mirror_proj_damage_mul()
+	var dmg := damage_override
+	if dmg < 0:
+		dmg = 20
+	dmg = maxi(1, int(round(float(dmg) * dmg_mul)))
+	var clash_power := dmg
+	var clash_integrity := dmg
+	if shot_flags.get("esqueleto_feixe", false):
+		clash_power = maxi(1, int(round(float(owner.esqueleto_skill_feixe_dano) * dmg_mul)))
+		clash_integrity = maxi(1, int(round(float(owner.esqueleto_skill_feixe_clash_integridade) * dmg_mul)))
+	_spawn_one_arrow(
+		owner,
+		spawn_position,
+		initial_velocity,
+		shot_flags,
+		0.0,
+		0,
+		dmg,
+		1.0,
+		clash_power,
+		clash_integrity,
+	)
+
+
+func _spawn_mirror_shots(
+	owner: EsqueletoPlayer,
+	clone: EsqueletoMirrorClone,
+	shots: Array,
+	opponent: Player,
+) -> void:
+	if typeof(shots) != TYPE_ARRAY:
+		return
+	var dmg_mul := owner.get_mirror_proj_damage_mul()
+	var muzzle := clone.get_muzzle_global()
+	var owner_muzzle := owner.muzzle.global_position if owner.muzzle != null else owner.global_position
+	var shot_idx := 0
+	for s in shots:
+		if typeof(s) != TYPE_DICTIONARY:
+			continue
+		var src: Dictionary = s
+		var src_pos: Vector2 = src.get("pos", owner_muzzle)
+		var offset := src_pos - owner_muzzle
+		var pos := muzzle + offset
+		var vel: Vector2 = src.get("vel", Vector2.ZERO)
+		vel = _mirror_apply_cpu_velocity(owner, clone, opponent, vel, shot_idx)
+		shot_idx += 1
+		var flags: Dictionary = src.get("flags", {}).duplicate()
+		flags["mirror_clone"] = true
+		var damage: int = int(src.get("damage", -1))
+		if damage >= 0:
+			damage = maxi(1, int(round(float(damage) * dmg_mul)))
+		var clash_power: int = int(src.get("clash_power", -1))
+		if clash_power >= 0:
+			clash_power = maxi(1, int(round(float(clash_power) * dmg_mul)))
+		var clash_integrity: int = int(src.get("clash_integrity", -1))
+		if clash_integrity >= 0:
+			clash_integrity = maxi(1, int(round(float(clash_integrity) * dmg_mul)))
+		var gravity: float = float(src.get("gravity", 0.0))
+		var bounces: int = int(src.get("bounces", 0))
+		var size: float = float(src.get("size", 1.0))
+		_spawn_one_arrow(
+			owner,
+			pos,
+			vel,
+			flags,
+			gravity,
+			bounces,
+			damage,
+			size,
+			clash_power,
+			clash_integrity,
+		)
+
+
+func _pick_mirror_swap_clone(ep: EsqueletoPlayer, clones: Array) -> EsqueletoMirrorClone:
+	var aim := ep.get_mirror_aim_direction()
+	var best: EsqueletoMirrorClone = null
+	var best_dot := -2.0
+	for c in clones:
+		if not (c is EsqueletoMirrorClone):
+			continue
+		var mc := c as EsqueletoMirrorClone
+		var to_clone := mc.global_position - ep.global_position
+		var dot := aim.dot(to_clone.normalized()) if to_clone.length_squared() > 1.0 else -2.0
+		if dot > best_dot:
+			best_dot = dot
+			best = mc
+	if best != null and best_dot > 0.1:
+		return best
+	var opponent := AutoAimFiveWayUtil.find_valid_opponent(ep)
+	if opponent == null:
+		return clones[0] as EsqueletoMirrorClone if clones.size() > 0 else null
+	var nearest: EsqueletoMirrorClone = null
+	var nearest_d := INF
+	for c in clones:
+		if not (c is EsqueletoMirrorClone):
+			continue
+		var mc := c as EsqueletoMirrorClone
+		var d := mc.global_position.distance_squared_to(opponent.global_position)
+		if d < nearest_d:
+			nearest_d = d
+			nearest = mc
+	return nearest
+
+
+func _execute_mirror_swap(player: EsqueletoPlayer, clone: EsqueletoMirrorClone) -> void:
+	var player_pos := player.global_position
+	var clone_pos := clone.global_position
+	var player_vel := player.velocity
+	var clone_vel := clone.velocity
+	player.global_position = clone_pos
+	clone.global_position = player_pos
+	player.velocity = clone_vel
+	clone.velocity = player_vel
+	clone.set_lateral_offset_x(0.0)
+	var echo_t := player.get_mirror_buffer_time() - player.get_mirror_echo_delay_s()
+	for c in _get_alive_mirror_clones(player):
+		var mc := c as EsqueletoMirrorClone
+		mc.freeze_echo(0.32)
+		mc.set_last_echo_t(echo_t)
+	_spawn_mirror_swap_vfx(player_pos.lerp(clone_pos, 0.5))
+	player.modulate = Color(1.35, 1.2, 1.45, 1.0)
+	var tw := player.create_tween()
+	tw.tween_property(player, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.22)
+	SfxManager.play("dash", player.global_position, 0.9, 2.0)
+
+
+func _spawn_mirror_swap_vfx(center: Vector2) -> void:
+	for i in range(3):
+		var puff := preload("res://projectiles/explosion/explosion.tscn").instantiate() as Node2D
+		if puff == null:
+			continue
+		add_child(puff)
+		puff.global_position = center + Vector2(randf_range(-16.0, 16.0), randf_range(-12.0, 10.0))
+		puff.scale = Vector2.ONE * 0.7
+		if puff is CanvasItem:
+			(puff as CanvasItem).modulate = Color(0.65, 0.9, 1.25, 0.95)
+
+
+func cancel_mirror_image_for_player(p: Player) -> void:
+	_despawn_mirror_clones(p)
+	_mirror_rare_shot_owner_cd.erase(p)
+	if p is EsqueletoPlayer:
+		var ep := p as EsqueletoPlayer
+		if ep.is_mirror_image_ativa():
+			ep.notify_mirror_clones_destroyed()
+
+
 func cancel_bone_rain_for_player(p: Player) -> void:
 	if p == null:
 		return
@@ -1795,6 +2345,7 @@ func _is_pausable_combat_projectile(node: Node) -> bool:
 		or node is Fireball
 		or node is IceField
 		or node is EsqueletoTurret
+		or node is EsqueletoTurretMortarShell
 		or node is EsqueletoZombie
 	)
 

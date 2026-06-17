@@ -95,7 +95,17 @@ func _explode() -> void:
 			away = away.normalized()
 		pl.apply_knockback(Vector2(away.x * knockback_horizontal, -knockback_up))
 
-	# Interação: a explosão pode "pegar" projéteis do pistoleiro (do mesmo dono)
+	for n in get_tree().get_nodes_in_group("esqueleto_mirror_clones"):
+		if not (n is EsqueletoMirrorClone):
+			continue
+		var mc := n as EsqueletoMirrorClone
+		if not mc.is_alive():
+			continue
+		if center.distance_to(mc.global_position) > explosion_radius + 20.0:
+			continue
+		mc.take_damage(1)
+
+	# Interação: a explosão pode "pegar" projéteis do pistoleiro
 	# e redirecionar/triplicar.
 	if _owner != null and is_instance_valid(_owner) and _owner.is_pistoleiro():
 		for n in get_tree().get_nodes_in_group("arrows"):

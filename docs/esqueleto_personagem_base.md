@@ -188,6 +188,15 @@ Na prática é um disparo único via `shots_requested` com flags de dano/tamanho
 | Destruição | Projéteis **inimigos** (`Arrow.take_damage` na torreta); feixe (36) destrói num hit | `arrow.gd` + `EsqueletoTurret.take_damage` |
 | Pausa SUPER | Torreta pausa com outros projéteis durante animação ULT | `Game._is_pausable_combat_projectile` |
 
+**Evoluções** (torreta no chão + mesmo botão do slot + direcção; CD **4 s** entre evoluções; só **uma** activa):
+
+| Direcção | Modo |
+|----------|------|
+| ↑ | Sentinela |
+| ↓ | Foguete |
+| ← | Morteiro |
+| → | Escudo Balístico |
+
 #### Torreta Sentinela (torreta activa + skill + **cima**)
 
 | Parâmetro | Valor |
@@ -215,6 +224,49 @@ Na prática é um disparo único via `shots_requested` com flags de dano/tamanho
 | Transferência de tiros | Cada tiro restante → **+4** dano e **+10%** vel. máx. do foguete | `bonus_dano_por_tiro` / `bonus_vel_por_tiro` |
 | Sobrecarga | Inimigo em movimento ≥ **220** px/s no impacto → explosão **+35%** raio e **+25%** dano | `sobrecarga_vel_inimigo` |
 | Projéteis | Empurra flechas/granadas leves na explosão | `_push_nearby_projectiles` |
+
+#### Torreta Fortaleza — Objetivo secundário (torreta activa + skill + **trás**)
+
+| Parâmetro | Valor |
+|-----------|--------|
+| Activação | Mesmo botão da torreta **com** direcção **para trás** (relativa ao facing) | `turret_fortress_requested` |
+| Cooldown evolução | **4,0** s entre evoluções na mesma torreta | `esqueleto_skill_torreta_evolution_recarga_s` |
+| Transformação | Pernas recolhem, corpo cresce, âncoras entram no chão | `transform_to_fortress` |
+| Vida | **80** (renova ao transformar) | `esqueleto_skill_torreta_fortaleza_vida` |
+| Resistência | Recebe **30%** do dano bruto (mín. 1) | `esqueleto_skill_torreta_fortaleza_resistencia_mul` |
+| Movimento | Não anda, não gira livremente, não persegue | `Mode.FORTRESS` |
+| Ataque | **12** rajadas de **3** flechas (**14** dano cada) | `esqueleto_skill_torreta_fortaleza_*` |
+| Intervalo entre rajadas | **2,0** s (após cada rajada) | `esqueleto_skill_torreta_fortaleza_intervalo_raja_s` |
+| Mira | **2,5** s de wind-up por rajada; rotação lenta **55°/s** até travar no alvo | `esqueleto_skill_torreta_fortaleza_mira_*` |
+| Duração | Auto: rajadas × (mira + intervalo) + folga; ou fixo em `duracao_s` (>0) | `esqueleto_skill_torreta_fortaleza_duracao_s` |
+| Fim | Destrói ao esgotar rajadas, ao chegar a 0 HP ou ao expirar o tempo | `_process_fortress` |
+| Hitbox | **52×50** px (corpo inteiro; instância própria por fortaleza) | `FORTRESS_HITBOX_*` |
+| Função | Objetivo secundário — adversário escolhe destruir a fortaleza ou focar o Esqueleto | design |
+
+#### Torreta Morteiro (torreta activa + skill + **←**)
+
+| Parâmetro | Valor |
+|-----------|--------|
+| Activação | Mesmo botão da torreta **com** `left` / stick para esquerda | `turret_mortar_requested` |
+| Transformação | Pernas recolhem, âncoras no chão, cano inclinado **~60°** | `transform_to_mortar` |
+| Vida | **30** | `esqueleto_skill_torreta_morteiro_vida` |
+| Munição | **6** disparos | `esqueleto_skill_torreta_morteiro_disparos` |
+| Cadência | **4,0** s | `esqueleto_skill_torreta_morteiro_intervalo_s` |
+| Projétil | Arco balístico sem tracking; explosão **24** dano · raio **120** px | `EsqueletoTurretMortarShell` |
+| Fim | Ao gastar munição ou ser destruída | `_process_mortar` |
+
+#### Torreta Escudo Balístico (torreta activa + skill + **→**)
+
+| Parâmetro | Valor |
+|-----------|--------|
+| Activação | Mesmo botão da torreta **com** `right` / stick para direita | `turret_shield_requested` |
+| Transformação | Painéis laterais, escudo frontal, cabeça retrai | `transform_to_shield` |
+| Vida | **60** | `esqueleto_skill_torreta_escudo_vida` |
+| Ataque | Desactivado (só contra-rajada) | `Mode.SHIELD` |
+| Duração | **12** s ou até destruída | `esqueleto_skill_torreta_escudo_duracao_s` |
+| Absorção | Flecha **+1** · pesado **+2** · míssil **+3** (máx. **10**) | `_shield_absorb_charge` |
+| Não bloqueia | Feixe, chuva ULT, efeitos globais | `get_shot_flags` |
+| Disparo balístico | Ao **10** cargas ou ao ser destruída: cone de **5**×**8** dano; torreta some | `_fire_shield_burst` |
 
 ### 4.2.3 Zumbi (Skill 1 F/X ou Skill 2 G/Y — conforme build)
 

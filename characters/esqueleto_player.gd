@@ -87,6 +87,31 @@ const BODY_JUMP_ANIM := "jump"
 @export var esqueleto_skill_torreta_foguete_bonus_dano_por_tiro: int = 4
 @export_range(0.05, 0.35, 0.01) var esqueleto_skill_torreta_foguete_bonus_vel_por_tiro: float = 0.1
 @export var esqueleto_skill_torreta_foguete_sobrecarga_vel_inimigo: float = 220.0
+@export var esqueleto_skill_torreta_fortaleza_vida: int = 80
+@export_range(0.05, 1.0, 0.05) var esqueleto_skill_torreta_fortaleza_resistencia_mul: float = 0.3
+@export var esqueleto_skill_torreta_fortaleza_mira_s: float = 2.5
+@export var esqueleto_skill_torreta_fortaleza_rajadas: int = 12
+@export var esqueleto_skill_torreta_fortaleza_flechas_por_raja: int = 3
+@export var esqueleto_skill_torreta_fortaleza_dano_tiro: int = 14
+@export var esqueleto_skill_torreta_fortaleza_intervalo_raja_s: float = 2.0
+@export var esqueleto_skill_torreta_fortaleza_velocidade_tiro: float = 380.0
+@export var esqueleto_skill_torreta_fortaleza_espalhamento_graus: float = 8.0
+@export var esqueleto_skill_torreta_fortaleza_mira_graus_s: float = 55.0
+@export var esqueleto_skill_torreta_fortaleza_duracao_s: float = 0.0
+@export var esqueleto_skill_torreta_morteiro_vida: int = 30
+@export var esqueleto_skill_torreta_morteiro_disparos: int = 6
+@export var esqueleto_skill_torreta_morteiro_intervalo_s: float = 4.0
+@export var esqueleto_skill_torreta_morteiro_dano: int = 24
+@export var esqueleto_skill_torreta_morteiro_raio: float = 120.0
+@export var esqueleto_skill_torreta_morteiro_knockback_x: float = 380.0
+@export var esqueleto_skill_torreta_morteiro_knockback_up: float = 200.0
+@export var esqueleto_skill_torreta_morteiro_angulo_cano_graus: float = 60.0
+@export var esqueleto_skill_torreta_escudo_vida: int = 60
+@export var esqueleto_skill_torreta_escudo_duracao_s: float = 12.0
+@export var esqueleto_skill_torreta_escudo_intercepto_intervalo_s: float = 0.32
+@export var esqueleto_skill_torreta_escudo_intercepto_velocidade: float = 560.0
+@export var esqueleto_skill_torreta_escudo_intercepto_alcance: float = 520.0
+@export var esqueleto_skill_torreta_morteiro_previsao_mul: float = 1.0
 
 ## Skill Esqueleto — Zumbi (Skill 1 F/X ou Skill 2 G/Y; re-activar explode)
 @export var esqueleto_skill_zumbi_recarga_s: float = 12.0
@@ -144,6 +169,31 @@ const BODY_JUMP_ANIM := "jump"
 ## Tremor contínuo leve na fase efeito (Camera2D.offset ambiente; não usa shake_duracao_s).
 @export var esqueleto_skill_ult_chuva_ossos_shake_intensidade: float = 3.0
 @export var esqueleto_skill_ult_chuva_ossos_shake_duracao_s: float = 0.18
+
+## Skill Esqueleto — ULT Mirror Image (`*_ult`: teclado R, controle LB)
+@export var esqueleto_skill_ult_mirror_image_recarga_s: float = 36.0
+@export var esqueleto_skill_ult_mirror_image_invocacao_s: float = 0.6
+@export var esqueleto_skill_ult_mirror_image_duracao_s: float = 8.0
+@export var esqueleto_skill_ult_mirror_image_echo_delay_s: float = 0.15
+@export var esqueleto_skill_ult_mirror_image_spawn_offset_x: float = 120.0
+@export var esqueleto_skill_ult_mirror_image_slowmo_scale: float = 0.85
+@export var esqueleto_skill_ult_mirror_image_slowmo_s: float = 0.35
+@export var esqueleto_skill_ult_mirror_image_swap_cd_s: float = 2.0
+@export var esqueleto_skill_ult_mirror_image_swap_max: int = 2
+@export_range(0.1, 1.0, 0.01) var esqueleto_skill_ult_mirror_image_proj_dmg_mul: float = 0.35
+@export var esqueleto_skill_ult_mirror_image_modulate: Color = Color(0.55, 0.82, 1.2)
+@export_range(0.0, 1.0, 0.01) var esqueleto_skill_ult_mirror_image_cpu_aim_blend: float = 0.55
+@export_range(0.0, 15.0, 0.1) var esqueleto_skill_ult_mirror_image_cpu_aim_jitter_deg: float = 4.0
+@export_range(0.0, 0.2, 0.005) var esqueleto_skill_ult_mirror_image_cpu_shot_stagger_s: float = 0.04
+@export_range(0.2, 3.0, 0.05) var esqueleto_skill_ult_mirror_image_cpu_idle_shot_after_s: float = 1.0
+@export_range(1.0, 15.0, 0.1) var esqueleto_skill_ult_mirror_image_cpu_rare_shot_cd_s: float = 5.0
+@export_range(0.0, 1.0, 0.01) var esqueleto_skill_ult_mirror_image_cpu_rare_shot_chance: float = 0.35
+@export_range(0.0, 48.0, 1.0) var esqueleto_skill_ult_mirror_image_cpu_move_bias_px: float = 28.0
+@export_range(120.0, 320.0, 5.0) var esqueleto_skill_ult_mirror_image_cpu_move_speed: float = 210.0
+@export_range(400.0, 900.0, 10.0) var esqueleto_skill_ult_mirror_image_cpu_jump_speed: float = 620.0
+@export_range(0.0, 1.0, 0.01) var esqueleto_skill_ult_mirror_image_cpu_echo_move_blend: float = 0.12
+@export_range(300.0, 700.0, 10.0) var esqueleto_skill_ult_mirror_image_cpu_dash_speed: float = 500.0
+
 ## Invulnerabilidade no dash (só Esqueleto / Ongma): bloqueia dano e knockback; timer independente da duração do dash.
 @export_range(0.0, 0.5, 0.01) var esqueleto_dash_invuln_seconds: float = 0.12
 ## Dash no ar + segurar ↓: ângulo da diagonal (velocidade total = speed do dash).
@@ -173,6 +223,18 @@ var _esqueleto_ult_cd_restante_s := 0.0
 var _esqueleto_chuva_ossos_ativa := false
 var _esqueleto_ult_armagem_animacao_restante_s := 0.0
 var _esqueleto_chuva_ossos_tempo_restante_s := 0.0
+var _mirror_image_ativa := false
+var _mirror_image_tempo_restante_s := 0.0
+var _mirror_invocacao_restante_s := 0.0
+var _mirror_swap_cd_left := 0.0
+var _mirror_swap_uses_left := 0
+var _mirror_buffer_time := 0.0
+var _mirror_snapshots: Array[Dictionary] = []
+var _mirror_last_owner_shot_t := -999.0
+var _mirror_owner_idle_s := 0.0
+
+const MIRROR_BUFFER_KEEP_S := 0.55
+const MIRROR_OWNER_IDLE_VEL_THRESHOLD := 18.0
 
 var _body_sprite: AnimatedSprite2D
 var _orig_sprite_modulate: Color = Color.WHITE
@@ -239,6 +301,46 @@ func get_torreta_sentinel_setup_config() -> Dictionary:
 		"walk_speed": esqueleto_skill_torreta_sentinela_walk_speed,
 		"follow_range": esqueleto_skill_torreta_sentinela_alcance_seguir,
 		"preferred_distance": esqueleto_skill_torreta_sentinela_distancia_ideal,
+	}
+
+
+func get_torreta_fortress_setup_config() -> Dictionary:
+	return {
+		"vida": esqueleto_skill_torreta_fortaleza_vida,
+		"resistencia_mul": esqueleto_skill_torreta_fortaleza_resistencia_mul,
+		"mira_s": esqueleto_skill_torreta_fortaleza_mira_s,
+		"rajadas": esqueleto_skill_torreta_fortaleza_rajadas,
+		"flechas_por_raja": esqueleto_skill_torreta_fortaleza_flechas_por_raja,
+		"dano_tiro": esqueleto_skill_torreta_fortaleza_dano_tiro,
+		"intervalo_raja_s": esqueleto_skill_torreta_fortaleza_intervalo_raja_s,
+		"velocidade_tiro": esqueleto_skill_torreta_fortaleza_velocidade_tiro,
+		"espalhamento_graus": esqueleto_skill_torreta_fortaleza_espalhamento_graus,
+		"mira_graus_s": esqueleto_skill_torreta_fortaleza_mira_graus_s,
+		"duracao_s": esqueleto_skill_torreta_fortaleza_duracao_s,
+	}
+
+
+func get_torreta_mortar_setup_config() -> Dictionary:
+	return {
+		"vida": esqueleto_skill_torreta_morteiro_vida,
+		"disparos": esqueleto_skill_torreta_morteiro_disparos,
+		"intervalo_s": esqueleto_skill_torreta_morteiro_intervalo_s,
+		"dano": esqueleto_skill_torreta_morteiro_dano,
+		"raio": esqueleto_skill_torreta_morteiro_raio,
+		"knockback_x": esqueleto_skill_torreta_morteiro_knockback_x,
+		"knockback_up": esqueleto_skill_torreta_morteiro_knockback_up,
+		"angulo_cano_graus": esqueleto_skill_torreta_morteiro_angulo_cano_graus,
+		"previsao_mul": esqueleto_skill_torreta_morteiro_previsao_mul,
+	}
+
+
+func get_torreta_shield_setup_config() -> Dictionary:
+	return {
+		"vida": esqueleto_skill_torreta_escudo_vida,
+		"duracao_s": esqueleto_skill_torreta_escudo_duracao_s,
+		"intercepto_intervalo_s": esqueleto_skill_torreta_escudo_intercepto_intervalo_s,
+		"intercepto_velocidade": esqueleto_skill_torreta_escudo_intercepto_velocidade,
+		"intercepto_alcance": esqueleto_skill_torreta_escudo_intercepto_alcance,
 	}
 
 
@@ -316,6 +418,8 @@ func _esqueleto_velocidade_viagem_projetil(speed: float) -> float:
 func _physics_process(delta: float) -> void:
 	super._physics_process(delta)
 	_sync_esqueleto_body_sprite(delta)
+	if _mirror_image_ativa:
+		_record_mirror_snapshot(delta)
 
 
 func should_pass_through_projectile(_projectile: Node) -> bool:
@@ -351,6 +455,18 @@ func _extra_timer_tick(delta: float) -> void:
 	_esqueleto_buff_velocidade_tiro_cd_restante_s = maxf(0.0, _esqueleto_buff_velocidade_tiro_cd_restante_s - delta)
 	_auto_mutilacao_cd_restante_s = maxf(0.0, _auto_mutilacao_cd_restante_s - delta)
 	_esqueleto_ult_cd_restante_s = maxf(0.0, _esqueleto_ult_cd_restante_s - delta)
+	if _mirror_image_ativa:
+		_mirror_swap_cd_left = maxf(0.0, _mirror_swap_cd_left - delta)
+		if _mirror_invocacao_restante_s > 0.0:
+			if not is_stalled():
+				_mirror_invocacao_restante_s -= delta
+			ult_status_changed.emit(true, _mirror_image_tempo_restante_s, true)
+		else:
+			_mirror_image_tempo_restante_s -= delta
+			if _mirror_image_tempo_restante_s <= 0.0:
+				_finalizar_mirror_image()
+			else:
+				ult_status_changed.emit(true, _mirror_image_tempo_restante_s, false)
 	if _esqueleto_chuva_ossos_ativa:
 		if _esqueleto_ult_armagem_animacao_restante_s > 0.0:
 			if not is_stalled():
@@ -454,6 +570,10 @@ func _get_esqueleto_shoot_cooldown_s() -> float:
 
 
 func _refresh_esqueleto_combat_modulate() -> void:
+	if _mirror_image_ativa:
+		if _mirror_invocacao_restante_s > 0.0:
+			self.modulate = esqueleto_skill_ult_mirror_image_modulate
+			return
 	if _esqueleto_chuva_ossos_ativa:
 		if _esqueleto_ult_armagem_animacao_restante_s > 0.0:
 			self.modulate = esqueleto_skill_ult_chuva_ossos_modulate
@@ -514,8 +634,106 @@ func is_chuva_ossos_ativa() -> bool:
 	return _esqueleto_chuva_ossos_ativa
 
 
+func is_mirror_image_ativa() -> bool:
+	return _mirror_image_ativa
+
+
+func is_mirror_invocacao_active() -> bool:
+	return _mirror_invocacao_restante_s > 0.0
+
+
+func get_mirror_time_left() -> float:
+	return _mirror_image_tempo_restante_s
+
+
+func get_mirror_buffer_time() -> float:
+	return _mirror_buffer_time
+
+
+func get_mirror_echo_delay_s() -> float:
+	return esqueleto_skill_ult_mirror_image_echo_delay_s
+
+
+func get_mirror_proj_damage_mul() -> float:
+	return esqueleto_skill_ult_mirror_image_proj_dmg_mul
+
+
+func get_mirror_cpu_tuning() -> Dictionary:
+	return {
+		"aim_blend": esqueleto_skill_ult_mirror_image_cpu_aim_blend,
+		"aim_jitter_deg": esqueleto_skill_ult_mirror_image_cpu_aim_jitter_deg,
+		"shot_stagger_s": esqueleto_skill_ult_mirror_image_cpu_shot_stagger_s,
+		"idle_shot_after_s": esqueleto_skill_ult_mirror_image_cpu_idle_shot_after_s,
+		"rare_shot_cd_s": esqueleto_skill_ult_mirror_image_cpu_rare_shot_cd_s,
+		"rare_shot_chance": esqueleto_skill_ult_mirror_image_cpu_rare_shot_chance,
+		"move_bias_px": esqueleto_skill_ult_mirror_image_cpu_move_bias_px,
+		"move_speed": esqueleto_skill_ult_mirror_image_cpu_move_speed,
+		"jump_speed": esqueleto_skill_ult_mirror_image_cpu_jump_speed,
+		"echo_move_blend": esqueleto_skill_ult_mirror_image_cpu_echo_move_blend,
+		"dash_speed": esqueleto_skill_ult_mirror_image_cpu_dash_speed,
+		"shot_speed": get_mirror_rare_shot_speed(),
+	}
+
+
+func get_mirror_owner_idle_s() -> float:
+	return _mirror_owner_idle_s
+
+
+func get_mirror_last_owner_shot_t() -> float:
+	return _mirror_last_owner_shot_t
+
+
+func get_mirror_rare_shot_speed() -> float:
+	return _esqueleto_velocidade_viagem_projetil(min_launch_speed) * _get_esqueleto_attack_speed_mul()
+
+
+func get_mirror_aim_direction() -> Vector2:
+	if _aim_direction.length_squared() > 0.01:
+		return _aim_direction.normalized()
+	var vel := _compute_launch_velocity_base(100.0)
+	if vel.length_squared() > 0.01:
+		return vel.normalized()
+	return Vector2.RIGHT if player_id == 1 else Vector2.LEFT
+
+
+func try_consume_mirror_swap() -> bool:
+	if not _mirror_image_ativa or _mirror_invocacao_restante_s > 0.0:
+		return false
+	if _mirror_swap_uses_left <= 0 or _mirror_swap_cd_left > 0.0:
+		return false
+	_mirror_swap_uses_left -= 1
+	_mirror_swap_cd_left = esqueleto_skill_ult_mirror_image_swap_cd_s
+	return true
+
+
+func poll_mirror_echo(since_t: float, echo_delay: float) -> Dictionary:
+	var target_t := _mirror_buffer_time - echo_delay
+	var best_snap := {}
+	var events: Array = []
+	for snap in _mirror_snapshots:
+		var st: float = float(snap.get("t", 0.0))
+		if st <= since_t or st > target_t:
+			continue
+		best_snap = snap
+		var shoot_single = snap.get("shoot_single")
+		if shoot_single != null:
+			events.append({"type": "shoot_single", "data": shoot_single, "t": st})
+		var shots = snap.get("shots")
+		if shots != null:
+			events.append({"type": "shots", "data": shots, "t": st})
+	return {"snapshot": best_snap, "events": events, "t": target_t}
+
+
+func notify_mirror_clones_destroyed() -> void:
+	if not _mirror_image_ativa:
+		return
+	_finalizar_mirror_image()
+
+
 ## Fases 1–2: acionamento + animação SUPER (parado; sem outras skills).
 func is_ult_em_armagem_ou_animacao() -> bool:
+	if _mirror_image_ativa and _mirror_invocacao_restante_s > 0.0:
+		return true
 	return _esqueleto_chuva_ossos_ativa and _esqueleto_ult_armagem_animacao_restante_s > 0.0
 
 
@@ -552,19 +770,146 @@ func _finalizar_chuva_ossos() -> void:
 	ult_status_changed.emit(false, 0.0, false)
 
 
+func _finalizar_mirror_image() -> void:
+	_mirror_image_ativa = false
+	_mirror_image_tempo_restante_s = 0.0
+	_mirror_invocacao_restante_s = 0.0
+	_mirror_swap_cd_left = 0.0
+	_mirror_swap_uses_left = 0
+	_mirror_buffer_time = 0.0
+	_mirror_snapshots.clear()
+	_mirror_last_owner_shot_t = -999.0
+	_mirror_owner_idle_s = 0.0
+	_refresh_esqueleto_combat_modulate()
+	ult_status_changed.emit(false, 0.0, false)
+
+
+func _record_mirror_snapshot(delta: float) -> void:
+	_mirror_buffer_time += delta
+	_update_mirror_owner_idle(delta)
+	var charge_t := 0.0
+	if _feixe_carregando and esqueleto_skill_feixe_tempo_max_carga_s > 0.0:
+		charge_t = clampf(_feixe_tempo_carga_s / esqueleto_skill_feixe_tempo_max_carga_s, 0.0, 1.0)
+	elif _is_charging and max_charge_time > 0.0:
+		charge_t = clampf(_charge_time / max_charge_time, 0.0, 1.0)
+	var flip_h := false
+	var anim_name := BODY_IDLE_ANIM
+	if _body_sprite != null and _body_sprite.visible:
+		flip_h = _body_sprite.flip_h
+		anim_name = _body_sprite.animation
+	_mirror_snapshots.append({
+		"t": _mirror_buffer_time,
+		"pos": global_position,
+		"vel": velocity,
+		"aim_dir": get_mirror_aim_direction(),
+		"flip_h": flip_h,
+		"anim": anim_name,
+		"on_floor": is_on_floor(),
+		"feixe_charging": _feixe_carregando or _is_charging,
+		"charge_t": charge_t,
+		"shoot_single": null,
+		"shots": null,
+	})
+	while _mirror_snapshots.size() > 0:
+		var first_t: float = float(_mirror_snapshots[0].get("t", 0.0))
+		if first_t >= _mirror_buffer_time - MIRROR_BUFFER_KEEP_S:
+			break
+		_mirror_snapshots.remove_at(0)
+
+
+func _update_mirror_owner_idle(delta: float) -> void:
+	var moving := velocity.length() >= MIRROR_OWNER_IDLE_VEL_THRESHOLD
+	var recent_shot := _mirror_buffer_time - _mirror_last_owner_shot_t < 0.35
+	if moving or recent_shot or _is_charging or _feixe_carregando or _vaso_carregando:
+		_mirror_owner_idle_s = 0.0
+	else:
+		_mirror_owner_idle_s += delta
+
+
+func _mirror_note_owner_shot() -> void:
+	_mirror_last_owner_shot_t = _mirror_buffer_time
+	_mirror_owner_idle_s = 0.0
+
+
+func _mirror_record_shoot_single(
+	spawn_pos: Vector2,
+	launch_vel: Vector2,
+	shot_flags: Dictionary,
+	damage: int = -1,
+) -> void:
+	if not _mirror_image_ativa or _mirror_snapshots.is_empty():
+		return
+	_mirror_note_owner_shot()
+	_mirror_snapshots[-1]["shoot_single"] = {
+		"pos": spawn_pos,
+		"vel": launch_vel,
+		"flags": shot_flags.duplicate(),
+		"damage": damage,
+	}
+
+
+func _mirror_record_shots(shots: Array) -> void:
+	if not _mirror_image_ativa or _mirror_snapshots.is_empty():
+		return
+	_mirror_note_owner_shot()
+	_mirror_snapshots[-1]["shots"] = shots.duplicate(true)
+
+
 func _tentar_ativar_ult() -> void:
 	match _build_skill(EsqueletoBuildCatalog.SLOT_ULT):
 		EsqueletoBuildCatalog.SKILL_CHUVA_OSSOS:
 			_tentar_ativar_ult_chuva_ossos()
+		EsqueletoBuildCatalog.SKILL_MIRROR_IMAGE:
+			_tentar_ativar_mirror_image()
 		_:
 			push_warning("Esqueleto: ULT desconhecida '%s' — fallback chuva de ossos." % _build_skill(EsqueletoBuildCatalog.SLOT_ULT))
 			_tentar_ativar_ult_chuva_ossos()
 
 
+func _tentar_mirror_swap() -> void:
+	if not _ult_just_pressed():
+		return
+	mirror_swap_requested.emit(self)
+
+
+func _tentar_ativar_mirror_image() -> void:
+	if not input_enabled:
+		return
+	if _mirror_image_ativa:
+		return
+	if _control_lock_left > 0.0:
+		return
+	if _esqueleto_ult_cd_restante_s > 0.0 or _esqueleto_chuva_ossos_ativa or _mirror_image_ativa:
+		return
+	if _feixe_carregando or _vaso_carregando or _is_charging:
+		return
+	if not _ult_just_pressed():
+		return
+	_begin_mirror_image()
+	mirror_image_requested.emit(self)
+
+
+func _begin_mirror_image() -> void:
+	_esqueleto_ult_cd_restante_s = esqueleto_skill_ult_mirror_image_recarga_s
+	_mirror_image_ativa = true
+	_mirror_image_tempo_restante_s = esqueleto_skill_ult_mirror_image_duracao_s
+	_mirror_invocacao_restante_s = esqueleto_skill_ult_mirror_image_invocacao_s
+	_mirror_swap_uses_left = esqueleto_skill_ult_mirror_image_swap_max
+	_mirror_swap_cd_left = 0.0
+	_mirror_buffer_time = 0.0
+	_mirror_snapshots.clear()
+	_mirror_last_owner_shot_t = -999.0
+	_mirror_owner_idle_s = 0.0
+	_control_lock_left = maxf(_control_lock_left, esqueleto_skill_ult_mirror_image_invocacao_s)
+	_refresh_esqueleto_combat_modulate()
+	ult_status_changed.emit(true, _mirror_image_tempo_restante_s, true)
+	SfxManager.play("ult_start", global_position, 0.62, 4.0)
+
+
 func _tentar_ativar_ult_chuva_ossos() -> void:
 	if not input_enabled or _control_lock_left > 0.0:
 		return
-	if _esqueleto_ult_cd_restante_s > 0.0 or _esqueleto_chuva_ossos_ativa:
+	if _esqueleto_ult_cd_restante_s > 0.0 or _esqueleto_chuva_ossos_ativa or _mirror_image_ativa:
 		return
 	if _feixe_carregando or _vaso_carregando or _is_charging:
 		return
@@ -625,6 +970,7 @@ func _disparar_feixe() -> void:
 		"flags": {"esqueleto_feixe": true},
 	}]
 	shots_requested.emit(self, shots)
+	_mirror_record_shots(shots)
 	_esqueleto_play_action_once("attack")
 	var f := esqueleto_skill_feixe_recoil_forca
 	var pitch := deg_to_rad(esqueleto_skill_feixe_recoil_angulo_acima_horizontal_graus)
@@ -788,7 +1134,17 @@ func _process_torreta(use_special_button: bool, ult_parado: bool) -> void:
 		return
 	if _torreta_active:
 		if _torreta_evolution_cd_restante_s <= 0.0:
-			if _torreta_sentinel_input_held():
+			if _torreta_left_input_held():
+				emit_signal("turret_mortar_requested", self)
+				_torreta_evolution_cd_restante_s = esqueleto_skill_torreta_evolution_recarga_s
+				_esqueleto_play_action_once("attack")
+				SfxManager.play("grenade_throw", global_position, 0.8, -6.0)
+			elif _torreta_right_input_held():
+				emit_signal("turret_shield_requested", self)
+				_torreta_evolution_cd_restante_s = esqueleto_skill_torreta_evolution_recarga_s
+				_esqueleto_play_action_once("attack")
+				SfxManager.play("ult_start", global_position, 0.5, -8.0)
+			elif _torreta_sentinel_input_held():
 				turret_sentinel_requested.emit(self)
 				_torreta_evolution_cd_restante_s = esqueleto_skill_torreta_evolution_recarga_s
 				_esqueleto_play_action_once("attack")
@@ -804,9 +1160,8 @@ func _process_torreta(use_special_button: bool, ult_parado: bool) -> void:
 	_colocar_torreta()
 
 
-func _torreta_sentinel_input_held() -> bool:
+func _torreta_up_input_held() -> bool:
 	var prefix := "p1" if player_id == 1 else "p2"
-	# Teclado: W está em hover_up; comando: stick/d-pad em move_up.
 	if Input.is_action_pressed(prefix + "_move_up"):
 		return true
 	if Input.is_action_pressed(prefix + "_hover_up"):
@@ -814,6 +1169,24 @@ func _torreta_sentinel_input_held() -> bool:
 	if Input.get_axis(prefix + "_move_down", prefix + "_move_up") > 0.35:
 		return true
 	return Input.get_axis(prefix + "_hover_down", prefix + "_hover_up") > 0.35
+
+
+func _torreta_left_input_held() -> bool:
+	var prefix := "p1" if player_id == 1 else "p2"
+	if Input.is_action_pressed(prefix + "_left"):
+		return true
+	return Input.get_axis(prefix + "_right", prefix + "_left") > 0.35
+
+
+func _torreta_right_input_held() -> bool:
+	var prefix := "p1" if player_id == 1 else "p2"
+	if Input.is_action_pressed(prefix + "_right"):
+		return true
+	return Input.get_axis(prefix + "_left", prefix + "_right") > 0.35
+
+
+func _torreta_sentinel_input_held() -> bool:
+	return _torreta_up_input_held()
 
 
 func _torreta_rocket_input_held() -> bool:
@@ -944,6 +1317,7 @@ func _process_basic_shot_carregado(delta: float, ult_parado: bool) -> void:
 				lerpf(min_launch_speed, max_launch_speed, t)
 			) * _get_esqueleto_attack_speed_mul()
 			var v0 := _compute_launch_velocity(speed)
+			_mirror_record_shoot_single(muzzle.global_position, v0, {}, -1)
 			shoot_requested.emit(self, muzzle.global_position, v0, {})
 			_apply_recoil(v0, recoil_normal)
 			_esqueleto_play_action_once("attack")
@@ -956,8 +1330,11 @@ func _process_basic_shot_carregado(delta: float, ult_parado: bool) -> void:
 
 
 func _process_combat(delta: float) -> void:
-	if input_enabled and _control_lock_left <= 0.0:
-		_tentar_ativar_ult()
+	if input_enabled:
+		if _mirror_image_ativa and _mirror_invocacao_restante_s <= 0.0:
+			_tentar_mirror_swap()
+		elif _control_lock_left <= 0.0:
+			_tentar_ativar_ult()
 
 	var ult_parado := is_ult_em_armagem_ou_animacao()
 
@@ -992,6 +1369,13 @@ func _extra_reset_for_vs_round() -> void:
 	_esqueleto_chuva_ossos_ativa = false
 	_esqueleto_ult_armagem_animacao_restante_s = 0.0
 	_esqueleto_chuva_ossos_tempo_restante_s = 0.0
+	_mirror_image_ativa = false
+	_mirror_image_tempo_restante_s = 0.0
+	_mirror_invocacao_restante_s = 0.0
+	_mirror_swap_cd_left = 0.0
+	_mirror_swap_uses_left = 0
+	_mirror_buffer_time = 0.0
+	_mirror_snapshots.clear()
 	self.modulate = Color(1, 1, 1)
 	_last_forward_tap_time_s = -100.0
 	_last_back_tap_time_s = -100.0

@@ -1,0 +1,39 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://projectiles/esqueleto_mirror_clone/esqueleto_mirror_clone.gd" id="1_clone"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
+size = Vector2(32, 52)
+
+[node name="EsqueletoMirrorClone" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 49
+z_index = 7
+script = ExtResource("1_clone")
+
+[node name="FacingRoot" type="Node2D" parent="."]
+
+[node name="GlowPoly" type="Polygon2D" parent="FacingRoot"]
+z_index = -1
+position = Vector2(0, 8)
+polygon = PackedVector2Array(-26, -34, 26, -34, 30, 8, 26, 42, -26, 42, -30, 8)
+color = Color(0.55, 0.85, 1.2, 0.22)
+
+[node name="BodySprite" type="AnimatedSprite2D" parent="FacingRoot"]
+z_index = 1
+offset = Vector2(0, 12)
+scale = Vector2(2.8, 2.8)
+
+[node name="Bow" type="Polygon2D" parent="FacingRoot"]
+visible = false
+z_index = 2
+position = Vector2(18, -10)
+color = Color(0.5, 0.78, 1.05, 0.55)
+polygon = PackedVector2Array(0, -3, 42, -3, 42, 3, 0, 3)
+
+[node name="Muzzle" type="Marker2D" parent="FacingRoot"]
+position = Vector2(35, -10)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 6)
+shape = SubResource("RectangleShape2D_body")
