@@ -86,6 +86,8 @@ const _ARENA_PLATFORM_LAYER_BIT := 16
 const _ARENA_FLOOR_LAYER_BIT := 32
 ## Índice da layer de física no editor (valor 16 = ArenaPlatforms).
 const _PHYSICS_LAYER_ARENA_PLATFORMS := 5
+## Projéteis em voo (flecha, granada, etc.): deteção de acerto fica no projétil, não no jogador.
+const _PHYSICS_LAYER_PROJECTILES := 2
 
 var _platform_drop_through_left: float = 0.0
 ## Pulo durante o dash: `(v_dash + v_jump) * dash_jump_impulse_mul` — arco **diagonal forte**, pouca sensação de “só para cima”.
@@ -478,6 +480,8 @@ func _preview_gravity_for_shot() -> float:
 
 
 func _ready() -> void:
+	# Evita "surf" em projéteis: move_and_slide não deve tratá-los como chão.
+	set_collision_mask_value(_PHYSICS_LAYER_PROJECTILES, false)
 	hp = max_hp
 	add_to_group("players")
 	_jumps_left = max_jumps

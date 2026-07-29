@@ -659,7 +659,7 @@ script = ExtResource("15_dmgnums")
 
 [node name="LeftPlayer" type="CharacterBody2D" parent="." unique_id=1571489207]
 position = Vector2(210, 672)
-collision_mask = 51
+collision_mask = 49
 script = ExtResource("3_2lq0l")
 
 [node name="FacingRoot" type="Node2D" parent="LeftPlayer"]
@@ -753,7 +753,7 @@ polygon = PackedVector2Array(0, -8, 8, 0, 0, 8, -8, 0)
 
 [node name="RightPlayer" type="CharacterBody2D" parent="." unique_id=60473321]
 position = Vector2(1710, 672)
-collision_mask = 51
+collision_mask = 49
 script = ExtResource("5_archer")
 player_id = 2
 
